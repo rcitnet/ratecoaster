@@ -1,4 +1,4 @@
-﻿# Force LF line endings in the repository and on checkout.
+# Force LF line endings in the repository and on checkout.
 #
 # Without this, Git on Windows commits CRLF and the server receives shell
 # scripts with a trailing \r on every line. bash then fails with

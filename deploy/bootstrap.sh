@@ -222,10 +222,10 @@ CORS_ORIGINS=https://${DOMAIN},https://www.${DOMAIN}
 
 # Sign-in emails do not work until these are set. See Part 12.
 RESEND_API_KEY=
-EMAIL_FROM=RateCoaster <hello@${DOMAIN}>
+EMAIL_FROM="RateCoaster <hello@${DOMAIN}>"
 
 COLLECTOR_MAX_RPM=12
-COLLECTOR_USER_AGENT=RateCoasterBot/1.0 (+https://${DOMAIN}/bot; hello@${DOMAIN})
+COLLECTOR_USER_AGENT="RateCoasterBot/1.0 (+https://${DOMAIN}/bot; hello@${DOMAIN})"
 COLLECTOR_DRY_RUN=1
 WAITS_PROVIDER=themeparks
 WAIT_RAW_RETENTION_DAYS=45
@@ -235,7 +235,12 @@ WAIT_RAW_RETENTION_DAYS=45
 EOF
   sudo chmod 600 "${APP_DIR}/.env"
   sudo chown "${APP_USER}:${APP_USER}" "${APP_DIR}/.env"
-  c_ok ".env written (chmod 600)"
+  # The file is read with `set -a && . ./.env`, i.e. parsed as shell. Values
+  # containing spaces, <>, () or ; must be quoted or sourcing dies with a
+  # syntax error that names the line but not the reason.
+  sudo -u "$APP_USER" bash -n "${APP_DIR}/.env" \
+    || die ".env is not valid shell — check quoting on EMAIL_FROM and COLLECTOR_USER_AGENT"
+  c_ok ".env written (chmod 600, syntax verified)"
 fi
 
 # ── 8. install, migrate, build ───────────────────────────────────────────────
@@ -244,6 +249,20 @@ c_do "Installing dependencies (this takes a few minutes)"
 # and the build then fails on missing TypeScript/tsx/drizzle-kit.
 sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && NODE_ENV=development npm install --include=dev --no-audit --no-fund" >/dev/null
 c_ok "dependencies installed"
+
+# Recent npm versions block package install scripts by default. esbuild's script
+# fetches its platform binary, and tsx — which runs the API and every db command
+# — is built on esbuild. Without this the next three steps fail with an opaque
+# "missing binary" error that looks nothing like a permissions default.
+c_do "Approving install scripts for esbuild and sharp"
+sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && npm install-scripts approve esbuild" >/dev/null 2>&1 || true
+sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && npm install-scripts approve sharp" >/dev/null 2>&1 || true
+sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && npm rebuild esbuild sharp" >/dev/null 2>&1 || true
+
+# Prove it worked rather than assuming — this is the failure that cascades.
+sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && npx tsx --version" >/dev/null 2>&1 \
+  || die "tsx is not runnable — esbuild's binary is missing. Run: npm rebuild esbuild --foreground-scripts"
+c_ok "tsx verified working"
 
 c_do "Creating database tables"
 sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && set -a && . ./.env && set +a && npm run db:push"

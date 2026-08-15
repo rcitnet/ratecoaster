@@ -557,6 +557,18 @@ The domains are already filled in. Work through the file and replace:
 - `CHANGE_ME_RESEND_KEY` → leave for now, you'll set it in Part 11
 - the contact email in `COLLECTOR_USER_AGENT` → your real email
 
+**Quote any value containing spaces, `<>`, `()`, `;` or `#`.** This file is read
+with `set -a && . ./.env`, so bash parses it as a script. `EMAIL_FROM` and
+`COLLECTOR_USER_AGENT` both need quotes; the supplied file already has them.
+
+Check it before you rely on it:
+
+```bash
+bash -n /home/ratecoaster/app/.env && echo "ENV OK"
+```
+
+That syntax-checks without executing. Anything else means a quoting problem.
+
 Save (Ctrl+O, Enter, Ctrl+X), then lock the file down so only you can read it:
 
 ```bash
@@ -607,6 +619,27 @@ NODE_ENV=development npm install --include=dev --no-audit --no-fund
 > skips devDependencies — and this project needs TypeScript, tsx and drizzle-kit
 > to build and run. Without this you get baffling "command not found" errors.
 > It's only for the install; everything else runs in production mode.
+
+If npm warns that **install scripts were blocked** (esbuild, sharp), approve them
+before going further:
+
+```bash
+npm install-scripts approve esbuild
+npm install-scripts approve sharp
+npm rebuild esbuild sharp
+```
+
+Recent npm versions deny install scripts by default. esbuild's script fetches its
+platform binary, and `tsx` — which runs the API and every database command — is
+built on esbuild. Confirm it worked before continuing:
+
+```bash
+npx tsx --version
+```
+
+A version number means you're fine. An error about a missing binary means the
+script still hasn't run, and the next three steps will all fail in ways that
+point nowhere near the real cause.
 
 Create the database tables:
 
@@ -731,8 +764,12 @@ Free accounts are the heart of this site, and they don't work without email.
 
    ```
    RESEND_API_KEY=re_your_actual_key
-   EMAIL_FROM=RateCoaster <hello@ratecoaster.net>
+   EMAIL_FROM="RateCoaster <hello@ratecoaster.net>"
    ```
+
+   > The quotes around `EMAIL_FROM` are required. `.env` is read with
+   > `set -a && . ./.env`, which parses it as shell — an unquoted `<` is a
+   > redirect operator and sourcing fails.
 
    Then restart the API:
 
@@ -934,6 +971,28 @@ Caddy is up but the website behind it isn't.
 ```bash
 systemctl status ratecoaster-web --no-pager
 journalctl -u ratecoaster-web -n 50 --no-pager
+```
+
+### `.env` fails with "syntax error near unexpected token"
+
+A value needs quoting. `.env` is sourced as a shell script, so `<`, `>`, `(`,
+`)`, `;` and spaces all have meaning:
+
+```bash
+cd /home/ratecoaster/app
+sed -i 's|^EMAIL_FROM=.*|EMAIL_FROM="RateCoaster <hello@ratecoaster.net>"|' .env
+sed -i 's|^COLLECTOR_USER_AGENT=.*|COLLECTOR_USER_AGENT="RateCoasterBot/1.0 (+https://ratecoaster.net/bot; hello@ratecoaster.net)"|' .env
+bash -n .env && echo "ENV OK"
+```
+
+### "Cannot find module '@esbuild/linux-x64'" or tsx won't run
+
+npm blocked esbuild's install script, so its platform binary was never fetched:
+
+```bash
+cd /home/ratecoaster/app
+npm rebuild esbuild --foreground-scripts
+npx tsx --version
 ```
 
 ### "command not found" during install or build
