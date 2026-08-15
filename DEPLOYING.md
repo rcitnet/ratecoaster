@@ -989,6 +989,24 @@ systemctl status ratecoaster-web --no-pager
 journalctl -u ratecoaster-web -n 50 --no-pager
 ```
 
+### git says "detected dubious ownership in repository"
+
+You're `ubuntu`, but the repo belongs to `ratecoaster`. Git blocks this because a
+repo owned by someone else can carry hooks that would run as **you**.
+
+Don't add the `safe.directory` exception it suggests — that disables the check.
+Run git as the owner:
+
+```bash
+sudo -u ratecoaster -H git -C /home/ratecoaster/app pull
+```
+
+Or just use the update script, which handles the user split for you:
+
+```bash
+bash /home/ratecoaster/app/deploy/update.sh
+```
+
 ### `.env` fails with "syntax error near unexpected token"
 
 A value needs quoting. `.env` is sourced as a shell script, so `<`, `>`, `(`,
