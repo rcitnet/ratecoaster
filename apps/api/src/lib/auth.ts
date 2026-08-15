@@ -2,11 +2,11 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import type { Tier } from "@parkpulse/shared";
-import { getDb } from "@parkpulse/db";
-import { magicLinkTokens, sessions, users } from "@parkpulse/db/schema";
+import type { Tier } from "@ratecoaster/shared";
+import { getDb } from "@ratecoaster/db";
+import { magicLinkTokens, sessions, users } from "@ratecoaster/db/schema";
 
-export const SESSION_COOKIE = "pp_session";
+export const SESSION_COOKIE = "rc_session";
 const SESSION_DAYS = 60;
 const MAGIC_LINK_MINUTES = 15;
 

@@ -2,13 +2,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: parkpulse
-      POSTGRES_PASSWORD: parkpulse
-      POSTGRES_DB: parkpulse
+      POSTGRES_USER: ratecoaster
+      POSTGRES_PASSWORD: ratecoaster
+      POSTGRES_DB: ratecoaster
     ports: ["5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U parkpulse"]
+      test: ["CMD-SHELL", "pg_isready -U ratecoaster"]
       interval: 5s
       timeout: 5s
       retries: 10

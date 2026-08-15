@@ -1,4 +1,4 @@
-import { centsToDisplay } from "@parkpulse/shared";
+import { centsToDisplay } from "@ratecoaster/shared";
 import { getClient, getMe, safe, formatLongDate, TIER_COLORS, TIER_LABELS } from "@/lib/api";
 import { Paywall } from "@/components/Paywall";
 

@@ -66,7 +66,7 @@ export default async function WaitsPage() {
         </div>
       ) : (
         <div className="notice">
-          No wait data yet. Run <code>npm run -w @parkpulse/api collect -- --only wait-times</code>.
+          No wait data yet. Run <code>npm run -w @ratecoaster/api collect -- --only wait-times</code>.
         </div>
       )}
 

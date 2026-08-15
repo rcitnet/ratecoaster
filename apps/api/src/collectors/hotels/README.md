@@ -39,7 +39,7 @@ to take, not a technical detail. Some things that materially reduce it:
 6. Generate a config skeleton:
 
    ```bash
-   npm run -w @parkpulse/api har:import -- har/loews.har loews-universal
+   npm run -w @ratecoaster/api har:import -- har/loews.har loews-universal
    ```
 
    The importer finds candidate rate responses, guesses `roomsPath` and the
@@ -52,8 +52,8 @@ to take, not a technical detail. Some things that materially reduce it:
 9. Verify against the live endpoint **without writing anything**:
 
    ```bash
-   npm run -w @parkpulse/api collect -- --only hotel-rates --dry-run
-   npm run -w @parkpulse/api verify:endpoint -- loews-universal
+   npm run -w @ratecoaster/api collect -- --only hotel-rates --dry-run
+   npm run -w @ratecoaster/api verify:endpoint -- loews-universal
    ```
 
 10. When the parsed output looks right, set `COLLECTOR_DRY_RUN=0`.

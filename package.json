@@ -1,5 +1,5 @@
 {
-  "name": "parkpulse",
+  "name": "ratecoaster",
   "private": true,
   "version": "0.1.0",
   "packageManager": "npm@10.9.8",
@@ -9,10 +9,10 @@
     "dev": "turbo run dev",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "db:generate": "npm run -w @parkpulse/db generate",
-    "db:push": "npm run -w @parkpulse/db push",
-    "db:seed": "npm run -w @parkpulse/db seed",
-    "collect": "npm run -w @parkpulse/api collect"
+    "db:generate": "npm run -w @ratecoaster/db generate",
+    "db:push": "npm run -w @ratecoaster/db push",
+    "db:seed": "npm run -w @ratecoaster/db seed",
+    "collect": "npm run -w @ratecoaster/api collect"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

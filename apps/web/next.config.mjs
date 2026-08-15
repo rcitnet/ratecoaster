@@ -6,7 +6,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 export default {
   reactStrictMode: true,
-  transpilePackages: ["@parkpulse/shared"],
+  transpilePackages: ["@ratecoaster/shared"],
 
   /*
    * Pin the workspace root. Next infers it by walking up looking for lockfiles,

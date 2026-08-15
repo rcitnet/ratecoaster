@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { ENTITLEMENTS, type Entitlements, type GateInfo, type Tier } from "@parkpulse/shared";
+import { ENTITLEMENTS, type Entitlements, type GateInfo, type Tier } from "@ratecoaster/shared";
 import { addDays, daysBetween, todayInTimezone } from "../collectors/framework/dates.js";
 
 /**

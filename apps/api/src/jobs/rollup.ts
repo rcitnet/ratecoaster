@@ -9,7 +9,7 @@
  * So: roll up, then delete what has been rolled up. Run daily.
  */
 import { sql } from "drizzle-orm";
-import { closeDb, getDb } from "@parkpulse/db";
+import { closeDb, getDb } from "@ratecoaster/db";
 
 const RAW_RETENTION_DAYS = Number(process.env.WAIT_RAW_RETENTION_DAYS ?? 45);
 

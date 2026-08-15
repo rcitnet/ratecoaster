@@ -36,7 +36,7 @@ export default async function StatusPage() {
 
       {data.collectors.length === 0 ? (
         <div className="notice">
-          Couldn&apos;t reach the API. Start it with <code>npm run -w @parkpulse/api dev</code>.
+          Couldn&apos;t reach the API. Start it with <code>npm run -w @ratecoaster/api dev</code>.
         </div>
       ) : (
         <div className="table-wrap" style={{ marginTop: 22 }}>

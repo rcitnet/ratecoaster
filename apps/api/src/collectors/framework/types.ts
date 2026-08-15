@@ -1,4 +1,4 @@
-import type { Db } from "@parkpulse/db";
+import type { Db } from "@ratecoaster/db";
 
 export interface CollectorContext {
   db: Db;

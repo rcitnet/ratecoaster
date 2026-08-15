@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import { ENTITLEMENTS, type Tier } from "@parkpulse/shared";
-import { PARKS, PROPERTIES, TICKET_PRODUCTS } from "@parkpulse/db/src/seed-data.js";
+import { ENTITLEMENTS, type Tier } from "@ratecoaster/shared";
+import { PARKS, PROPERTIES, TICKET_PRODUCTS } from "@ratecoaster/db/src/seed-data.js";
 import { gateDateWindow, tierOf } from "./lib/entitlements.js";
 import { fetchThemeParksWiki } from "./collectors/waits/providers.js";
 import {
@@ -26,7 +26,7 @@ import { addDays, dayOfWeek, todayInTimezone } from "./collectors/framework/date
 const DEMO_ATTRIBUTION = {
   source: "demo",
   text: "Hotel, ticket and Express prices on this page are SAMPLE DATA, not collected rates",
-  url: "https://example.com/demo",
+  url: "https://ratecoaster.net/demo",
 };
 
 /** Deterministic hash so the same date always yields the same sample price. */
@@ -69,7 +69,7 @@ function sampleRate(propertySlug: string, tier: string, date: string, rateCode: 
   return Math.round((standard * (1 - discount)) / 100) * 100;
 }
 
-const DEMO_TIER_COOKIE = "pp_demo_tier";
+const DEMO_TIER_COOKIE = "rc_demo_tier";
 
 /**
  * Stand-in for the real session middleware while running without Postgres.
@@ -84,7 +84,7 @@ export const demoAuthMiddleware: MiddlewareHandler = async (c, next) => {
     "user",
     tier === "anonymous"
       ? null
-      : { userId: "demo-user", email: "you@example.com", displayName: null, createdAt: new Date() }
+      : { userId: "demo-user", email: "you@ratecoaster.net", displayName: null, createdAt: new Date() }
   );
   await next();
 };
@@ -118,7 +118,7 @@ demoApp.post("/v1/auth/magic-link", async (c) => {
   return c.json({
     ok: true,
     demo: true,
-    message: `Demo mode: signed in as ${body.email ?? "you@example.com"} with no email sent.`,
+    message: `Demo mode: signed in as ${body.email ?? "you@ratecoaster.net"} with no email sent.`,
   });
 });
 

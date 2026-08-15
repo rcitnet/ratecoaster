@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "@parkpulse/db";
-import { collectorRuns } from "@parkpulse/db/schema";
+import { getDb } from "@ratecoaster/db";
+import { collectorRuns } from "@ratecoaster/db/schema";
 import { createLogger, createStats, type Collector } from "./types.js";
 
 export interface RunResult {

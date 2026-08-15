@@ -3,7 +3,7 @@ import "./globals.css";
 import { getMe } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "ParkPulse — Universal hotel deals, tickets & live wait times",
+  title: "RateCoaster — Universal hotel deals, tickets & live wait times",
   description:
     "Track passholder and public hotel rates a full year ahead across Universal Orlando, Hollywood and Frisco. Plus dynamic ticket prices, Express Pass costs and live ride waits. Free.",
 };
@@ -37,9 +37,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="masthead-inner">
             <a href="/" className="brand">
               <span className="brand-mark" aria-hidden="true">
-                ◎
+                🎢
               </span>
-              Park<em>Pulse</em>
+              Rate<em>Coaster</em>
             </a>
             <nav className="nav">
               {NAV.map((item) => (
@@ -83,9 +83,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div>
                 <div className="brand">
                   <span className="brand-mark" aria-hidden="true">
-                    ◎
+                    🎢
                   </span>
-                  Park<em>Pulse</em>
+                  Rate<em>Coaster</em>
                 </div>
                 <p style={{ margin: 0 }}>
                   Free hotel rate tracking for Universal Orlando, Hollywood and Frisco.

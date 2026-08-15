@@ -77,7 +77,7 @@ export async function politeFetch(
     // Identify honestly and give the operator a way to contact you. Pretending
     // to be a browser is both a worse engineering choice — you lose the signal
     // when they change something — and a worse-faith one.
-    headers.set("user-agent", env("COLLECTOR_USER_AGENT", "ParkPulseBot/0.1"));
+    headers.set("user-agent", env("COLLECTOR_USER_AGENT", "RateCoasterBot/0.1"));
   }
   if (!headers.has("accept")) headers.set("accept", "application/json, text/html;q=0.9");
   headers.set("accept-encoding", "gzip, deflate");

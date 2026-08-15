@@ -2,7 +2,7 @@
  * Turns a browser HAR capture into an endpoint config skeleton.
  *
  * Usage:
- *   npm run -w @parkpulse/api har:import -- har/loews.har loews-universal
+ *   npm run -w @ratecoaster/api har:import -- har/loews.har loews-universal
  *
  * The heuristics below are not magic — they find the JSON response that most
  * looks like a list of room offers and guess the paths. You still review the

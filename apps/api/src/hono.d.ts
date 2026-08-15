@@ -1,4 +1,4 @@
-import type { Tier } from "@parkpulse/shared";
+import type { Tier } from "@ratecoaster/shared";
 
 /**
  * Types for the values the auth middleware puts on every request context.

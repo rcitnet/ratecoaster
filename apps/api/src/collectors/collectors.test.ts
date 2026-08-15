@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseMoneyToCents, centsToDisplay } from "@parkpulse/shared";
+import { parseMoneyToCents, centsToDisplay } from "@ratecoaster/shared";
 import { addDays, dateRange, daysBetween, prioritizeDates, todayInTimezone } from "./framework/dates.js";
 import { extractPath, extractOne, renderTemplate } from "./hotels/endpoint-config.js";
 import { parseOffers, checkRateCode } from "./hotels/index.js";
@@ -82,7 +82,7 @@ describe("endpoint config path extraction", () => {
 
   const config: EndpointConfig = {
     name: "test",
-    request: { method: "GET", urlTemplate: "https://example.com/a", headers: {}, rpm: 12 },
+    request: { method: "GET", urlTemplate: "https://ratecoaster.net/a", headers: {}, rpm: 12 },
     response: {
       roomsPath: "data.roomRates[*]",
       fields: {
@@ -118,18 +118,18 @@ describe("endpoint config path extraction", () => {
 describe("url templating", () => {
   test("substitutes placeholders", () => {
     const url = renderTemplate(
-      "https://example.com/avail?hotel={hotelCode}&arrive={checkIn}&adults={adults}&promo={rateCode}",
+      "https://ratecoaster.net/avail?hotel={hotelCode}&arrive={checkIn}&adults={adults}&promo={rateCode}",
       { hotelCode: "PBH", checkIn: "2026-12-24", adults: 2, rateCode: "APH" }
     );
-    assert.equal(url, "https://example.com/avail?hotel=PBH&arrive=2026-12-24&adults=2&promo=APH");
+    assert.equal(url, "https://ratecoaster.net/avail?hotel=PBH&arrive=2026-12-24&adults=2&promo=APH");
   });
 
   test("drops empty params so STANDARD means 'send no promo code at all'", () => {
     const url = renderTemplate(
-      "https://example.com/avail?hotel={hotelCode}&promo={rateCode}&adults={adults}",
+      "https://ratecoaster.net/avail?hotel={hotelCode}&promo={rateCode}&adults={adults}",
       { hotelCode: "PBH", rateCode: "", adults: 2 }
     );
-    assert.equal(url, "https://example.com/avail?hotel=PBH&adults=2");
+    assert.equal(url, "https://ratecoaster.net/avail?hotel=PBH&adults=2");
     assert.ok(!url.includes("promo="), "an empty promo param is not the same request as omitting it");
   });
 });

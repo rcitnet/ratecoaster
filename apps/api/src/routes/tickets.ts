@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { getDb } from "@parkpulse/db";
+import { getDb } from "@ratecoaster/db";
 import {
   expressPassPrices,
   ticketPriceCurrent,
   ticketProducts,
-} from "@parkpulse/db/schema";
+} from "@ratecoaster/db/schema";
 import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
 import { gateDateWindow, tierOf } from "../lib/entitlements.js";
 

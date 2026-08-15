@@ -1,8 +1,8 @@
-# ParkPulse API service
-# Copy to /etc/systemd/system/parkpulse-api.service
+# RateCoaster API service
+# Copy to /etc/systemd/system/ratecoaster-api.service
 
 [Unit]
-Description=ParkPulse API
+Description=RateCoaster API
 # Wait for both the network and Postgres, otherwise the first start races the
 # database and fails before Postgres is accepting connections.
 After=network-online.target postgresql.service
@@ -11,16 +11,16 @@ Requires=postgresql.service
 
 [Service]
 Type=simple
-User=parkpulse
-WorkingDirectory=/home/parkpulse/app/apps/api
-EnvironmentFile=/home/parkpulse/app/.env
+User=ratecoaster
+WorkingDirectory=/home/ratecoaster/app/apps/api
+EnvironmentFile=/home/ratecoaster/app/.env
 ExecStart=/usr/bin/npm run start
 
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=parkpulse-api
+SyslogIdentifier=ratecoaster-api
 
 # --- Hardening ---
 # If the app is ever compromised, these limit what the attacker can reach.
@@ -28,7 +28,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/parkpulse/app
+ReadWritePaths=/home/ratecoaster/app
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true

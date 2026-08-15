@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { Db } from "@parkpulse/db";
-import { rateCurrent, rateObservations } from "@parkpulse/db/schema";
+import type { Db } from "@ratecoaster/db";
+import { rateCurrent, rateObservations } from "@ratecoaster/db/schema";
 import type { RunStats } from "./types.js";
 
 export interface RateReading {

@@ -1,13 +1,13 @@
 /**
  * Live smoke test for the wait-time providers. No database required.
  *
- *   npm run -w @parkpulse/api smoke:waits
+ *   npm run -w @ratecoaster/api smoke:waits
  *
  * Hits both providers for every seeded park and prints what the parsers made of
  * the response. This is the fastest way to answer "is the upstream still shaped
  * the way we think it is" without standing up Postgres.
  */
-import { PARKS } from "@parkpulse/db/src/seed-data.js";
+import { PARKS } from "@ratecoaster/db/src/seed-data.js";
 import { fetchQueueTimes, fetchThemeParksWiki } from "../collectors/waits/providers.js";
 
 async function main() {

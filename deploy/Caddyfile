@@ -1,15 +1,15 @@
-# ParkPulse web server config
-# Copy to /etc/caddy/Caddyfile, replacing example.com with your domain.
+# RateCoaster web server config
+# Copy to /etc/caddy/Caddyfile. Already set to ratecoaster.net — change only if your domain differs.
 #
 # Caddy gets and renews the HTTPS certificate automatically. There is no
 # certbot step and no renewal cron job to forget about.
 
-example.com, www.example.com {
+ratecoaster.net, www.ratecoaster.net {
 
 	# The API is served under /api on the SAME domain as the website.
 	#
 	# This is deliberate and it matters. Sign-in uses a session cookie; if the
-	# API lived on api.example.com instead, that cookie would be cross-site and
+	# API lived on api.ratecoaster.net instead, that cookie would be cross-site and
 	# you would be fighting SameSite rules and CORS forever. Same origin means
 	# the cookie simply works.
 	#
@@ -36,7 +36,7 @@ example.com, www.example.com {
 	}
 
 	log {
-		output file /var/log/caddy/parkpulse.log {
+		output file /var/log/caddy/ratecoaster.log {
 			roll_size 20mb
 			roll_keep 5
 		}

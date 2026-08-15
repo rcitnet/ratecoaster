@@ -1,5 +1,5 @@
 import { cookies, headers } from "next/headers";
-import { ENTITLEMENTS, ParkPulseClient, type Entitlements, type GateInfo } from "@parkpulse/shared";
+import { ENTITLEMENTS, RateCoasterClient, type Entitlements, type GateInfo } from "@ratecoaster/shared";
 
 const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8787";
 
@@ -11,9 +11,9 @@ const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8787";
  * passing the cookie through, every page would render as anonymous — and a
  * signed-in user would still see the 30-day wall.
  */
-export async function getClient(): Promise<ParkPulseClient> {
+export async function getClient(): Promise<RateCoasterClient> {
   const cookieHeader = (await cookies()).toString();
-  return new ParkPulseClient({
+  return new RateCoasterClient({
     baseUrl: BASE_URL,
     fetch: (input, init) =>
       fetch(input, {

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { parseMoneyToCents } from "@parkpulse/shared";
-import { properties, roomTypes } from "@parkpulse/db/schema";
+import { parseMoneyToCents } from "@ratecoaster/shared";
+import { properties, roomTypes } from "@ratecoaster/db/schema";
 import { fetchJson } from "../framework/http.js";
 import { addDays, dateRange, prioritizeDates, todayInTimezone } from "../framework/dates.js";
 import { persistRateReadings, type RateReading } from "../framework/persist.js";

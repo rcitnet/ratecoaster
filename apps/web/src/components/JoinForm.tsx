@@ -68,7 +68,7 @@ export function JoinForm({ next = "/" }: { next?: string }) {
           className="field"
           type="email"
           required
-          placeholder="you@example.com"
+          placeholder="you@ratecoaster.net"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email address"

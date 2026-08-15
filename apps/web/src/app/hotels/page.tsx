@@ -1,4 +1,4 @@
-import { centsToDisplay, DestinationSlug, RateCode } from "@parkpulse/shared";
+import { centsToDisplay, DestinationSlug, RateCode } from "@ratecoaster/shared";
 import {
   getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";

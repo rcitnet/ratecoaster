@@ -3,8 +3,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { desc } from "drizzle-orm";
-import { getDb } from "@parkpulse/db";
-import { collectorRuns } from "@parkpulse/db/schema";
+import { getDb } from "@ratecoaster/db";
+import { collectorRuns } from "@ratecoaster/db/schema";
 import { dealsRouter, propertiesRouter, ratesRouter } from "./routes/rates.js";
 import { expressRouter, ticketsRouter } from "./routes/tickets.js";
 import { waitsRouter } from "./routes/waits.js";
@@ -25,7 +25,7 @@ app.use(
 
 const DEMO = process.env.DEMO_MODE === "1";
 
-app.get("/health", (c) => c.json({ ok: true, service: "parkpulse-api", demo: DEMO }));
+app.get("/health", (c) => c.json({ ok: true, service: "ratecoaster-api", demo: DEMO }));
 
 /*
  * Auth runs before every route, including public ones. "anonymous" is a tier
@@ -127,7 +127,7 @@ const port = Number(process.env.API_PORT ?? 8787);
 
 if (process.env.NODE_ENV !== "test") {
   serve({ fetch: app.fetch, port }, (info) => {
-    console.log(`parkpulse-api listening on http://localhost:${info.port}`);
+    console.log(`ratecoaster-api listening on http://localhost:${info.port}`);
   });
 }
 

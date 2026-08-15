@@ -2,14 +2,14 @@
  * Sends exactly ONE request through an endpoint config and prints what the
  * parser made of it. Nothing is written to the database.
  *
- *   npm run -w @parkpulse/api verify:endpoint -- loews-universal PBH
+ *   npm run -w @ratecoaster/api verify:endpoint -- loews-universal PBH
  *
  * This is the step between "I captured a HAR" and "I turned on a 16,000-request
  * crawl". One request tells you whether your paths are right; discovering they
  * were wrong after a full pass means a day of junk data and a day of traffic
  * you cannot take back.
  */
-import { closeDb } from "@parkpulse/db";
+import { closeDb } from "@ratecoaster/db";
 import { loadEndpointConfig } from "../collectors/hotels/endpoint-config.js";
 import { queryOffers } from "../collectors/hotels/index.js";
 import { addDays, todayInTimezone } from "../collectors/framework/dates.js";

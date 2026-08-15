@@ -18,7 +18,7 @@ import { LiveWaitsResponse, WaitRollupPoint, type WaitQuery } from "./schemas/wa
 import { CreateWatch, Watch } from "./schemas/alerts.js";
 import { Entitlements, GateInfo, SessionUser } from "./schemas/auth.js";
 
-export class ParkPulseApiError extends Error {
+export class RateCoasterApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
@@ -26,7 +26,7 @@ export class ParkPulseApiError extends Error {
     readonly details?: unknown
   ) {
     super(message);
-    this.name = "ParkPulseApiError";
+    this.name = "RateCoasterApiError";
   }
 }
 
@@ -45,7 +45,7 @@ export interface ClientOptions {
  * at once. That is the whole reason for choosing a TypeScript monorepo when a
  * mobile companion is on the roadmap.
  */
-export class ParkPulseClient {
+export class RateCoasterClient {
   private readonly baseUrl: string;
   private readonly doFetch: typeof globalThis.fetch;
 
@@ -78,7 +78,7 @@ export class ParkPulseClient {
 
     if (!res.ok) {
       const parsed = ApiError.safeParse(json);
-      throw new ParkPulseApiError(
+      throw new RateCoasterApiError(
         res.status,
         parsed.success ? parsed.data.error.code : "unknown",
         parsed.success ? parsed.data.error.message : res.statusText,

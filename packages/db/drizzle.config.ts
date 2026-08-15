@@ -5,6 +5,6 @@ export default {
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://parkpulse:parkpulse@localhost:5432/parkpulse",
+    url: process.env.DATABASE_URL ?? "postgres://ratecoaster:ratecoaster@localhost:5432/ratecoaster",
   },
 } satisfies Config;

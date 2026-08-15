@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { getDb } from "@parkpulse/db";
-import { properties, rateCurrent, rateObservations } from "@parkpulse/db/schema";
-import { RateQuery } from "@parkpulse/shared";
+import { getDb } from "@ratecoaster/db";
+import { properties, rateCurrent, rateObservations } from "@ratecoaster/db/schema";
+import { RateQuery } from "@ratecoaster/shared";
 import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
 import { gateDateWindow, requireFeature, tierOf } from "../lib/entitlements.js";
 

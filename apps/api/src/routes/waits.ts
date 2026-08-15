@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { and, asc, eq, sql } from "drizzle-orm";
-import { getDb } from "@parkpulse/db";
-import { attractions, parks, waitCurrent, waitRollups } from "@parkpulse/db/schema";
+import { getDb } from "@ratecoaster/db";
+import { attractions, parks, waitCurrent, waitRollups } from "@ratecoaster/db/schema";
 import {
   QUEUE_TIMES_ATTRIBUTION,
   THEMEPARKS_WIKI_ATTRIBUTION,

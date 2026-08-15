@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { attractions, parks, waitCurrent, waitObservations } from "@parkpulse/db/schema";
+import { attractions, parks, waitCurrent, waitObservations } from "@ratecoaster/db/schema";
 import type { Collector, CollectorContext } from "../framework/types.js";
 import {
   fetchQueueTimes,

@@ -1,4 +1,4 @@
-import type { GateInfo } from "@parkpulse/shared";
+import type { GateInfo } from "@ratecoaster/shared";
 
 /**
  * The upgrade prompt shown where the free window runs out.

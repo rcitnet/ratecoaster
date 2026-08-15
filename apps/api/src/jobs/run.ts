@@ -1,4 +1,4 @@
-import { closeDb } from "@parkpulse/db";
+import { closeDb } from "@ratecoaster/db";
 import { runAll, runCollector } from "../collectors/framework/runner.js";
 import { COLLECTORS } from "./registry.js";
 

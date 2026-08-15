@@ -1,5 +1,5 @@
 {
-  "name": "@parkpulse/api",
+  "name": "@ratecoaster/api",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -15,8 +15,8 @@
     "smoke:waits": "tsx src/jobs/smoke-waits.ts"
   },
   "dependencies": {
-    "@parkpulse/db": "*",
-    "@parkpulse/shared": "*",
+    "@ratecoaster/db": "*",
+    "@ratecoaster/shared": "*",
     "@hono/node-server": "^1.13.7",
     "hono": "^4.6.14",
     "drizzle-orm": "^0.38.3",

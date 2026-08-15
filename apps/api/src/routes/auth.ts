@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
-import { ENTITLEMENTS, RequestMagicLink, type Tier } from "@parkpulse/shared";
+import { ENTITLEMENTS, RequestMagicLink, type Tier } from "@ratecoaster/shared";
 import {
   SESSION_COOKIE,
   clearSessionCookie,
@@ -16,7 +16,7 @@ export const authRouter = new Hono();
 
 const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 /*
- * The API's own PUBLIC address, e.g. https://example.com/api.
+ * The API's own PUBLIC address, e.g. https://ratecoaster.net/api.
  *
  * Distinct from API_BASE_URL, which is the internal address the website uses to
  * reach the API (127.0.0.1:8787). A sign-in link built from the internal

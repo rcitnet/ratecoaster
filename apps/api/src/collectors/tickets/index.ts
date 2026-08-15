@@ -1,12 +1,12 @@
 import { and, eq, sql } from "drizzle-orm";
-import { parseMoneyToCents } from "@parkpulse/shared";
+import { parseMoneyToCents } from "@ratecoaster/shared";
 import {
   expressPassPrices,
   parks,
   ticketPriceCurrent,
   ticketPriceObservations,
   ticketProducts,
-} from "@parkpulse/db/schema";
+} from "@ratecoaster/db/schema";
 import { fetchJson } from "../framework/http.js";
 import { dateRange, todayInTimezone } from "../framework/dates.js";
 import {

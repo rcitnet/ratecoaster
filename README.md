@@ -1,4 +1,4 @@
-# ParkPulse
+# RateCoaster
 
 Hotel rates, dynamic ticket pricing, Express Pass prices, and live ride wait
 times for **Universal Orlando**, **Universal Studios Hollywood**, and
@@ -27,7 +27,7 @@ The collectors ship with no third-party endpoint URLs. That is deliberate — se
 ## Architecture
 
 ```
-parkpulse/
+ratecoaster/
 ├── apps/
 │   ├── api/          Hono API + collectors + scheduled jobs
 │   └── web/          Next.js 15 (App Router), server components
@@ -71,7 +71,7 @@ npm run db:push        # create tables
 npm run db:seed        # 16 properties, 6 parks, 8 ticket products
 
 # Wait times need no configuration — this works immediately:
-npm run -w @parkpulse/api collect -- --only wait-times
+npm run -w @ratecoaster/api collect -- --only wait-times
 
 npm run dev            # API on :8787, web on :3000
 ```
@@ -84,13 +84,13 @@ Full walkthrough: [`apps/api/src/collectors/hotels/README.md`](apps/api/src/coll
 
 ```bash
 # 1. Capture the booking request from your browser (DevTools → Network → Copy as HAR)
-npm run -w @parkpulse/api har:import -- har/loews.har loews-universal
+npm run -w @ratecoaster/api har:import -- har/loews.har loews-universal
 
 # 2. Review config/endpoints/loews-universal.json, then test ONE request
-npm run -w @parkpulse/api verify:endpoint -- loews-universal PBH APH
+npm run -w @ratecoaster/api verify:endpoint -- loews-universal PBH APH
 
 # 3. When the parsed output looks right
-COLLECTOR_DRY_RUN=0 npm run -w @parkpulse/api collect -- --only hotel-rates
+COLLECTOR_DRY_RUN=0 npm run -w @ratecoaster/api collect -- --only hotel-rates
 ```
 
 `COLLECTOR_DRY_RUN=1` is the default. The first thing you do with a new adapter
@@ -133,7 +133,7 @@ calendar per response, so ~12 requests covers a year.
 | Hotel rates | 6 h | `collect -- --only hotel-rates` |
 | Ticket prices | 12 h | `collect -- --only ticket-prices` |
 | Express Pass | 4 h | `collect -- --only express-pass` |
-| Rollup + prune | daily | `npm run -w @parkpulse/api rollup` |
+| Rollup + prune | daily | `npm run -w @ratecoaster/api rollup` |
 
 Drive these from cron or your platform's scheduler rather than a long-lived
 process — a crashed scheduler nobody notices is a worse failure mode than a cron
@@ -147,7 +147,7 @@ what makes other sites' "average wait" numbers untrustworthy.
 ## Testing
 
 ```bash
-npm run -w @parkpulse/api test    # 24 tests
+npm run -w @ratecoaster/api test    # 24 tests
 npm run typecheck                 # all packages
 ```
 
@@ -200,7 +200,7 @@ Sanctioned access is slower to obtain and far more durable.
 apps/mobile/    Expo + React Native
 ```
 
-Import `ParkPulseClient` from `@parkpulse/shared`, point it at the same
+Import `RateCoasterClient` from `@ratecoaster/shared`, point it at the same
 `API_BASE_URL`, and every endpoint is available with full types. Push
 notifications register through `POST /v1/push/register`, which already accepts
 the `expo-push` channel — the watch and alert schema was designed for it rather

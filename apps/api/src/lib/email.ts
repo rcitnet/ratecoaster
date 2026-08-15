@@ -23,7 +23,7 @@ export function emailConfigured(): boolean {
 export async function sendMagicLinkEmail(to: string, link: string): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
-  const siteName = process.env.SITE_NAME ?? "ParkPulse";
+  const siteName = process.env.SITE_NAME ?? "RateCoaster";
 
   if (!apiKey || !from) {
     return { sent: false, reason: "RESEND_API_KEY or EMAIL_FROM is not set" };
