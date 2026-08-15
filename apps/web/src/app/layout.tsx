@@ -19,6 +19,10 @@ const NAV = [
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const me = await getMe();
   const signedIn = Boolean(me.user);
+  // The link only appears for admins. It isn't the security boundary — the API
+  // 404s /v1/admin for everyone else — it just keeps staff tooling out of the
+  // way of visitors.
+  const isAdmin = me.entitlements.admin === true;
 
   return (
     <html lang="en">
@@ -51,9 +55,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <span className="spacer" />
             {signedIn ? (
               <>
-                <span className="badge badge-blue">
-                  {me.entitlements.tier === "pro" ? "Pro" : "Free account"}
-                </span>
+                {isAdmin ? (
+                  <a href="/admin" className="badge badge-hot" style={{ textDecoration: "none" }}>
+                    Admin
+                  </a>
+                ) : (
+                  <span className="badge badge-blue">
+                    {me.entitlements.tier === "pro" ? "Pro" : "Free account"}
+                  </span>
+                )}
                 <a href="/account" className="btn btn-ghost btn-sm">
                   Account
                 </a>

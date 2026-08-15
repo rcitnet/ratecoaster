@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import { collectorRuns } from "@ratecoaster/db/schema";
 import { createLogger, createStats, type Collector } from "./types.js";
+import { getCollectorSetting } from "../../lib/settings.js";
 
 export interface RunResult {
   collector: string;
@@ -30,9 +31,41 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
   const stats = createStats();
   const startedAt = Date.now();
 
+  /*
+   * Per-collector dry-run, applied to the process environment for the duration
+   * of this run. Collectors execute sequentially and in-process, so this is
+   * safe; the alternative — threading a flag down to every fetch call site —
+   * would touch far more code for the same effect. If runs ever become
+   * concurrent, this has to become explicit context instead.
+   */
+  const setting = await getCollectorSetting(collector.name);
+  const previousDryRun = process.env.COLLECTOR_DRY_RUN;
+  process.env.COLLECTOR_DRY_RUN = setting.dryRun ? "1" : "0";
+
+  const restoreEnv = () => {
+    if (previousDryRun === undefined) delete process.env.COLLECTOR_DRY_RUN;
+    else process.env.COLLECTOR_DRY_RUN = previousDryRun;
+  };
+
+  if (!setting.enabled) {
+    logger.info("skipped — disabled in admin settings");
+    restoreEnv();
+    return {
+      collector: collector.name,
+      status: "skipped",
+      reason: "disabled in admin settings",
+      requestCount: 0,
+      parsedCount: 0,
+      writtenCount: 0,
+      errorCount: 0,
+      durationMs: 0,
+    };
+  }
+
   const readiness = await collector.isConfigured({ db, stats, logger });
   if (!readiness.ready) {
     logger.warn(`skipped — ${readiness.reason ?? "not configured"}`);
+    restoreEnv();
     return {
       collector: collector.name,
       status: "skipped",
@@ -70,6 +103,7 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
     logger.error(`run failed: ${String(err)}`);
   }
 
+  restoreEnv();
   const durationMs = Date.now() - startedAt;
 
   if (run) {
@@ -85,6 +119,7 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
         notes: {
           ...stats.notes,
           durationMs,
+          dryRun: setting.dryRun,
           ...(thrown ? { error: String(thrown) } : {}),
         },
       })

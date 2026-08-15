@@ -8,10 +8,10 @@ import type { Collector, CollectorContext } from "../framework/types.js";
 import {
   extractOne,
   extractPath,
-  loadEndpointConfig,
   renderTemplate,
   type EndpointConfig,
 } from "./endpoint-config.js";
+import { resolveEndpointConfig } from "../../lib/settings.js";
 
 type RateCode = RateReading["rateCode"];
 
@@ -70,7 +70,7 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
         const adapter = typeof cfg.adapter === "string" ? cfg.adapter : null;
         const hotelCode = cfg.hotelCode ?? cfg.ctyhocn ?? cfg.marshaCode ?? cfg.hotelId;
         if (!adapter || !hotelCode) continue;
-        if (await loadEndpointConfig(adapter)) ready.push(p.slug);
+        if (await resolveEndpointConfig(adapter)) ready.push(p.slug);
       }
 
       if (ready.length === 0) {
@@ -99,7 +99,7 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
           continue;
         }
 
-        const endpoint = await loadEndpointConfig(adapterName);
+        const endpoint = await resolveEndpointConfig(adapterName);
         if (!endpoint) {
           stats.notes[`${property.slug}.skipped`] = `no endpoint config for ${adapterName}`;
           continue;

@@ -12,7 +12,8 @@
     "test": "node --import tsx --test src/collectors/collectors.test.ts src/collectors/waits/providers.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
-    "smoke:waits": "tsx src/jobs/smoke-waits.ts"
+    "smoke:waits": "tsx src/jobs/smoke-waits.ts",
+    "admin:grant": "tsx src/jobs/grant-admin.ts"
   },
   "dependencies": {
     "@ratecoaster/db": "*",

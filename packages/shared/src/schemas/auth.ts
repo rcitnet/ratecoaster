@@ -8,10 +8,10 @@ import { IsoInstant } from "./common.js";
  * yet. The alternative — a boolean `isRegistered` — would need unpicking from
  * every route the moment a paid tier appears, and paid tiers always appear.
  */
-export const Tier = z.enum(["anonymous", "free", "pro"]);
+export const Tier = z.enum(["anonymous", "free", "pro", "admin"]);
 export type Tier = z.infer<typeof Tier>;
 
-export const TIER_RANK: Record<Tier, number> = { anonymous: 0, free: 1, pro: 2 };
+export const TIER_RANK: Record<Tier, number> = { anonymous: 0, free: 1, pro: 2, admin: 3 };
 
 export function atLeast(actual: Tier, required: Tier): boolean {
   return TIER_RANK[actual] >= TIER_RANK[required];
@@ -38,6 +38,8 @@ export const Entitlements = z.object({
   allRoomTypes: z.boolean(),
   /** Cross-hotel comparison and "best time to book" modelling. */
   advancedInsights: z.boolean(),
+  /** Access to /admin. Operational control, not a product feature. */
+  admin: z.boolean(),
 });
 export type Entitlements = z.infer<typeof Entitlements>;
 
@@ -50,6 +52,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlements> = {
     maxWatches: 0,
     allRoomTypes: false,
     advancedInsights: false,
+    admin: false,
   },
   free: {
     tier: "free",
@@ -60,6 +63,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlements> = {
     maxWatches: 5,
     allRoomTypes: false,
     advancedInsights: false,
+    admin: false,
   },
   pro: {
     tier: "pro",
@@ -69,6 +73,17 @@ export const ENTITLEMENTS: Record<Tier, Entitlements> = {
     maxWatches: 100,
     allRoomTypes: true,
     advancedInsights: true,
+    admin: false,
+  },
+  admin: {
+    tier: "admin",
+    lookaheadDays: 365,
+    priceHistory: true,
+    alerts: true,
+    maxWatches: 1000,
+    allRoomTypes: true,
+    advancedInsights: true,
+    admin: true,
   },
 };
 

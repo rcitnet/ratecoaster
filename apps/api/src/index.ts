@@ -107,6 +107,13 @@ app.get("/v1/status", async (c) => {
 if (!DEMO) {
   const { authRouter } = await import("./routes/auth.js");
   app.route("/v1/auth", authRouter);
+
+  // Admin is gated by requireAdmin, which 404s for everyone else so the routes
+  // are indistinguishable from a typo to anyone probing the public domain.
+  const { adminRouter } = await import("./routes/admin.js");
+  const { requireAdmin } = await import("./lib/admin.js");
+  app.use("/v1/admin/*", requireAdmin);
+  app.route("/v1/admin", adminRouter);
 }
 
 app.route("/v1/properties", propertiesRouter);

@@ -12,9 +12,9 @@ import { dateRange, todayInTimezone } from "../framework/dates.js";
 import {
   extractOne,
   extractPath,
-  loadEndpointConfig,
   renderTemplate,
 } from "../hotels/endpoint-config.js";
+import { resolveEndpointConfig } from "../../lib/settings.js";
 import type { Collector, CollectorContext } from "../framework/types.js";
 
 const TIMEZONES: Record<string, string> = {
@@ -53,7 +53,7 @@ export function createTicketPriceCollector(options: { lookaheadDays?: number } =
       for (const p of rows) {
         const cfg = (p.collectorConfig ?? {}) as Record<string, unknown>;
         if (typeof cfg.adapter === "string" && cfg.productCode) {
-          if (await loadEndpointConfig(cfg.adapter)) return { ready: true };
+          if (await resolveEndpointConfig(cfg.adapter)) return { ready: true };
         }
       }
       return {
@@ -79,7 +79,7 @@ export function createTicketPriceCollector(options: { lookaheadDays?: number } =
           continue;
         }
 
-        const endpoint = await loadEndpointConfig(adapterName);
+        const endpoint = await resolveEndpointConfig(adapterName);
         if (!endpoint) {
           stats.notes[`${product.slug}.skipped`] = `no endpoint config for ${adapterName}`;
           continue;
@@ -176,7 +176,7 @@ export function createExpressPassCollector(options: { lookaheadDays?: number } =
       for (const p of rows) {
         const cfg = (p.collectorConfig ?? {}) as Record<string, unknown>;
         if (typeof cfg.adapter === "string" && cfg.productCode) {
-          if (await loadEndpointConfig(cfg.adapter)) return { ready: true };
+          if (await resolveEndpointConfig(cfg.adapter)) return { ready: true };
         }
       }
       return { ready: false, reason: "no Express Pass endpoint config captured yet" };
@@ -197,7 +197,7 @@ export function createExpressPassCollector(options: { lookaheadDays?: number } =
         const productCode = cfg.productCode ? String(cfg.productCode) : null;
         if (!adapterName || !productCode) continue;
 
-        const endpoint = await loadEndpointConfig(adapterName);
+        const endpoint = await resolveEndpointConfig(adapterName);
         if (!endpoint) continue;
 
         const timezone = TIMEZONES[product.destination] ?? "America/New_York";

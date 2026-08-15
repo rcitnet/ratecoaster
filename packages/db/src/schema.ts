@@ -414,7 +414,7 @@ export const expressPassPrices = pgTable(
  * Users, watches, notifications
  * ------------------------------------------------------------------ */
 
-export const tierEnum = pgEnum("tier", ["anonymous", "free", "pro"]);
+export const tierEnum = pgEnum("tier", ["anonymous", "free", "pro", "admin"]);
 
 export const users = pgTable(
   "users",
@@ -592,4 +592,82 @@ export const rawSnapshots = pgTable(
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("raw_snapshots_idx").on(t.collector, t.capturedAt)]
+);
+
+
+/* ------------------------------------------------------------------ *
+ * Admin-managed operational state
+ * ------------------------------------------------------------------ */
+
+/**
+ * Endpoint configurations, moved out of files on disk and into the database.
+ *
+ * They started as `config/endpoints/*.json`, which was right when only a human
+ * with SSH could edit them. Once the admin UI can write them, files become the
+ * wrong home: a deploy overwrites them, permissions get fiddly, and there is no
+ * history of who changed what. These are operational data, not source code.
+ *
+ * The loader still falls back to the JSON files when no row exists, so an
+ * existing file-based setup keeps working untouched.
+ */
+export const endpointConfigs = pgTable(
+  "endpoint_configs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** Matches `collectorConfig.adapter` on a property or ticket product. */
+    name: text("name").notNull(),
+    config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+    notes: text("notes"),
+    /** Result of the last single-request test, so the UI can show it. */
+    lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+    lastTestOk: boolean("last_test_ok"),
+    lastTestMessage: text("last_test_message"),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("endpoint_configs_name_uq").on(t.name)]
+);
+
+/**
+ * Per-collector operational settings.
+ *
+ * Dry-run used to be one global environment variable, which meant enabling a
+ * verified hotel collector also un-muzzled the unverified ticket one. Per
+ * collector, it becomes a safe switch you can flip one source at a time.
+ */
+export const collectorSettings = pgTable(
+  "collector_settings",
+  {
+    collector: text("collector").primaryKey(),
+    enabled: boolean("enabled").notNull().default(true),
+    /** True = log intended requests, send nothing. Defaults to safe. */
+    dryRun: boolean("dry_run").notNull().default(true),
+    /** Overrides the collector's built-in interval when set. */
+    intervalMinutes: integer("interval_minutes"),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  }
+);
+
+/**
+ * Every admin action, recorded.
+ *
+ * This panel controls a scraper and the prices shown to the public. When
+ * something goes wrong at 2am — dry-run switched off against an unverified
+ * endpoint, a hotel code mistyped — the first question is what changed and who
+ * changed it. Without this the answer is unavailable.
+ */
+export const adminAudit = pgTable(
+  "admin_audit",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    email: text("email"),
+    action: text("action").notNull(),
+    target: text("target"),
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("admin_audit_at_idx").on(t.at)]
 );
