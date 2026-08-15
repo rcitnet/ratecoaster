@@ -1,0 +1,21 @@
+﻿# Force LF line endings in the repository and on checkout.
+#
+# Without this, Git on Windows commits CRLF and the server receives shell
+# scripts with a trailing \r on every line. bash then fails with
+# "bad interpreter: /usr/bin/env bash^M", which gives no clue as to the cause.
+* text=auto eol=lf
+
+*.sh        text eol=lf
+*.service   text eol=lf
+*.cron      text eol=lf
+Caddyfile   text eol=lf
+
+# Windows-only files keep CRLF.
+*.bat       text eol=crlf
+*.ps1       text eol=crlf
+
+# Never touch binaries.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
