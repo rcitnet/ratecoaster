@@ -66,7 +66,8 @@ export default async function WaitsPage() {
         </div>
       ) : (
         <div className="notice">
-          No wait data yet. Run <code>npm run -w @ratecoaster/api collect -- --only wait-times</code>.
+          <b>Wait times are coming online.</b> We refresh from the parks every few minutes —
+          check back shortly.
         </div>
       )}
 

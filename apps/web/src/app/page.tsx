@@ -64,11 +64,8 @@ export default async function DealsPage() {
 
         {deals.length === 0 ? (
           <div className="notice">
-            No rate data yet. Wait times work today with no setup — try the{" "}
-            <a href="/waits">
-              <b>Wait times</b>
-            </a>{" "}
-            tab.
+            <b>We&apos;re still gathering hotel rates.</b> Live ride wait times are up and
+            running now — <a href="/waits"><b>take a look</b></a> while we finish.
           </div>
         ) : (
           <div className="grid grid-3">

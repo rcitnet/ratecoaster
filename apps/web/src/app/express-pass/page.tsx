@@ -33,8 +33,8 @@ export default async function ExpressPage({
 
       {prices.length === 0 ? (
         <div className="notice">
-          No Express Pass pricing yet. Once configured this collector runs every four hours, because
-          Express moves intraday in a way hotel rates do not.
+          <b>Express Pass tracking isn&apos;t live yet.</b> Once it is, you&apos;ll see how prices
+          move day to day — Express swings more than anything else on property.
         </div>
       ) : (
         <>

@@ -76,9 +76,9 @@ export default async function HotelsPage({
 
       {rates.items.length === 0 ? (
         <div className="notice">
-          <b>{properties.length} hotels are set up and ready.</b> The collector needs a booking
-          endpoint captured before it can fetch live prices — see{" "}
-          <code>apps/api/src/collectors/hotels/README.md</code>.
+          <b>Rate tracking for these {properties.length} hotels isn&apos;t live yet.</b> We&apos;re
+          working on it. In the meantime, <a href="/waits"><b>live ride wait times</b></a> are
+          available for every park.
         </div>
       ) : (
         <div className={gate.gated ? "locked-preview" : ""}>

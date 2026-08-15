@@ -45,8 +45,8 @@ export default async function TicketsPage({
 
       {calendar.length === 0 ? (
         <div className="notice">
-          No ticket pricing collected yet. Storefronts return a whole calendar per request, so this
-          collector is cheap once its endpoint is captured — about a dozen requests covers a year.
+          <b>Ticket price tracking isn&apos;t live yet.</b> When it is, you&apos;ll see every date
+          priced side by side so you can spot the cheap days at a glance.
         </div>
       ) : (
         <>

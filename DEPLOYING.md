@@ -572,9 +572,16 @@ That syntax-checks without executing. Anything else means a quoting problem.
 Save (Ctrl+O, Enter, Ctrl+X), then lock the file down so only you can read it:
 
 ```bash
-sudo chmod 600 /home/ratecoaster/app/.env
-sudo chown ratecoaster:ratecoaster /home/ratecoaster/app/.env
+chmod 600 /home/ratecoaster/app/.env
+ls -l /home/ratecoaster/app/.env
 ```
+
+You should see `-rw------- 1 ratecoaster ratecoaster`.
+
+> **No `sudo` here.** If you followed Part 9 you're logged in as `ratecoaster`,
+> which owns the file already — and `sudo` would prompt for a password that
+> account deliberately doesn't have. If you *are* back on `ubuntu`, use
+> `sudo chmod 600 ...` instead.
 
 ### The three address settings, explained
 
@@ -944,9 +951,18 @@ directory, so it's worth ruling out before you chase permissions further.
 
 ### `sudo` asks for a password
 
-You're logged in as `ratecoaster`, not `ubuntu`. That account has no password on
-purpose. Type `exit`, confirm `whoami` says `ubuntu`, and try again. Never set a
-password for `ratecoaster` to work around this.
+Your prompt says `ratecoaster@`, not `ubuntu@`. That account is `--system`: no
+password, no login, no sudo — all deliberate, so nothing can log in as the user
+running your website.
+
+Press Ctrl+C, then either:
+
+- **You own the file anyway** — drop the `sudo`. `chmod`, `nano` and `git pull`
+  inside `/home/ratecoaster/app` all work directly as `ratecoaster`.
+- **You genuinely need admin** — `exit` back to `ubuntu`, confirm with `whoami`,
+  and run it there.
+
+Never set a password for `ratecoaster` to work around this.
 
 ### "UNPROTECTED PRIVATE KEY FILE" when connecting
 
