@@ -1,0 +1,115 @@
+# Capturing a booking-engine endpoint
+
+The rate collectors are complete and tested. What they do **not** ship with is
+any third party's endpoint URL — those are undocumented, they change, and
+hardcoding them would make this repo a liability rather than a tool. Instead you
+capture one from your own browser, once, and drop it in as JSON.
+
+This takes about ten minutes per operator. Four operators cover everything:
+`loews-universal` (all 11 Orlando hotels), `hilton`, `marriott`, `synxis`
+(Hollywood partners), and `universal-frisco`.
+
+## Before you start — read this
+
+Automated querying of a booking engine is very likely contrary to the operator's
+terms of service, even though the annual-passholder rate needs no login and is
+quoted from a public promo-code field. That is a business risk you are choosing
+to take, not a technical detail. Some things that materially reduce it:
+
+- **Stay slow.** The default is 12 requests/minute per host. A full 365-day pass
+  across 11 hotels is roughly 16,000 requests spread over many hours. That is
+  less traffic than a single enthusiastic human comparison-shopping.
+- **Identify yourself.** `COLLECTOR_USER_AGENT` should name your bot and carry a
+  contact address. If you are causing a problem, let them tell you instead of
+  discovering it as a silent IP ban.
+- **Honour the signals.** The HTTP client already respects `Retry-After` and
+  backs off on 429. Do not tune that out.
+- **Ask first, if you can.** Loews and Universal both run affiliate programs.
+  Sanctioned access is slower to get and far more durable than scraping.
+
+## Steps
+
+1. Open the hotel's booking page in Chrome and search a date with **two adults**.
+2. DevTools → **Network** → filter **Fetch/XHR**.
+3. Run the same search again with the promo code `APH` in the promo field.
+4. Find the request that returns room rates — usually the largest JSON response.
+   Right-click it → **Copy** → **Copy as HAR** (or *Save all as HAR with content*).
+5. Save it as `har/loews.har` in the repo root (the `har/` directory is
+   gitignored — HAR files contain your cookies).
+6. Generate a config skeleton:
+
+   ```bash
+   npm run -w @parkpulse/api har:import -- har/loews.har loews-universal
+   ```
+
+   The importer finds candidate rate responses, guesses `roomsPath` and the
+   price fields, and writes `config/endpoints/loews-universal.json`.
+7. Open that file and fix up the placeholders. Replace the literal dates,
+   occupancy, and promo code in `urlTemplate` with `{checkIn}`, `{checkOut}`,
+   `{adults}`, `{children}`, `{rateCode}`, `{hotelCode}`.
+8. Put each hotel's own code into `collectorConfig.hotelCode` in
+   `packages/db/src/seed-data.ts`, then re-run `npm run db:seed`.
+9. Verify against the live endpoint **without writing anything**:
+
+   ```bash
+   npm run -w @parkpulse/api collect -- --only hotel-rates --dry-run
+   npm run -w @parkpulse/api verify:endpoint -- loews-universal
+   ```
+
+10. When the parsed output looks right, set `COLLECTOR_DRY_RUN=0`.
+
+## Getting `rateCodeAppliedPath` right
+
+This is the field worth spending time on.
+
+Booking engines routinely accept an invalid or inapplicable promo code and
+silently return the **public** rate, with no error. If you do not detect that,
+you will store standard prices labelled `APH` and show users a passholder
+discount that does not exist — which is worse than showing nothing, because they
+will act on it.
+
+Look in the response for the field that echoes the applied rate plan (often
+`ratePlanCode`, `promoApplied`, `rateCategory`, or a `messages[]` entry saying
+the code was not valid). Set:
+
+```json
+"rateCodeAppliedPath": "data.ratePlan.code",
+"rateCodeAppliedEquals": "APH"
+```
+
+Offers from a response that fails this check are discarded, and the run records
+a `rateCodeRejected` count you can see on the status page. A sudden spike there
+usually means the passholder rate simply is not published yet for those dates —
+which is normal, and is itself worth surfacing to users.
+
+## Config reference
+
+```json
+{
+  "name": "loews-universal",
+  "capturedAt": "2026-08-06",
+  "request": {
+    "method": "GET",
+    "urlTemplate": "https://example-booking-host/api/availability?hotel={hotelCode}&arrive={checkIn}&depart={checkOut}&adults={adults}&children={children}&promo={rateCode}",
+    "headers": { "accept": "application/json" },
+    "rpm": 12
+  },
+  "response": {
+    "roomsPath": "data.roomRates[*]",
+    "fields": {
+      "roomCode": "roomTypeCode",
+      "roomName": "roomTypeName",
+      "nightly": "rates[0].averageNightlyRate",
+      "total": "rates[0].totalAmount",
+      "available": "isAvailable",
+      "maxOccupancy": "maxOccupancy"
+    },
+    "rateCodeAppliedPath": "data.appliedRatePlan",
+    "rateCodeAppliedEquals": "APH",
+    "pricesAreCents": false
+  }
+}
+```
+
+Paths support `a.b.c`, `a[0].b`, and `a[*].b`. Prices may be numbers or strings
+like `"$249.00"` — both parse.

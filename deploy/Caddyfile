@@ -1,0 +1,44 @@
+# ParkPulse web server config
+# Copy to /etc/caddy/Caddyfile, replacing example.com with your domain.
+#
+# Caddy gets and renews the HTTPS certificate automatically. There is no
+# certbot step and no renewal cron job to forget about.
+
+example.com, www.example.com {
+
+	# The API is served under /api on the SAME domain as the website.
+	#
+	# This is deliberate and it matters. Sign-in uses a session cookie; if the
+	# API lived on api.example.com instead, that cookie would be cross-site and
+	# you would be fighting SameSite rules and CORS forever. Same origin means
+	# the cookie simply works.
+	#
+	# handle_path strips the /api prefix, so a browser request to
+	# /api/v1/auth/me arrives at the API as /v1/auth/me.
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	# Everything else is the Next.js website.
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	encode gzip zstd
+
+	header {
+		# Don't advertise what we're running.
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file /var/log/caddy/parkpulse.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

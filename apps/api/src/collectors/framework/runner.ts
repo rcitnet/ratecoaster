@@ -1,0 +1,123 @@
+import { eq } from "drizzle-orm";
+import { getDb } from "@parkpulse/db";
+import { collectorRuns } from "@parkpulse/db/schema";
+import { createLogger, createStats, type Collector } from "./types.js";
+
+export interface RunResult {
+  collector: string;
+  status: "ok" | "partial" | "failed" | "skipped";
+  reason?: string;
+  requestCount: number;
+  parsedCount: number;
+  writtenCount: number;
+  errorCount: number;
+  durationMs: number;
+}
+
+/**
+ * Runs one collector with full bookkeeping.
+ *
+ * The status distinction that matters is `partial`: a run that completed
+ * without throwing but parsed zero rows. That is exactly what happens when a
+ * booking engine changes its JSON shape — no exception, no error log, just a
+ * site that silently stops updating. Treating "finished but parsed nothing" as
+ * a failure state is the difference between noticing in an hour and noticing
+ * when a user emails you three weeks later.
+ */
+export async function runCollector(collector: Collector): Promise<RunResult> {
+  const db = getDb();
+  const logger = createLogger(collector.name);
+  const stats = createStats();
+  const startedAt = Date.now();
+
+  const readiness = await collector.isConfigured({ db, stats, logger });
+  if (!readiness.ready) {
+    logger.warn(`skipped — ${readiness.reason ?? "not configured"}`);
+    return {
+      collector: collector.name,
+      status: "skipped",
+      reason: readiness.reason,
+      requestCount: 0,
+      parsedCount: 0,
+      writtenCount: 0,
+      errorCount: 0,
+      durationMs: 0,
+    };
+  }
+
+  const [run] = await db
+    .insert(collectorRuns)
+    .values({ collector: collector.name, status: "running" })
+    .returning({ id: collectorRuns.id });
+
+  let status: "ok" | "partial" | "failed" = "ok";
+  let thrown: unknown = null;
+
+  try {
+    await collector.run({ db, stats, logger });
+    if (stats.parsedCount === 0) {
+      status = "partial";
+      logger.warn(
+        "run finished but parsed 0 records — the upstream response shape has probably changed"
+      );
+    } else if (stats.errorCount > 0) {
+      status = "partial";
+    }
+  } catch (err) {
+    status = "failed";
+    thrown = err;
+    stats.errorCount++;
+    logger.error(`run failed: ${String(err)}`);
+  }
+
+  const durationMs = Date.now() - startedAt;
+
+  if (run) {
+    await db
+      .update(collectorRuns)
+      .set({
+        status,
+        finishedAt: new Date(),
+        requestCount: stats.requestCount,
+        parsedCount: stats.parsedCount,
+        writtenCount: stats.writtenCount,
+        errorCount: stats.errorCount,
+        notes: {
+          ...stats.notes,
+          durationMs,
+          ...(thrown ? { error: String(thrown) } : {}),
+        },
+      })
+      .where(eq(collectorRuns.id, run.id));
+  }
+
+  logger.info(
+    `${status} in ${durationMs}ms — ${stats.requestCount} requests, ${stats.parsedCount} parsed, ${stats.writtenCount} written, ${stats.errorCount} errors`
+  );
+
+  return {
+    collector: collector.name,
+    status,
+    requestCount: stats.requestCount,
+    parsedCount: stats.parsedCount,
+    writtenCount: stats.writtenCount,
+    errorCount: stats.errorCount,
+    durationMs,
+  };
+}
+
+/**
+ * Run several collectors in sequence.
+ *
+ * Sequential on purpose: the rate limiter is per-host, but running a hotel
+ * crawl and a ticket crawl concurrently against the same origin doubles the
+ * perceived load for no real gain, since these are scheduled jobs with hours of
+ * headroom. One failing collector never stops the others.
+ */
+export async function runAll(collectors: Collector[]): Promise<RunResult[]> {
+  const results: RunResult[] = [];
+  for (const c of collectors) {
+    results.push(await runCollector(c));
+  }
+  return results;
+}

@@ -1,0 +1,24 @@
+{
+  "name": "parkpulse",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@10.9.8",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "db:generate": "npm run -w @parkpulse/db generate",
+    "db:push": "npm run -w @parkpulse/db push",
+    "db:seed": "npm run -w @parkpulse/db seed",
+    "collect": "npm run -w @parkpulse/api collect"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.10.2"
+  },
+  "engines": { "node": ">=22" }
+}

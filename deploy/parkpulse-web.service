@@ -1,0 +1,32 @@
+# ParkPulse website service
+# Copy to /etc/systemd/system/parkpulse-web.service
+
+[Unit]
+Description=ParkPulse website
+After=network-online.target parkpulse-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=parkpulse
+WorkingDirectory=/home/parkpulse/app/apps/web
+EnvironmentFile=/home/parkpulse/app/.env
+ExecStart=/usr/bin/npm run start
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=parkpulse-web
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/parkpulse/app
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
