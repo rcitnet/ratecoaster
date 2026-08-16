@@ -30,26 +30,50 @@ async function main() {
     .where(eq(users.email, email))
     .limit(1);
 
-  if (!existing) {
-    console.error(`No account for ${email}.`);
-    console.error("Sign in at /join first so the account exists, then re-run this.");
-    process.exit(1);
+  const tier = revoke ? "free" : "admin";
+  let userId: string;
+  let previousTier: string;
+
+  if (existing) {
+    userId = existing.id;
+    previousTier = existing.tier;
+    await db.update(users).set({ tier }).where(eq(users.id, existing.id));
+  } else {
+    if (revoke) {
+      console.error(`No account for ${email} — nothing to revoke.`);
+      process.exit(1);
+    }
+    /*
+     * Create the account outright.
+     *
+     * Requiring a prior sign-in made the first admin depend on working email,
+     * which is precisely the thing most likely to be broken on day one. Anyone
+     * running this already has shell access on the server, so there is nothing
+     * gained by making them jump through the inbox first.
+     */
+    const [created] = await db
+      .insert(users)
+      .values({ email, tier: "admin", emailVerifiedAt: new Date() })
+      .returning({ id: users.id });
+    userId = created!.id;
+    previousTier = "(new account)";
+    console.log(`Created account for ${email}.`);
   }
 
-  const tier = revoke ? "free" : "admin";
-  await db.update(users).set({ tier }).where(eq(users.id, existing.id));
-
   await db.insert(adminAudit).values({
-    userId: existing.id,
+    userId,
     email,
     action: revoke ? "admin.revoke" : "admin.grant",
     target: email,
-    detail: { from: existing.tier, to: tier, via: "cli" },
+    detail: { from: previousTier, to: tier, via: "cli" },
   });
 
-  console.log(`${email}: ${existing.tier} -> ${tier}`);
+  console.log(`${email}: ${previousTier} -> ${tier}`);
   if (!revoke) {
-    console.log("\nSign out and back in for the change to take effect in your session.");
+    console.log(
+      "\nNow get a sign-in link without needing email:\n" +
+        `  npm run -w @ratecoaster/api login:link -- ${email}`
+    );
   }
 
   await closeDb();

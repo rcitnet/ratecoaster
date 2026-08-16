@@ -1058,11 +1058,36 @@ The `GRANT ALL ON SCHEMA public` line in Part 6 got skipped:
 sudo -u postgres psql -d ratecoaster -c "GRANT ALL ON SCHEMA public TO ratecoaster;"
 ```
 
-### Sign-in emails never arrive
+### "We couldn't send that email just now"
 
-1. `journalctl -u ratecoaster-api -n 30 --no-pager` — the real reason is logged.
-2. Check the domain shows **Verified** in Resend.
-3. Check `EMAIL_FROM` uses the domain you verified there.
+The API tried to send and the provider refused. The real reason is logged:
+
+```bash
+sudo journalctl -u ratecoaster-api -n 50 --no-pager | grep -i "magic\|resend\|failed"
+```
+
+In order of likelihood:
+
+1. **Your domain isn't verified in Resend.** Until it shows **Verified**, Resend
+   rejects any `from` address on it. Resend → Domains → add the DNS records → Verify.
+2. `EMAIL_FROM` uses a domain other than the verified one.
+3. The API key is wrong, or was revoked.
+
+**You are not locked out while you fix this.** Mint a sign-in link directly on
+the server, no email involved:
+
+```bash
+sudo -u ratecoaster -H bash -c 'cd /home/ratecoaster/app && set -a && . ./.env && set +a && npm run -w @ratecoaster/api login:link -- you@example.com'
+```
+
+Paste the printed link into your browser. It's single-use and expires in 15
+minutes, same as an emailed one.
+
+### Sign-in emails never arrive (no error shown)
+
+The send succeeded but nothing landed. Check spam, then confirm the domain's
+DKIM and SPF records in Resend are all green — a domain that verifies but has
+incomplete DKIM will deliver straight to spam or get dropped silently.
 
 ### Sign-in link goes to a page that won't load
 
