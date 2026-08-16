@@ -16,8 +16,33 @@ export interface SendResult {
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
+/**
+ * Values that mean "not filled in yet".
+ *
+ * Without this check a placeholder is treated as a real key, the send fails at
+ * the provider, and the user is told delivery went wrong — when in truth the
+ * feature was never switched on. Wrong diagnosis, wrong place to look.
+ */
+function isPlaceholder(value: string | undefined): boolean {
+  if (!value) return true;
+  const v = value.trim();
+  if (v === "") return true;
+  return /^(change_?me|your[-_]?key|placeholder|todo|xxx+)/i.test(v);
+}
+
 export function emailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+  if (isPlaceholder(key) || isPlaceholder(from)) return false;
+  // Resend keys all start with re_. Catching this here turns a confusing 401
+  // from the provider into a clear "not configured" locally.
+  if (!key!.startsWith("re_")) {
+    console.error(
+      "[email] RESEND_API_KEY does not start with 're_' — treating email as unconfigured."
+    );
+    return false;
+  }
+  return true;
 }
 
 export async function sendMagicLinkEmail(to: string, link: string): Promise<SendResult> {
