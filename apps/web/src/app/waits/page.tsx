@@ -15,7 +15,12 @@ function statusLabel(status: string): string {
   return "Closed";
 }
 
-export default async function WaitsPage() {
+export default async function WaitsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ park?: string }>;
+}) {
+  const params = await searchParams;
   const client = await getClient();
   const data = await safe(client.liveWaits({ ridesOnly: true }), {
     parks: [],
@@ -23,7 +28,21 @@ export default async function WaitsPage() {
     fetchedAt: new Date().toISOString(),
   });
 
-  const parks = data.parks.filter((p) => p.waits.length > 0);
+  const withWaits = data.parks.filter((p) => p.waits.length > 0);
+
+  /*
+   * All parks come back in one request and the filter is applied here rather
+   * than through the API's `parkSlug` parameter, because the chip row needs the
+   * full park list either way — filtering upstream would mean a second round
+   * trip just to rebuild it. An unrecognised ?park= slug falls back to showing
+   * everything rather than rendering a confusing empty page.
+   */
+  const selected = withWaits.some((p) => p.park.slug === params.park) ? params.park : undefined;
+  const parks = selected ? withWaits.filter((p) => p.park.slug === selected) : withWaits;
+  const selectedName = selected
+    ? (withWaits.find((p) => p.park.slug === selected)?.park.name ?? null)
+    : null;
+
   const allOpen = parks.flatMap((p) =>
     p.waits.filter((w) => w.status === "operating" && w.waitMinutes !== null)
   );
@@ -33,9 +52,31 @@ export default async function WaitsPage() {
     <main className="section">
       <h1>Live ride waits</h1>
       <p className="lede" style={{ marginTop: 12 }}>
-        Every Universal park, refreshed every few minutes. Free for everyone, always — this runs on
-        public APIs built for exactly this purpose.
+        {selectedName ?? "Every Universal park"}, refreshed every few minutes. Free for everyone,
+        always — this runs on public APIs built for exactly this purpose.
       </p>
+
+      {withWaits.length > 1 ? (
+        <div className="chips">
+          <a href="/waits" className={`chip ${selected ? "" : "on"}`}>
+            All parks
+          </a>
+          {withWaits.map(({ park }) => (
+            <a
+              key={park.slug}
+              href={`/waits?park=${park.slug}`}
+              className={`chip ${selected === park.slug ? "on" : ""}`}
+            >
+              <span
+                className="chip-dot"
+                style={{ background: PARK_COLORS[park.slug] ?? "#3355ee" }}
+                aria-hidden="true"
+              />
+              {park.name}
+            </a>
+          ))}
+        </div>
+      ) : null}
 
       {allOpen.length > 0 ? (
         <div className="grid grid-4" style={{ marginTop: 26 }}>
@@ -66,8 +107,17 @@ export default async function WaitsPage() {
         </div>
       ) : (
         <div className="notice">
-          <b>Wait times are coming online.</b> We refresh from the parks every few minutes —
-          check back shortly.
+          {parks.length > 0 ? (
+            <>
+              <b>Nothing open{selectedName ? ` at ${selectedName}` : ""} right now.</b> Waits
+              appear here as soon as the rides start running for the day.
+            </>
+          ) : (
+            <>
+              <b>Wait times are coming online.</b> We refresh from the parks every few minutes —
+              check back shortly.
+            </>
+          )}
         </div>
       )}
 
