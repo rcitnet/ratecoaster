@@ -52,8 +52,8 @@ export default async function WaitsPage({
     <main className="section">
       <h1>Live ride waits</h1>
       <p className="lede" style={{ marginTop: 12 }}>
-        {selectedName ?? "Every Universal park"}, refreshed every few minutes. Free for everyone,
-        always — this runs on public APIs built for exactly this purpose.
+        {selectedName ?? "Every Universal park"}, updated every few minutes — and free for
+        everyone.
       </p>
 
       {withWaits.length > 1 ? (
@@ -170,8 +170,7 @@ export default async function WaitsPage({
 
       {parks.length > 0 ? (
         <p className="tiny muted" style={{ marginTop: 30 }}>
-          Last refreshed {relativeTime(data.fetchedAt)}. Closed rides show no wait rather than zero
-          minutes — counting them as zero is what makes other sites&apos; averages misleading.
+          Last updated {relativeTime(data.fetchedAt)}.
         </p>
       ) : null}
     </main>

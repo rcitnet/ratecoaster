@@ -7,6 +7,7 @@ const TABS = [
   { href: "/admin/endpoints", label: "Price sources" },
   { href: "/admin/hotels", label: "Hotels" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/status", label: "Data freshness" },
 ];
 
 /**

@@ -15,12 +15,12 @@ export default async function DealsPage() {
     <main>
       <section className="hero">
         <div className="hero-kicker">
-          <span aria-hidden="true">✦</span> Free forever · No card required
+          <span aria-hidden="true">✦</span> Free to use · No card required
         </div>
         <h1>The best week to go is cheaper than you think.</h1>
         <p className="lede">
-          We check every Universal hotel — Orlando, Hollywood and the new Frisco resort — every few
-          hours, at both the passholder rate and the public one. Then we tell you which nights are
+          Passholder and public rates for every Universal hotel — Orlando, Hollywood and the new
+          Frisco resort, kept up to date through the day. We&apos;ll show you which nights are
           genuinely a bargain, not just cheap.
         </p>
         <div className="hero-actions">
@@ -57,9 +57,7 @@ export default async function DealsPage() {
       <section className="section">
         <h2>Tonight&apos;s standout deals</h2>
         <p className="lede" style={{ marginBottom: 26 }}>
-          Ranked by how good each price is against that hotel&apos;s <em>own</em> history — so a
-          $520 night at Portofino can outrank a $180 night somewhere else, because it&apos;s the
-          bigger genuine saving.
+          The biggest genuine savings across every Universal hotel right now.
         </p>
 
         {deals.length === 0 ? (
@@ -133,19 +131,18 @@ export default async function DealsPage() {
             </span>
             <h3>Real passholder rates</h3>
             <p className="muted" style={{ margin: "8px 0 0", fontSize: 15 }}>
-              We query the same public promo-code field you would. When the booking engine quietly
-              ignores the code and quotes the public price, we throw that reading away rather than
-              show you a discount that isn&apos;t real.
+              Every passholder saving we show is one you can actually book. If the discount
+              doesn&apos;t apply on a date, we won&apos;t pretend it does.
             </p>
           </div>
           <div className="card">
             <span className="badge badge-purple" style={{ marginBottom: 10 }}>
               Know when to book
             </span>
-            <h3>Every price change, kept</h3>
+            <h3>See the full price history</h3>
             <p className="muted" style={{ margin: "8px 0 0", fontSize: 15 }}>
-              We record each move a rate makes, so you can see whether today&apos;s number is a
-              genuine low or simply the new normal — before you put down a deposit.
+              Find out whether today&apos;s price is a genuine low or simply the new normal —
+              before you put down a deposit.
             </p>
           </div>
           <div className="card">

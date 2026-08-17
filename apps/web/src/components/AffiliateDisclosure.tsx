@@ -20,8 +20,8 @@ export function AffiliateDisclosure({
     return (
       <p style={{ margin: "0 0 6px" }}>
         Some links to tickets and hotels are affiliate links. If you book through
-        one, we may earn a commission at no extra cost to you — it helps keep
-        RateCoaster free. We only ever link prices we have actually tracked, and a
+        one, we may earn a commission at no extra cost to you — it helps keep this
+        site running. We only ever link prices we have actually tracked, and a
         commission never changes which deals we surface or how we rank them.
       </p>
     );

@@ -32,8 +32,8 @@ export default async function TicketsPage({
     <main className="section">
       <h1>Ticket prices by date</h1>
       <p className="lede" style={{ marginTop: 12 }}>
-        Universal prices admission dynamically — the same ticket costs noticeably more on a December
-        Saturday than a September Tuesday. Green days are the cheapest third of what you can see.
+        Universal prices admission by date — the same ticket costs noticeably more on a December
+        Saturday than a September Tuesday. Green days are the cheapest.
       </p>
 
       <div className="chips">

@@ -6,7 +6,7 @@ import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
 export const metadata: Metadata = {
   title: "RateCoaster — Universal hotel deals, tickets & live wait times",
   description:
-    "Track passholder and public hotel rates a full year ahead across Universal Orlando, Hollywood and Frisco. Plus dynamic ticket prices, Express Pass costs and live ride waits. Free.",
+    "Track passholder and public hotel rates a full year ahead across Universal Orlando, Hollywood and Frisco. Plus dynamic ticket prices, Express Pass costs and live ride waits.",
 };
 
 const NAV = [
@@ -80,9 +80,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="shell">
           {process.env.DEMO_MODE === "1" ? (
             <div className="notice notice-warn" style={{ marginTop: 18 }}>
-              <b>Demo mode.</b> Ride wait times are real, pulled live from ThemeParks.wiki. Hotel,
-              ticket and Express Pass prices are sample data — no booking endpoint has been captured
-              yet, so nothing here is a real quote.
+              <b>Demo mode.</b> Ride wait times are live and accurate. Hotel, ticket and Express
+              Pass prices are sample figures for now — not real quotes, so please don&apos;t plan
+              around them yet.
             </div>
           ) : null}
           {children}
@@ -118,8 +118,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <strong style={{ color: "#fff" }}>Account</strong>
                 <p style={{ margin: "8px 0 0", lineHeight: 2 }}>
                   <a href="/join">Create a free account</a>
-                  <br />
-                  <a href="/status">Data freshness</a>
                 </p>
               </div>
             </div>
@@ -145,8 +143,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </p>
               <AffiliateDisclosure variant="footer" />
               <p style={{ margin: 0 }}>
-                Prices shown are observations, not quotes. Always confirm on the official site
-                before booking.
+                Prices change often and may differ at checkout. Always confirm on the official
+                site before booking.
               </p>
             </div>
           </div>

@@ -43,7 +43,7 @@ export function JoinForm({ next = "/" }: { next?: string }) {
       if (data.demo) setTimeout(() => (window.location.href = next), 900);
     } catch {
       setState("error");
-      setMessage("Couldn't reach the server. Is the API running?");
+      setMessage("Something went wrong at our end. Please try again in a moment.");
     }
   }
 

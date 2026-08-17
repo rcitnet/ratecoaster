@@ -52,7 +52,7 @@ export default async function HotelsPage({
       <p className="lede" style={{ marginTop: 12 }}>
         The cheapest available room at every hotel, night by night. Switch rate type to see exactly
         what the passholder discount is worth on each date.
-        {lastObserved ? ` Checked ${relativeTime(lastObserved)}.` : ""}
+        {lastObserved ? ` Updated ${relativeTime(lastObserved)}.` : ""}
       </p>
 
       <div className="chips">

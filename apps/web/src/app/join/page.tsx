@@ -15,7 +15,7 @@ export default async function JoinPage({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 44, alignItems: "start" }}>
         <div>
           <span className="badge badge-hot" style={{ marginBottom: 14 }}>
-            Free forever
+            Free account
           </span>
           <h1 style={{ fontSize: "clamp(30px, 4vw, 44px)" }}>
             Unlock the whole year.

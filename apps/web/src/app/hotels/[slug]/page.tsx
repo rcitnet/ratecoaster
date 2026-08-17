@@ -114,14 +114,14 @@ export default async function PropertyPage({
           <section className="card" style={{ marginBottom: 28 }}>
             <h3>Price history — {selectedDate ? formatStayDate(selectedDate) : ""}</h3>
             <p className="tiny muted" style={{ marginBottom: 8 }}>
-              {history.length} price changes recorded. Flat stretches mean the rate held steady.
+              {history.length} price changes. Flat stretches mean the rate held steady.
             </p>
             <PriceHistory points={history} />
           </section>
         ) : (
           <div className="notice">
-            Not enough history for this date yet. Because only real changes are stored, a chart
-            appears after the price has actually moved a couple of times.
+            Not enough history for this date yet. A chart appears once the price has moved a
+            couple of times.
           </div>
         )
       ) : (

@@ -2,6 +2,14 @@ import { apiFetch, relativeTime } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Collector telemetry. Staff-only by virtue of living under /admin.
+ *
+ * This was once a public "Data freshness" page, which meant visitors were shown
+ * collector names, run intervals and parsed-row counts — operational detail
+ * that answers a question nobody planning a trip is asking. The signal is
+ * genuinely useful, just not to them.
+ */
 type CollectorStatus = {
   name: string;
   description: string;
@@ -23,19 +31,18 @@ function dot(c: CollectorStatus) {
   return { cls: "dot-ok", label: "Healthy" };
 }
 
-export default async function StatusPage() {
+export default async function AdminStatus() {
   const data = await apiFetch<{ collectors: CollectorStatus[] }>("/v1/status", { collectors: [] });
 
   return (
-    <main className="section">
-      <h1>Data freshness</h1>
-      <p className="lede" style={{ marginTop: 12 }}>
-        Public on purpose. The only promise this site makes is that its prices are current, so it
-        should be obvious — to you and to us — the moment a feed goes quiet.
-      </p>
+    <>
+      <div className="notice">
+        <b>Every collector, and when it last produced anything.</b> A feed that has gone quiet
+        looks identical to a healthy one on the public site — this is where it shows.
+      </div>
 
       {data.collectors.length === 0 ? (
-        <div className="notice">
+        <div className="notice" style={{ marginTop: 20 }}>
           Couldn&apos;t reach the API. Start it with <code>npm run -w @ratecoaster/api dev</code>.
         </div>
       ) : (
@@ -67,6 +74,6 @@ export default async function StatusPage() {
           </table>
         </div>
       )}
-    </main>
+    </>
   );
 }
