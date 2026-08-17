@@ -4,7 +4,16 @@ import { parseMoneyToCents, centsToDisplay } from "@ratecoaster/shared";
 import { addDays, dateRange, daysBetween, prioritizeDates, todayInTimezone } from "./framework/dates.js";
 import { extractPath, extractOne, renderTemplate } from "./hotels/endpoint-config.js";
 import { parseOffers, checkRateCode } from "./hotels/index.js";
+import {
+  selectAdapter,
+  RATE_ADAPTERS,
+  observedAdapter,
+  affiliateAdapter,
+  derivedAdapter,
+} from "./hotels/adapters/index.js";
 import { normalizeDate } from "./tickets/index.js";
+import { parseCsv, csvToObjects } from "./framework/csv.js";
+import { mapFeedRecords, isPlaceholderFeedUrl, type TicketFeedConfig } from "./tickets/feed-config.js";
 import { normalizeName, slugify } from "./waits/providers.js";
 import type { EndpointConfig } from "./hotels/endpoint-config.js";
 
@@ -157,5 +166,117 @@ describe("attraction naming", () => {
 
   test("slugs are stable and url-safe", () => {
     assert.equal(slugify("Harry Potter and the Battle at the Ministry™"), "harry-potter-and-the-battle-at-the-ministry");
+  });
+});
+
+describe("rate source adapters", () => {
+  test("each adapter's source matches the registry key it is filed under", () => {
+    for (const [key, adapter] of Object.entries(RATE_ADAPTERS)) {
+      assert.equal(adapter.source, key);
+    }
+  });
+
+  test("selectAdapter defaults to the observed scraper", () => {
+    // Absent, empty, or scraper-only config (adapter is the endpoint name, not
+    // a source) must keep behaving exactly as before the pivot.
+    assert.equal(selectAdapter(null), observedAdapter);
+    assert.equal(selectAdapter({}), observedAdapter);
+    assert.equal(selectAdapter({ adapter: "loews-portofino" }), observedAdapter);
+  });
+
+  test("selectAdapter resolves the requested source; unknown falls back to observed", () => {
+    assert.equal(selectAdapter({ source: "affiliate" }), affiliateAdapter);
+    assert.equal(selectAdapter({ source: "derived" }), derivedAdapter);
+    assert.equal(selectAdapter({ source: "nope" }), observedAdapter);
+  });
+
+  test("seam adapters report not-ready with a reason until feeds/keys exist", async () => {
+    const ctx = {} as Parameters<typeof affiliateAdapter.isReady>[0];
+    const property = {} as Parameters<typeof affiliateAdapter.isReady>[1];
+
+    const aff = await affiliateAdapter.isReady(ctx, property);
+    assert.equal(aff.ready, false);
+    assert.ok(aff.reason, "affiliate adapter should explain why it is not ready");
+
+    const der = await derivedAdapter.isReady(ctx, property);
+    assert.equal(der.ready, false);
+    assert.ok(der.reason, "derived adapter should explain why it is not ready");
+  });
+});
+
+describe("csv parsing", () => {
+  test("handles quoted delimiters, escaped quotes, and CRLF", () => {
+    const text = 'a,b,c\r\n"1,000","he said ""hi""",z\r\n';
+    const rows = parseCsv(text);
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows[1], ["1,000", 'he said "hi"', "z"]);
+  });
+
+  test("maps a header row to trimmed records", () => {
+    const { header, records } = csvToObjects("SKU, NAME ,PRICE\nX, Widget ,9.99\n");
+    assert.deepEqual(header, ["SKU", "NAME", "PRICE"]);
+    assert.equal(records.length, 1);
+    assert.equal(records[0]!.NAME, "Widget");
+    assert.equal(records[0]!.PRICE, "9.99");
+  });
+});
+
+describe("affiliate ticket feed mapping", () => {
+  const config: TicketFeedConfig = {
+    name: "undercover-tourist",
+    merchant: "undercover-tourist",
+    network: "cj",
+    feedUrl: "https://feeds.cj.com/12345/uct.csv",
+    format: "csv",
+    currency: "USD",
+    headers: {},
+    columns: {
+      sku: "SKU",
+      name: "NAME",
+      price: "SALEPRICE",
+      retailPrice: "PRICE",
+      currency: "CURRENCY",
+      buyUrl: "BUYURL",
+      available: "INSTOCK",
+    },
+    filter: { column: "ADVERTISERNAME", equals: "Undercover Tourist" },
+    defaultGuestCategory: "adult",
+  };
+
+  // A realistic CJ product-catalog feed: a comma inside a quoted ticket name, a
+  // discounted SALEPRICE vs list PRICE, a broken row with no price, and a row
+  // from another advertiser that the filter must drop.
+  const feed =
+    "SKU,NAME,SALEPRICE,PRICE,CURRENCY,BUYURL,INSTOCK,ADVERTISERNAME\n" +
+    'UOR2DP2P,"Universal Orlando 2-Day, Park-to-Park",279.99,314.99,USD,https://www.dpbolvw.net/click-1?u=uor2,yes,Undercover Tourist\n' +
+    "UOR1D1P,Universal Orlando 1-Day 1-Park,169.00,185.00,USD,https://www.dpbolvw.net/click-1?u=uor1,yes,Undercover Tourist\n" +
+    "BROKEN,Missing Price Row,,199.00,USD,https://x,yes,Undercover Tourist\n" +
+    "DISNEY1,Some Disney Ticket,109.00,,USD,https://x,yes,Other Merchant\n";
+
+  test("keeps only priced rows from the configured advertiser", () => {
+    const rows = mapFeedRecords(config, csvToObjects(feed).records);
+    assert.equal(rows.length, 2, "no-price and other-advertiser rows must be dropped");
+    assert.deepEqual(
+      rows.map((r) => r.sku),
+      ["UOR2DP2P", "UOR1D1P"]
+    );
+  });
+
+  test("parses the discounted price, keeps names with commas, and the deep link", () => {
+    const [first] = mapFeedRecords(config, csvToObjects(feed).records);
+    assert.equal(first!.priceCents, 27999, "uses SALEPRICE, in cents");
+    assert.equal(first!.retailCents, 31499);
+    assert.equal(first!.name, "Universal Orlando 2-Day, Park-to-Park");
+    assert.ok(first!.buyUrl.startsWith("https://"), "the affiliate deep link survives intact");
+    assert.equal(first!.currency, "USD");
+    assert.equal(first!.available, true);
+    assert.equal(first!.validDate, null, "CJ product feeds are date-less");
+  });
+
+  test("isPlaceholderFeedUrl flags an unconfigured feed", () => {
+    assert.equal(isPlaceholderFeedUrl("https://CHANGE_ME_CJ_PRODUCT_FEED_URL"), true);
+    assert.equal(isPlaceholderFeedUrl(""), true);
+    assert.equal(isPlaceholderFeedUrl("ftp://feeds.cj.com/x.csv"), true);
+    assert.equal(isPlaceholderFeedUrl("https://feeds.cj.com/12345/uct.csv"), false);
   });
 });

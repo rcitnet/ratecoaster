@@ -25,16 +25,23 @@ ticketsRouter.get("/products", async (c) => {
     .orderBy(asc(ticketProducts.days), asc(ticketProducts.name));
 
   return c.json(
-    rows.map((p) => ({
-      id: p.id,
-      destination: p.destination,
-      slug: p.slug,
-      name: p.name,
-      kind: p.kind,
-      days: p.days,
-      parkCount: p.parkCount,
-      externalId: p.externalId,
-    }))
+    rows.map((p) => {
+      const cfg = (p.collectorConfig ?? {}) as Record<string, unknown>;
+      return {
+        id: p.id,
+        destination: p.destination,
+        slug: p.slug,
+        name: p.name,
+        kind: p.kind,
+        days: p.days,
+        parkCount: p.parkCount,
+        externalId: p.externalId,
+        // The affiliate deep link a feed collector writes back per product, plus
+        // which merchant it points at — powers the Book button and its FTC note.
+        bookingUrl: typeof cfg.bookingUrl === "string" ? cfg.bookingUrl : null,
+        bookingMerchant: typeof cfg.bookingMerchant === "string" ? cfg.bookingMerchant : null,
+      };
+    })
   );
 });
 

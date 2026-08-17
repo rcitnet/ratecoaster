@@ -147,3 +147,13 @@ export const TIER_LABELS: Record<string, string> = {
   value: "Value",
   partner: "Partner hotel",
 };
+
+/** Display names for affiliate merchants behind Book buttons. */
+export const MERCHANT_LABELS: Record<string, string> = {
+  "undercover-tourist": "Undercover Tourist",
+};
+
+export function merchantLabel(merchant: string | null | undefined): string {
+  if (!merchant) return "our partner";
+  return MERCHANT_LABELS[merchant] ?? merchant;
+}

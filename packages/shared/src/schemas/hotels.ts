@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Cents, Currency, DestinationSlug, IsoDate, IsoInstant } from "./common.js";
+import { Cents, Currency, DestinationSlug, IsoDate, IsoInstant, RateSource } from "./common.js";
 
 /**
  * Rate codes are the heart of this product.
@@ -117,6 +117,12 @@ export const RateObservation = z.object({
   currency: Currency,
   /** False when the engine quoted a price but the room is sold out. */
   available: z.boolean(),
+  /** Where this price came from: observed | affiliate | derived. */
+  source: RateSource,
+  /** True when the price is reconstructed rather than directly quoted. */
+  isEstimated: z.boolean(),
+  /** Feed/OTA the price came from; null for observed. */
+  merchant: z.string().nullable(),
   observedAt: IsoInstant,
 });
 export type RateObservation = z.infer<typeof RateObservation>;
@@ -135,6 +141,10 @@ export const CurrentRate = z.object({
   totalCents: Cents.nullable(),
   roomTypeName: z.string().nullable(),
   available: z.boolean(),
+  source: RateSource,
+  isEstimated: z.boolean(),
+  /** Feed/OTA the price came from; null for observed. Drives the Book button. */
+  merchant: z.string().nullable(),
   observedAt: IsoInstant,
   /** Cheapest standard rate for the same night, for savings math. */
   standardNightlyCents: Cents.nullable(),
@@ -172,6 +182,10 @@ export const Deal = z.object({
   /** Percentile of this price within the property's own observed history. */
   percentileOfHistory: z.number().min(0).max(100).nullable(),
   includesExpressPass: z.boolean(),
+  source: RateSource,
+  isEstimated: z.boolean(),
+  /** Feed/OTA the price came from; null for observed. Drives the Book button. */
+  merchant: z.string().nullable(),
 });
 export type Deal = z.infer<typeof Deal>;
 

@@ -28,6 +28,17 @@ export type Cents = z.infer<typeof Cents>;
 export const Currency = z.enum(["USD"]);
 export type Currency = z.infer<typeof Currency>;
 
+/**
+ * Provenance of a price. Mirrors the `rate_source` DB enum.
+ *
+ *   observed  — read directly from a booking/storefront engine.
+ *   affiliate — sourced from a commercial feed (an OTA API, Undercover Tourist).
+ *   derived   — reconstructed (e.g. an APH rate computed from a public rate plus
+ *               a sampled passholder discount). Always paired with isEstimated.
+ */
+export const RateSource = z.enum(["observed", "affiliate", "derived"]);
+export type RateSource = z.infer<typeof RateSource>;
+
 /** The three Universal destinations this project tracks. */
 export const DestinationSlug = z.enum([
   "universal-orlando",

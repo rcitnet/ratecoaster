@@ -519,3 +519,17 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .nav { display: none; }
   .section { padding: 36px 0; }
 }
+
+/* Affiliate Book button + FTC disclosure.
+   Teal reads as "buy" and stays distinct from the magenta primary CTA. */
+.btn-book { background: #0fb5a5; color: #fff; box-shadow: var(--shadow-sm); }
+.btn-book:hover { background: #0c9488; box-shadow: var(--shadow-md); color: #fff; }
+
+.book-cta { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; margin: 18px 0; }
+
+.affiliate-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-mute);
+}

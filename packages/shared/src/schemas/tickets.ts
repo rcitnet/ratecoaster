@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Cents, Currency, DestinationSlug, IsoDate, IsoInstant } from "./common.js";
+import { Cents, Currency, DestinationSlug, IsoDate, IsoInstant, RateSource } from "./common.js";
 
 /**
  * Universal prices park admission dynamically by date — the same 2-day ticket
@@ -33,6 +33,10 @@ export const TicketProduct = z.object({
   /** Number of parks the ticket admits to per day, where meaningful. */
   parkCount: z.number().int().positive().nullable(),
   externalId: z.string().nullable(),
+  /** Affiliate deep link for the Book button; null until a feed populates it. */
+  bookingUrl: z.string().nullable().default(null),
+  /** Merchant the booking link points at, e.g. "undercover-tourist". */
+  bookingMerchant: z.string().nullable().default(null),
 });
 export type TicketProduct = z.infer<typeof TicketProduct>;
 
@@ -52,6 +56,10 @@ export const TicketPriceObservation = z.object({
   totalCents: Cents.nullable(),
   currency: Currency,
   available: z.boolean(),
+  source: RateSource,
+  isEstimated: z.boolean(),
+  /** Affiliate feed the price came from; null for observed. */
+  merchant: z.string().nullable(),
   observedAt: IsoInstant,
 });
 export type TicketPriceObservation = z.infer<typeof TicketPriceObservation>;
@@ -75,6 +83,10 @@ export const ExpressPassPrice = z.object({
   priceCents: Cents,
   currency: Currency,
   available: z.boolean(),
+  source: RateSource,
+  isEstimated: z.boolean(),
+  /** Feed the price came from, when not first-party; null for observed. */
+  merchant: z.string().nullable(),
   observedAt: IsoInstant,
 });
 export type ExpressPassPrice = z.infer<typeof ExpressPassPrice>;
@@ -88,6 +100,11 @@ export const PriceCalendarDay = z.object({
   band: z.enum(["low", "mid", "high"]).nullable(),
   /** Cheapest price seen in the window, for highlighting. */
   isWindowLow: z.boolean(),
+  /** Provenance of this cell's price; defaults to observed. */
+  source: RateSource.default("observed"),
+  isEstimated: z.boolean().default(false),
+  /** Affiliate feed the price came from; null for observed. */
+  merchant: z.string().nullable().default(null),
 });
 export type PriceCalendarDay = z.infer<typeof PriceCalendarDay>;
 

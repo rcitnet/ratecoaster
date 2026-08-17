@@ -1,6 +1,7 @@
 import { waitTimesCollector } from "../collectors/waits/index.js";
 import { hotelRateCollector } from "../collectors/hotels/index.js";
 import { expressPassCollector, ticketPriceCollector } from "../collectors/tickets/index.js";
+import { undercoverTouristTicketFeed } from "../collectors/tickets/feed.js";
 import type { Collector } from "../collectors/framework/types.js";
 
 /**
@@ -16,4 +17,5 @@ export const COLLECTORS: Collector[] = [
   hotelRateCollector,
   ticketPriceCollector,
   expressPassCollector,
+  undercoverTouristTicketFeed,
 ];

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getMe } from "@/lib/api";
+import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
 
 export const metadata: Metadata = {
   title: "RateCoaster — Universal hotel deals, tickets & live wait times",
@@ -142,6 +143,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 Not affiliated with, endorsed by or sponsored by Universal Destinations &amp;
                 Experiences, NBCUniversal, or Loews Hotels.
               </p>
+              <AffiliateDisclosure variant="footer" />
               <p style={{ margin: 0 }}>
                 Prices shown are observations, not quotes. Always confirm on the official site
                 before booking.

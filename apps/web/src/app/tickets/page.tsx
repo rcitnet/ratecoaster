@@ -1,6 +1,7 @@
 import { centsToDisplay } from "@ratecoaster/shared";
 import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, getMe, safe } from "@/lib/api";
 import { Paywall } from "@/components/Paywall";
+import { BookButton } from "@/components/BookButton";
 
 export const revalidate = 300;
 
@@ -17,6 +18,7 @@ export default async function TicketsPage({
     getMe(),
   ]);
   const selected = params.product ?? products[0]?.slug;
+  const selectedProduct = products.find((p) => p.slug === selected);
   const calendar = selected
     ? await safe(client.ticketCalendar({ productSlug: selected, guestCategory: "adult" }), [])
     : [];
@@ -42,6 +44,14 @@ export default async function TicketsPage({
           </a>
         ))}
       </div>
+
+      {selectedProduct?.bookingUrl ? (
+        <BookButton
+          url={selectedProduct.bookingUrl}
+          merchant={selectedProduct.bookingMerchant}
+          size="lg"
+        />
+      ) : null}
 
       {calendar.length === 0 ? (
         <div className="notice">

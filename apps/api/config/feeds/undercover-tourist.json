@@ -1,0 +1,20 @@
+{
+  "name": "undercover-tourist",
+  "merchant": "undercover-tourist",
+  "network": "cj",
+  "feedUrl": "https://CHANGE_ME_CJ_PRODUCT_FEED_URL",
+  "format": "csv",
+  "currency": "USD",
+  "headers": {},
+  "columns": {
+    "sku": "SKU",
+    "name": "NAME",
+    "price": "SALEPRICE",
+    "retailPrice": "PRICE",
+    "currency": "CURRENCY",
+    "buyUrl": "BUYURL",
+    "available": "INSTOCK"
+  },
+  "filter": { "column": "ADVERTISERNAME", "equals": "Undercover Tourist" },
+  "defaultGuestCategory": "adult"
+}

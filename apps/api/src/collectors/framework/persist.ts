@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "@ratecoaster/db";
 import { rateCurrent, rateObservations } from "@ratecoaster/db/schema";
+import type { RateSource } from "@ratecoaster/shared";
 import type { RunStats } from "./types.js";
 
 export interface RateReading {
@@ -24,6 +25,12 @@ export interface RateReading {
   totalCents: number | null;
   currency: string;
   available: boolean;
+  /** Provenance of this reading. Adapters stamp it; defaults are not assumed. */
+  source: RateSource;
+  /** True when the price is reconstructed (e.g. a derived APH rate). */
+  isEstimated: boolean;
+  /** Feed/OTA the price came from; null for observed (scraped) readings. */
+  merchant?: string | null;
 }
 
 /**
@@ -52,6 +59,7 @@ export async function persistRateReadings(
       .select({
         nightlyCents: rateCurrent.nightlyCents,
         available: rateCurrent.available,
+        source: rateCurrent.source,
         historicalLowCents: rateCurrent.historicalLowCents,
       })
       .from(rateCurrent)
@@ -71,8 +79,14 @@ export async function persistRateReadings(
       .limit(1);
 
     const prev = existing[0];
+    // A provenance change (e.g. a date switching from scraped to affiliate at
+    // the same price) is a real event worth a history row, not something the
+    // write-on-change rule should swallow.
     const changed =
-      !prev || prev.nightlyCents !== r.nightlyCents || prev.available !== r.available;
+      !prev ||
+      prev.nightlyCents !== r.nightlyCents ||
+      prev.available !== r.available ||
+      prev.source !== r.source;
 
     const newLow =
       prev?.historicalLowCents == null
@@ -92,6 +106,9 @@ export async function persistRateReadings(
         totalCents: r.totalCents,
         currency: r.currency,
         available: r.available,
+        source: r.source,
+        isEstimated: r.isEstimated,
+        merchant: r.merchant ?? null,
       });
       stats.writtenCount++;
     }
@@ -110,6 +127,9 @@ export async function persistRateReadings(
         totalCents: r.totalCents,
         currency: r.currency,
         available: r.available,
+        source: r.source,
+        isEstimated: r.isEstimated,
+        merchant: r.merchant ?? null,
         historicalLowCents: newLow,
         previousCents: prev?.nightlyCents ?? null,
         observedAt: new Date(),
@@ -129,6 +149,9 @@ export async function persistRateReadings(
           nightlyCents: r.nightlyCents,
           totalCents: r.totalCents,
           available: r.available,
+          source: r.source,
+          isEstimated: r.isEstimated,
+          merchant: r.merchant ?? null,
           historicalLowCents: newLow,
           // Only advance `previousCents` and `changedAt` on a real change, so
           // "changed 3 hours ago" stays meaningful instead of always reading

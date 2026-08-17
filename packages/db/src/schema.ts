@@ -36,6 +36,23 @@ export const rateCodeEnum = pgEnum("rate_code", [
   "MIL",
 ]);
 
+/**
+ * Where a price came from — the pivot from scraping to affiliate feeds.
+ *
+ *   observed  — read directly from a booking/storefront engine (the original
+ *               scraper). Authoritative; not estimated.
+ *   affiliate — sourced from a commercial feed (Undercover Tourist, an OTA API).
+ *               Authoritative for what it covers; carries a `merchant`.
+ *   derived   — reconstructed, e.g. an APH rate computed by applying a sampled
+ *               passholder discount to an affiliate public rate. Always
+ *               `is_estimated = true`.
+ *
+ * Provenance is a column rather than a separate table because
+ * `rate_observations` / `rate_current` don't otherwise care where a number came
+ * from — the write-on-change rule and the read paths are identical regardless.
+ */
+export const rateSourceEnum = pgEnum("rate_source", ["observed", "affiliate", "derived"]);
+
 export const propertyTierEnum = pgEnum("property_tier", [
   "premier",
   "preferred",
@@ -159,6 +176,10 @@ export const rateObservations = pgTable(
     totalCents: integer("total_cents"),
     currency: text("currency").notNull().default("USD"),
     available: boolean("available").notNull().default(true),
+    source: rateSourceEnum("source").notNull().default("observed"),
+    isEstimated: boolean("is_estimated").notNull().default(false),
+    /** Feed/OTA the price came from (e.g. "expedia", "undercover-tourist"). Null for observed. */
+    merchant: text("merchant"),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -197,6 +218,10 @@ export const rateCurrent = pgTable(
     totalCents: integer("total_cents"),
     currency: text("currency").notNull().default("USD"),
     available: boolean("available").notNull().default(true),
+    source: rateSourceEnum("source").notNull().default("observed"),
+    isEstimated: boolean("is_estimated").notNull().default(false),
+    /** Feed/OTA the price came from (e.g. "expedia", "undercover-tourist"). Null for observed. */
+    merchant: text("merchant"),
     /** Lowest nightly rate ever recorded for this key. Powers "all-time low" badges. */
     historicalLowCents: integer("historical_low_cents"),
     /** Previous distinct price, so the UI can show a delta without a second query. */
@@ -366,6 +391,10 @@ export const ticketPriceObservations = pgTable(
     totalCents: integer("total_cents"),
     currency: text("currency").notNull().default("USD"),
     available: boolean("available").notNull().default(true),
+    source: rateSourceEnum("source").notNull().default("observed"),
+    isEstimated: boolean("is_estimated").notNull().default(false),
+    /** Affiliate feed the price came from (e.g. "undercover-tourist"). Null for observed. */
+    merchant: text("merchant"),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -386,6 +415,10 @@ export const ticketPriceCurrent = pgTable(
     totalCents: integer("total_cents"),
     previousCents: integer("previous_cents"),
     available: boolean("available").notNull().default(true),
+    source: rateSourceEnum("source").notNull().default("observed"),
+    isEstimated: boolean("is_estimated").notNull().default(false),
+    /** Affiliate feed the price came from (e.g. "undercover-tourist"). Null for observed. */
+    merchant: text("merchant"),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("ticket_current_key_uq").on(t.productId, t.validDate, t.guestCategory)]
@@ -402,6 +435,10 @@ export const expressPassPrices = pgTable(
     priceCents: integer("price_cents").notNull(),
     currency: text("currency").notNull().default("USD"),
     available: boolean("available").notNull().default(true),
+    source: rateSourceEnum("source").notNull().default("observed"),
+    isEstimated: boolean("is_estimated").notNull().default(false),
+    /** Feed the price came from, when not first-party. Null for observed. */
+    merchant: text("merchant"),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

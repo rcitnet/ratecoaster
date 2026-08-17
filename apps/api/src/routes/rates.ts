@@ -64,6 +64,9 @@ ratesRouter.get("/", async (c) => {
         nightlyCents: rateCurrent.nightlyCents,
         totalCents: rateCurrent.totalCents,
         available: rateCurrent.available,
+        source: rateCurrent.source,
+        isEstimated: rateCurrent.isEstimated,
+        merchant: rateCurrent.merchant,
         historicalLowCents: rateCurrent.historicalLowCents,
         previousCents: rateCurrent.previousCents,
         observedAt: rateCurrent.observedAt,
@@ -119,6 +122,9 @@ ratesRouter.get("/", async (c) => {
         totalCents: row.totalCents,
         roomTypeName: null,
         available: row.available,
+        source: row.source,
+        isEstimated: row.isEstimated,
+        merchant: row.merchant,
         observedAt: row.observedAt.toISOString(),
         standardNightlyCents: std?.nightlyCents ?? null,
         savingsCents: std ? std.nightlyCents - row.nightlyCents : null,
@@ -230,6 +236,9 @@ export const dealsRouter = new Hono().get("/", async (c) => {
       nightlyCents: rateCurrent.nightlyCents,
       totalCents: rateCurrent.totalCents,
       historicalLowCents: rateCurrent.historicalLowCents,
+      source: rateCurrent.source,
+      isEstimated: rateCurrent.isEstimated,
+      merchant: rateCurrent.merchant,
     })
     .from(rateCurrent)
     .innerJoin(properties, eq(properties.id, rateCurrent.propertyId))
@@ -264,6 +273,9 @@ export const dealsRouter = new Hono().get("/", async (c) => {
         savingsPercent: null,
         percentileOfHistory: percentile,
         includesExpressPass: r.includesExpressPass,
+        source: r.source,
+        isEstimated: r.isEstimated,
+        merchant: r.merchant,
       };
     })
     .sort((a, b) => (a.percentileOfHistory ?? 999) - (b.percentileOfHistory ?? 999))

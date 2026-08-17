@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { parseMoneyToCents } from "@ratecoaster/shared";
+import { parseMoneyToCents, type RateSource } from "@ratecoaster/shared";
 import {
   expressPassPrices,
   parks,
@@ -242,6 +242,9 @@ export function createExpressPassCollector(options: { lookaheadDays?: number } =
               tier,
               priceCents,
               available: true,
+              // First-party storefront read; no reseller feed exists for Express.
+              source: "observed",
+              isEstimated: false,
             });
             stats.writtenCount++;
           }
@@ -263,12 +266,20 @@ async function persistTicketPrice(
     priceCents: number;
     totalCents: number | null;
     available: boolean;
+    /** Defaults to observed until a ticket affiliate feed (e.g. Undercover Tourist) is wired in. */
+    source?: RateSource;
+    isEstimated?: boolean;
+    merchant?: string | null;
   }
 ) {
   const { db, stats } = ctx;
 
+  const source = reading.source ?? "observed";
+  const isEstimated = reading.isEstimated ?? false;
+  const merchant = reading.merchant ?? null;
+
   const existing = await db
-    .select({ priceCents: ticketPriceCurrent.priceCents })
+    .select({ priceCents: ticketPriceCurrent.priceCents, source: ticketPriceCurrent.source })
     .from(ticketPriceCurrent)
     .where(
       and(
@@ -280,7 +291,7 @@ async function persistTicketPrice(
     .limit(1);
 
   const prev = existing[0];
-  const changed = !prev || prev.priceCents !== reading.priceCents;
+  const changed = !prev || prev.priceCents !== reading.priceCents || prev.source !== source;
 
   // Same write-on-change rule as hotel rates: a year of dates re-read twice a
   // day is ~700 identical rows daily per product otherwise, none of which say
@@ -293,6 +304,9 @@ async function persistTicketPrice(
       priceCents: reading.priceCents,
       totalCents: reading.totalCents,
       available: reading.available,
+      source,
+      isEstimated,
+      merchant,
     });
     stats.writtenCount++;
   }
@@ -307,6 +321,9 @@ async function persistTicketPrice(
       totalCents: reading.totalCents,
       previousCents: prev?.priceCents ?? null,
       available: reading.available,
+      source,
+      isEstimated,
+      merchant,
       observedAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -319,6 +336,9 @@ async function persistTicketPrice(
         priceCents: reading.priceCents,
         totalCents: reading.totalCents,
         available: reading.available,
+        source,
+        isEstimated,
+        merchant,
         previousCents: changed
           ? (prev?.priceCents ?? null)
           : sql`${ticketPriceCurrent.previousCents}`,
