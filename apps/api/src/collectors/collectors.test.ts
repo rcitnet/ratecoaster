@@ -11,6 +11,7 @@ import {
   affiliateAdapter,
   derivedAdapter,
   universalIbeAdapter,
+  universalKidsCommerceAdapter,
 } from "./hotels/adapters/index.js";
 import {
   buildUniversalRateUrl,
@@ -18,6 +19,10 @@ import {
   parseUniversalRatePage,
   universalDayIndex,
 } from "./hotels/adapters/universal-ibe.js";
+import {
+  buildKidsHotelSearchUrl,
+  parseKidsHotelResponse,
+} from "./hotels/adapters/universal-kids-commerce.js";
 import { selectRotatingDates } from "./hotels/schedule.js";
 import { normalizeDate } from "./tickets/index.js";
 import { parseCsv, csvToObjects } from "./framework/csv.js";
@@ -133,6 +138,90 @@ describe("Universal reservation engine", () => {
     assert.equal(isUniversalRateUnavailablePage("The property is currently unavailable."), true);
     assert.equal(isUniversalRateUnavailablePage("The offer is not available or expired."), true);
     assert.equal(isUniversalRateUnavailablePage("<html>new unexplained markup</html>"), false);
+  });
+});
+
+describe("Universal Kids Resort commerce API", () => {
+  const response = {
+    bookingRooms: [
+      {
+        bookingRoomSequenceId: 1,
+        products: [
+          {
+            code: "UKRFR-STDQ",
+            name: "Standard Queen",
+            hotelId: "UNI012",
+            roomTypeCode: "STDQ",
+            purchasable: true,
+            maxOccupancy: 5,
+            stock: { stockLevelStatus: "inStock" },
+            hotelPrice: {
+              currencyIso: "USD",
+              ratePlanCode: "RACK",
+              value: 194,
+            },
+          },
+          {
+            code: "UKRFR-SOLD",
+            name: "Sold Out Suite",
+            hotelId: "UNI012",
+            roomTypeCode: "SOLD",
+            purchasable: false,
+            maxOccupancy: 6,
+            stock: { stockLevelStatus: "outOfStock" },
+            hotelPrice: {
+              currencyIso: "USD",
+              ratePlanCode: "RACK",
+              value: "349.00",
+            },
+          },
+          {
+            code: "UKRFR-PROMO",
+            name: "Unverified Promotion",
+            hotelId: "UNI012",
+            roomTypeCode: "PROMO",
+            purchasable: true,
+            hotelPrice: {
+              currencyIso: "USD",
+              ratePlanCode: "SOMETHING_ELSE",
+              value: 99,
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  test("builds the public UNI012 commerce search endpoint", () => {
+    const url = new URL(buildKidsHotelSearchUrl());
+    assert.equal(url.hostname, "comm-api.universaldestinationsandexperiences.com");
+    assert.equal(url.pathname, "/occ/v2/ukrfr_b2c_hotel/hotelsWithRoomDetails");
+    assert.equal(url.searchParams.get("siteId"), "ukrfr_b2c_hotel");
+  });
+
+  test("parses RACK as Standard and preserves sold-out availability", () => {
+    assert.deepEqual(parseKidsHotelResponse(response), [
+      {
+        roomCode: "STDQ",
+        roomName: "Standard Queen",
+        nightlyCents: 19400,
+        currency: "USD",
+        available: true,
+        maxOccupancy: 5,
+      },
+      {
+        roomCode: "SOLD",
+        roomName: "Sold Out Suite",
+        nightlyCents: 34900,
+        currency: "USD",
+        available: false,
+        maxOccupancy: 6,
+      },
+    ]);
+  });
+
+  test("rejects an unexpected response instead of treating it as sold out", () => {
+    assert.throws(() => parseKidsHotelResponse({ products: [] }), /bookingRooms/);
   });
 });
 
@@ -254,6 +343,13 @@ describe("rate source adapters", () => {
     assert.equal(
       selectAdapter({ adapter: "universal-ibe", hotelId: 14842, hotelGroupId: 641 }),
       universalIbeAdapter
+    );
+  });
+
+  test("selectAdapter uses the separate Universal Kids commerce driver", () => {
+    assert.equal(
+      selectAdapter({ adapter: "universal-kids-commerce", hotelId: "UNI012" }),
+      universalKidsCommerceAdapter
     );
   });
 
