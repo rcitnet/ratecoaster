@@ -1,6 +1,8 @@
 import { closeDb } from "@ratecoaster/db";
 import { runAll, runCollector } from "../collectors/framework/runner.js";
+import { createHotelRateCollector } from "../collectors/hotels/index.js";
 import { COLLECTORS } from "./registry.js";
+import { parseCollectArgs } from "./collect-args.js";
 
 export { COLLECTORS };
 
@@ -9,6 +11,7 @@ export { COLLECTORS };
  *
  *   npm run collect                        # every collector once
  *   npm run collect -- --only wait-times   # one collector
+ *   npm run collect -- --only hotel-rates --property universal-kids-hotel
  *   npm run collect -- --list              # what exists and how often it runs
  *   npm run collect -- --dry-run           # log requests, send nothing
  *
@@ -17,9 +20,9 @@ export { COLLECTORS };
  * worse failure mode than a cron job that visibly did not run.
  */
 async function main() {
-  const args = process.argv.slice(2);
+  const args = parseCollectArgs(process.argv.slice(2));
 
-  if (args.includes("--list")) {
+  if (args.list) {
     for (const c of COLLECTORS) {
       console.log(`${c.name.padEnd(16)} every ${String(c.intervalMinutes).padStart(4)}m  ${c.description}`);
     }
@@ -29,14 +32,19 @@ async function main() {
   // Keep this separate from COLLECTOR_DRY_RUN. The runner normally replaces
   // that value with each collector's database setting; this explicit CLI
   // override must remain authoritative even when the collector is live.
-  if (args.includes("--dry-run")) process.env.RATECOASTER_FORCE_DRY_RUN = "1";
+  if (args.dryRun) process.env.RATECOASTER_FORCE_DRY_RUN = "1";
 
-  const onlyIndex = args.indexOf("--only");
-  const only = onlyIndex >= 0 ? args[onlyIndex + 1] : null;
+  const collectors = args.propertySlug
+    ? COLLECTORS.map((collector) =>
+        collector.name === "hotel-rates"
+          ? createHotelRateCollector({ propertySlug: args.propertySlug! })
+          : collector
+      )
+    : COLLECTORS;
 
-  const selected = only ? COLLECTORS.filter((c) => c.name === only) : COLLECTORS;
-  if (only && selected.length === 0) {
-    console.error(`unknown collector: ${only}`);
+  const selected = args.only ? collectors.filter((c) => c.name === args.only) : collectors;
+  if (args.only && selected.length === 0) {
+    console.error(`unknown collector: ${args.only}`);
     console.error(`available: ${COLLECTORS.map((c) => c.name).join(", ")}`);
     process.exit(1);
   }
