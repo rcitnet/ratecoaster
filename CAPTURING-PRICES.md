@@ -222,7 +222,7 @@ Restart the API so it picks up the change:
 sudo systemctl restart ratecoaster-api
 ```
 
-### Watch `/status` for the first few days
+### Watch `/admin/status` for the first few days
 
 That page is the early warning system. Two things to look for:
 
@@ -239,7 +239,7 @@ That page is the early warning system. Two things to look for:
 ## When it breaks
 
 It will, eventually — booking engines change without warning. The symptom is
-almost always `/status` showing "parsed nothing" rather than an error.
+almost always `/admin/status` showing "parsed nothing" rather than an error.
 
 Recapture the HAR and re-run `har:import`. Nothing else needs touching: no code
 changes, no deploy. That's the entire reason the endpoints live in config

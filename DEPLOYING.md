@@ -828,7 +828,8 @@ sudo -u ratecoaster -H bash -c 'cd /home/ratecoaster/app && set -a && . ./.env &
 **✅ Check:** it reports parsed counts per park. Then visit
 `https://ratecoaster.net/waits` — real numbers.
 
-Visit `https://ratecoaster.net/status` any time to see when each feed last ran.
+Visit `https://ratecoaster.net/admin/status` any time to see when each feed last
+ran. It sits behind the admin gate, so sign in as an admin first.
 
 ---
 
@@ -1146,7 +1147,7 @@ Before you tell anyone about the site:
 - [ ] `http://` redirects to `https://` (Caddy does this automatically)
 - [ ] You can sign in with a real email and see the full year afterwards
 - [ ] `DEMO_MODE` is **not** set — no invented prices on a public site
-- [ ] `/status` shows wait times healthy
+- [ ] `/admin/status` shows wait times healthy
 - [ ] A backup file exists and you've copied one to your own computer
 - [ ] `.env` is `chmod 600` and not in git
 - [ ] The footer disclaimer is accurate for what you're actually showing

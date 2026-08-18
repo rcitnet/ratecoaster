@@ -76,7 +76,8 @@ npm run -w @ratecoaster/api collect -- --only wait-times
 npm run dev            # API on :8787, web on :3000
 ```
 
-Visit `/waits` for live data and `/status` to see the health of every collector.
+Visit `/waits` for live data and `/admin/status` (admin sign-in required) to see
+the health of every collector.
 
 ## Bringing the pricing collectors online
 
@@ -106,7 +107,7 @@ than showing nothing, because they will act on it.
 
 Set `rateCodeAppliedPath` in your endpoint config to the field that echoes the
 applied rate plan. Readings that fail the check are discarded, and the count
-surfaces on `/status`.
+surfaces on `/admin/status`.
 
 ## Crawl volume
 
