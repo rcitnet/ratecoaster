@@ -12,7 +12,7 @@
     "db:generate": "npm run -w @ratecoaster/db generate",
     "db:push": "npm run -w @ratecoaster/db push",
     "db:seed": "npm run -w @ratecoaster/db seed",
-    "collect": "npm run -w @ratecoaster/api collect"
+    "collect": "tsx apps/api/src/jobs/run.ts"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

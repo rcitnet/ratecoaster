@@ -58,6 +58,7 @@ export async function politeFetch(
     maxAttempts = 4,
     timeoutMs = 20_000,
     alwaysSend = false,
+    requestKey: _requestKey,
     ...init
   } = options;
 

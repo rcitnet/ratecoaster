@@ -40,7 +40,8 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
    */
   const setting = await getCollectorSetting(collector.name);
   const previousDryRun = process.env.COLLECTOR_DRY_RUN;
-  process.env.COLLECTOR_DRY_RUN = setting.dryRun ? "1" : "0";
+  const forceDryRun = process.env.RATECOASTER_FORCE_DRY_RUN === "1";
+  process.env.COLLECTOR_DRY_RUN = setting.dryRun || forceDryRun ? "1" : "0";
 
   const restoreEnv = () => {
     if (previousDryRun === undefined) delete process.env.COLLECTOR_DRY_RUN;

@@ -28,10 +28,9 @@ export interface HotelCollectorOptions {
  * The hotel rate collector.
  *
  * It owns scheduling, readiness reporting, and the single persistence path; each
- * property's actual price source is a pluggable adapter (observed scraper,
- * affiliate feed, or derived APH estimate) chosen from `collectorConfig.source`.
- * Swapping the scraper for an affiliate feed — the strategic pivot — is an
- * adapter change, not a change to this file.
+ * property's actual price source is a pluggable adapter. Direct observed rates
+ * are the primary path; optional external sources remain isolated behind the
+ * same interface so they can be added later without changing persistence.
  */
 export function createHotelRateCollector(options: HotelCollectorOptions = {}): Collector {
   const params = {

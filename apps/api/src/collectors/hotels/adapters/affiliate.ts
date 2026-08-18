@@ -2,13 +2,11 @@ import type { CollectorContext } from "../../framework/types.js";
 import type { PropertyRow, RateAdapter, RateAdapterParams, ReadingSink } from "./types.js";
 
 /**
- * Affiliate rate adapter — SEAM, not yet live.
+ * Optional affiliate rate adapter — dormant seam, not product direction.
  *
- * The pivot: instead of scraping booking engines, source public nightly rates
- * from a commercial feed. For Universal's Loews-operated on-site hotels the only
- * viable carriers are OTA APIs — Expedia (direct or via Travelpayouts),
- * Booking.com's demand API, or Stay22. Each needs credentials RateCoaster does
- * not hold yet, so this adapter reports "not configured" rather than guessing.
+ * Direct observed STANDARD and APH rates are collected from Universal's own
+ * reservation engine. This remains only so a licensed third-party source can be
+ * added later without redesigning the collector.
  *
  * When a key exists, `collect` should: fetch the property's date-keyed rate
  * calendar in as few requests as the feed allows (feeds return whole calendars,

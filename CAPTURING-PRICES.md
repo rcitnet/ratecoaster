@@ -29,12 +29,10 @@ Things that materially reduce it, all already built in:
 - **Dry run on by default.** Nothing is fetched until you deliberately switch it
   off, per collector.
 
-**Scope has narrowed.** Public nightly rates are moving to affiliate feeds (see
-`CONFIGURING-AFFILIATE-FEEDS.md`), which is sanctioned access and far more
-durable. What no feed will ever carry is the **annual passholder rate** — it is a
-membership discount, and OTAs don't have it. So this capture is now mainly about
-the passholder side, and about sampling it sparsely to derive a discount rather
-than crawling all 365 days.
+**Current direction.** Standard and Annual Passholder rates are both observed
+directly from Universal's reservation engine. Affiliate support remains a
+dormant adapter seam that can be configured later; it is not required for the
+hotel product and no derived APH estimates are used.
 
 ---
 
@@ -69,20 +67,19 @@ Passholder price, public price struck through, and a label naming the discount.
 **One request gives you both sides and therefore the discount** — you do not need
 to query twice and diff, which is what the sampling design assumed.
 
-### There is no JSON pricing API on this page
+### The marketing page is not the source of truth
 
-Reloading the details page with network capture running produced eight requests,
-all analytics (Yahoo, Adobe, Akamai). No `__NEXT_DATA__`, no JSON `<script>`
-tags. It is an Angular application rendering prices server-side.
+The public marketing page did not expose pricing JSON, but the underlying SHR
+Windsurfer reservation engine does. Its search flow posts to
+`xml/setSearchCriteria.aspx` and then `xml/getresultd.aspx`. For RateCoaster's
+one-night STANDARD and APH collection, the simpler source is the server-rendered
+`ibe/details.aspx` rate page: every room's booking button contains the room code,
+rate code, nightly amount, tax, and access marker in stable attributes.
 
-That matters: the `roomsPath` + JSON field-path shape in `EndpointConfig` has
-nothing to point at here. **This source needs a DOM-selector adapter, not a JSON
-one.** The `data-aui` attributes are test-automation hooks and tend to survive
-redesigns better than CSS class names, so prefer them as selectors.
-
-Still unconfirmed: whether the *search submission* hits a JSON endpoint even
-though the details page does not. Worth watching for during your capture — if
-one exists, it beats scraping the DOM.
+Use `rate=0RACW` for the Flexible/standard rate and
+`rate=3APHW&access=APH` for Annual Passholder. The `dt1` parameter is the number
+of days since 2000-01-01. One request returns all available room types for that
+hotel, date, occupancy, and rate plan.
 
 ### The headline price is an average, not a nightly rate
 
@@ -153,84 +150,38 @@ saved $200 a night when they didn't.
 
 ## Source 1 — Universal Orlando hotels
 
-### Capture
+### Implemented request shape
 
-1. Start from the **passholder booking entry point** — the separate passholder
-   link, not a promo field. Pick one hotel, 2 adults, a date ~45 days out.
-2. Press **F12** → **Network** → filter **Fetch/XHR** → tick **Preserve log**
-   *before* running the search.
-3. Run the search. Watch for any JSON response containing room names and prices:
-   that would be the search endpoint, and it is preferable to DOM scraping if it
-   exists.
-4. On the details page, note the **hotel code** — the last path segment
-   (`UECBB` for Cabana Bay).
-5. Right-click the most promising request → **Copy** → **Copy as HAR**, with
-   content. Save it as `har/loews.har` on the server.
+No browser capture or affiliate feed is required. Each property is configured
+with Universal's numeric `hotelId` and `hotelGroupId`. The dedicated
+`universal-ibe` adapter requests both rate plans for every selected one-night
+date:
 
-`har/` is gitignored — HAR files contain your session cookies.
+- Standard/Flexible: `rate=0RACW`
+- Annual Passholder: `rate=3APHW&access=APH`
 
-### If the search returned JSON
+The adapter requires the returned booking button to identify the exact expected
+rate code and, for APH, the `access=APH` marker. This prevents a public fallback
+from being stored as a passholder quote. Missing rooms are transitioned to
+`available=false`; an unfamiliar page with no recognized offers is treated as a
+parser error rather than sold-out inventory.
 
-Use the existing importer; the JSON path config applies:
-
-```bash
-cd /home/ratecoaster/app
-npm run -w @ratecoaster/api har:import -- har/loews.har loews-universal
-```
-
-Then replace the captured literals with placeholders — `{hotelCode} {checkIn}
-{checkOut} {nights} {adults} {children} {currency}` — and check that the price
-field is a **nightly** figure, not a stay average or total.
-
-### If it did not (what we observed)
-
-The details page has no JSON to import, so the adapter needs DOM selectors:
-
-| Field | Selector |
-|---|---|
-| Room block | `.rooms-wrapper` |
-| Room name | `h2.title` |
-| Passholder price | `p.price` (or `[data-aui$="-price-per-stay-amount"]`) |
-| Public price | `s.strike-through-price` |
-| Discount confirmation | `p.savings` |
-
-Both prices are stay averages, so this is only safe with one-night queries.
-
-### Hotel codes
-
-```ts
-collectorConfig: { adapter: "loews-universal", hotelCode: "UECBB" },
-```
-
-Then re-seed:
+All eleven Orlando hotel IDs are in `packages/db/src/seed-data.ts`. Re-run the
+idempotent seed after pulling configuration changes:
 
 ```bash
-set -a && . ./.env && set +a && npm run db:seed
+npm run db:seed
 ```
 
-**Do one hotel first.** Get it working end to end before filling in the other
-ten — a mistake repeated across 11 hotels is 11 times the cleanup.
-
-### Test with a single request
+Then inspect the generated URLs without sending them:
 
 ```bash
-npm run -w @ratecoaster/api verify:endpoint -- loews-universal UECBB APH
+npm run collect -- --only hotel-rates --dry-run
 ```
 
-One request, nothing written to the database. You want a list of room types with
-sensible nightly prices, and the discount confirmation present.
-
-### Open questions
-
-Worth resolving on your next capture, while you are inside the flow:
-
-- **How `<searchId>` is minted for arbitrary dates.** This is the crux of
-  automating anything here — without it you cannot ask about a date of your
-  choosing.
-- **Whether the search submission returns JSON.** If it does, prefer it and skip
-  the DOM entirely.
-- **Whether cart nightly rates keep the passholder discount.** Decides whether
-  the ~7× volume saving is real.
+Set `COLLECTOR_DRY_RUN=0` only after the request scope and contactable user-agent
+have been reviewed. The collector keeps the next fourteen dates hot and rotates
+through the rest of the 365-day window instead of repeating the same slice.
 
 ---
 

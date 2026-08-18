@@ -46,7 +46,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 750,
     latitude: 28.4657,
     longitude: -81.4713,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 14841, hotelGroupId: 641 },
   },
   {
     destination: "universal-orlando",
@@ -60,7 +60,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 650,
     latitude: 28.4715,
     longitude: -81.4676,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 14842, hotelGroupId: 641 },
   },
   {
     destination: "universal-orlando",
@@ -74,7 +74,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 1000,
     latitude: 28.4649,
     longitude: -81.4696,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 14843, hotelGroupId: 641 },
   },
 
   // ---- Universal Orlando: Preferred ----
@@ -93,7 +93,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 500,
     latitude: 28.4414,
     longitude: -81.4487,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 17424, hotelGroupId: 705 },
   },
   {
     destination: "universal-orlando",
@@ -107,7 +107,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 1000,
     latitude: 28.4632,
     longitude: -81.4708,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 14845, hotelGroupId: 641 },
   },
 
   // ---- Universal Orlando: Prime Value ----
@@ -123,7 +123,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 750,
     latitude: 28.4356,
     longitude: -81.4534,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 17425, hotelGroupId: 705 },
   },
   {
     destination: "universal-orlando",
@@ -137,7 +137,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 750,
     latitude: 28.4348,
     longitude: -81.4551,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 17426, hotelGroupId: 705 },
   },
   {
     destination: "universal-orlando",
@@ -151,7 +151,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 600,
     latitude: 28.4619,
     longitude: -81.4696,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 14856, hotelGroupId: 641 },
   },
   {
     destination: "universal-orlando",
@@ -165,7 +165,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 2200,
     latitude: 28.4606,
     longitude: -81.4738,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 14844, hotelGroupId: 641 },
   },
 
   // ---- Universal Orlando: Value ----
@@ -181,7 +181,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 750,
     latitude: 28.4419,
     longitude: -81.4633,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 15346, hotelGroupId: 641 },
   },
   {
     destination: "universal-orlando",
@@ -195,7 +195,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 2050,
     latitude: 28.4408,
     longitude: -81.4645,
-    collectorConfig: { adapter: "loews-universal", hotelCode: null },
+    collectorConfig: { adapter: "universal-ibe", hotelId: 15783, hotelGroupId: 641 },
   },
 
   // ---- Universal Hollywood partner hotels ----

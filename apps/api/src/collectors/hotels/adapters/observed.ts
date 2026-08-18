@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
-import { roomTypes } from "@ratecoaster/db/schema";
 import { addDays, dateRange, prioritizeDates, todayInTimezone } from "../../framework/dates.js";
 import type { CollectorContext } from "../../framework/types.js";
 import type { RateReading } from "../../framework/persist.js";
 import { resolveEndpointConfig } from "../../../lib/settings.js";
 import { queryOffers } from "../scrape.js";
+import { upsertRoomType } from "../room-types.js";
+import { selectRotatingDates } from "../schedule.js";
 import type { PropertyRow, RateAdapter } from "./types.js";
 
 type RateCode = RateReading["rateCode"];
@@ -32,44 +32,6 @@ const TIMEZONES: Record<string, string> = {
 
 function hotelCodeOf(cfg: Record<string, unknown>): string {
   return String(cfg.hotelCode ?? cfg.ctyhocn ?? cfg.marshaCode ?? cfg.hotelId ?? "");
-}
-
-const roomTypeCache = new Map<string, string>();
-
-async function upsertRoomType(
-  ctx: CollectorContext,
-  propertyId: string,
-  externalCode: string,
-  name: string,
-  maxOccupancy: number | null
-): Promise<string> {
-  const key = `${propertyId}:${externalCode}`;
-  const cached = roomTypeCache.get(key);
-  if (cached) return cached;
-
-  const existing = await ctx.db
-    .select({ id: roomTypes.id })
-    .from(roomTypes)
-    .where(and(eq(roomTypes.propertyId, propertyId), eq(roomTypes.externalCode, externalCode)))
-    .limit(1);
-
-  if (existing[0]) {
-    roomTypeCache.set(key, existing[0].id);
-    return existing[0].id;
-  }
-
-  const [created] = await ctx.db
-    .insert(roomTypes)
-    .values({ propertyId, externalCode, name, maxOccupancy })
-    .onConflictDoUpdate({
-      target: [roomTypes.propertyId, roomTypes.externalCode],
-      set: { name },
-    })
-    .returning({ id: roomTypes.id });
-
-  const id = created!.id;
-  roomTypeCache.set(key, id);
-  return id;
 }
 
 /**
@@ -113,8 +75,7 @@ export const observedAdapter: RateAdapter = {
     const timezone = TIMEZONES[property.destination] ?? "America/New_York";
     const today = todayInTimezone(timezone);
     const allDates = prioritizeDates(dateRange(today, params.lookaheadDays));
-    const sliceSize = Math.max(1, Math.ceil(allDates.length * params.sliceFraction));
-    const dates = allDates.slice(0, sliceSize);
+    const dates = selectRotatingDates(allDates, params.sliceFraction);
 
     const codes = RATE_CODES[property.destination] ?? ["STANDARD"];
     const readings: RateReading[] = [];

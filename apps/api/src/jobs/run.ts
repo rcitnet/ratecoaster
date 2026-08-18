@@ -26,7 +26,10 @@ async function main() {
     return;
   }
 
-  if (args.includes("--dry-run")) process.env.COLLECTOR_DRY_RUN = "1";
+  // Keep this separate from COLLECTOR_DRY_RUN. The runner normally replaces
+  // that value with each collector's database setting; this explicit CLI
+  // override must remain authoritative even when the collector is live.
+  if (args.includes("--dry-run")) process.env.RATECOASTER_FORCE_DRY_RUN = "1";
 
   const onlyIndex = args.indexOf("--only");
   const only = onlyIndex >= 0 ? args[onlyIndex + 1] : null;
