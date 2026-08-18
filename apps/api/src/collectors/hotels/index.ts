@@ -3,6 +3,7 @@ import { properties } from "@ratecoaster/db/schema";
 import { persistRateReadings, type RateReading } from "../framework/persist.js";
 import type { Collector, CollectorContext } from "../framework/types.js";
 import { selectAdapter } from "./adapters/index.js";
+import { selectRotatingBatch } from "./schedule.js";
 
 /*
  * The scraper primitives moved into ./scrape.ts when the collector gained an
@@ -24,6 +25,8 @@ export interface HotelCollectorOptions {
   nights?: number;
   /** Restrict a manual/canary run to one exact property slug. */
   propertySlug?: string;
+  /** Number of collectable properties included in each scheduled run. */
+  propertiesPerRun?: number;
 }
 
 /**
@@ -40,13 +43,14 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
     sliceFraction: options.sliceFraction ?? 0.25,
     nights: options.nights ?? 1,
   };
+  const propertiesPerRun = Math.max(1, Math.floor(options.propertiesPerRun ?? 3));
   const propertyFilter = options.propertySlug
     ? and(eq(properties.active, true), eq(properties.slug, options.propertySlug))
     : eq(properties.active, true);
 
   return {
     name: "hotel-rates",
-    description: `Hotel rates, ${params.lookaheadDays}-day lookahead, all room types and occupancies${options.propertySlug ? `, property ${options.propertySlug}` : ""}`,
+    description: `Hotel rates, ${params.lookaheadDays}-day lookahead, all room types and occupancies${options.propertySlug ? `, property ${options.propertySlug}` : `, ${propertiesPerRun} rotating properties/run`}`,
     intervalMinutes: 360,
 
     async isConfigured(ctx: CollectorContext) {
@@ -78,6 +82,10 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
       const { db, stats } = ctx;
       const rows = await db.select().from(properties).where(propertyFilter);
       const emit = (readings: RateReading[]) => persistRateReadings(db, readings, stats);
+      const collectable: Array<{
+        property: (typeof rows)[number];
+        adapter: ReturnType<typeof selectAdapter>;
+      }> = [];
 
       for (const property of rows) {
         const adapter = selectAdapter(property.collectorConfig);
@@ -86,6 +94,21 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
           stats.notes[`${property.slug}.skipped`] = readiness.reason ?? "not configured";
           continue;
         }
+        collectable.push({ property, adapter });
+      }
+
+      collectable.sort((a, b) => a.property.slug.localeCompare(b.property.slug));
+      const selected = options.propertySlug
+        ? collectable
+        : selectRotatingBatch(collectable, propertiesPerRun);
+
+      stats.notes.collectablePropertyCount = collectable.length;
+      stats.notes.selectedProperties = selected.map(({ property }) => property.slug);
+      ctx.logger.info(
+        `selected ${selected.length} of ${collectable.length} collectable properties: ${selected.map(({ property }) => property.slug).join(", ")}`
+      );
+
+      for (const { property, adapter } of selected) {
         await adapter.collect(ctx, property, params, emit);
       }
     },
