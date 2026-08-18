@@ -259,7 +259,7 @@ export const PROPERTIES: PropertySeed[] = [
     roomCount: 300,
     latitude: 33.1507,
     longitude: -96.8236,
-    collectorConfig: { adapter: "universal-frisco", hotelCode: null },
+    collectorConfig: { adapter: "universal-kids-commerce", hotelId: "UNI012" },
   },
 ];
 

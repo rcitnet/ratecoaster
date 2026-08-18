@@ -16,8 +16,13 @@ capture workflow below is only for other operators whose endpoints are not
 already represented by a dedicated adapter.
 
 This takes about ten minutes per operator. Four operators cover everything:
-`universal-ibe` (all 11 Orlando hotels), `hilton`, `marriott`, `synxis`
-(Hollywood partners), and `universal-frisco`.
+`universal-ibe` (all 11 Orlando hotels), `universal-kids-commerce` (the Frisco
+hotel), `hilton`, `marriott`, and `synxis` (Hollywood partners).
+
+The Frisco hotel uses a separate SAP Commerce site and property id `UNI012`.
+Its public guest API currently exposes the `RACK` Standard rate only—there is
+no APH plan to infer or relabel. Set `UNIVERSAL_KIDS_COMMERCE_CLIENT_SECRET` to
+the guest client key published by that booking app before enabling collection.
 
 ## Before you start — read this
 

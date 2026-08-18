@@ -3,12 +3,14 @@ import { observedAdapter } from "./observed.js";
 import { affiliateAdapter } from "./affiliate.js";
 import { derivedAdapter } from "./derived.js";
 import { universalIbeAdapter } from "./universal-ibe.js";
+import { universalKidsCommerceAdapter } from "./universal-kids-commerce.js";
 
 export type { RateAdapter, RateAdapterParams, ReadingSink, PropertyRow } from "./types.js";
 export { observedAdapter } from "./observed.js";
 export { affiliateAdapter } from "./affiliate.js";
 export { derivedAdapter } from "./derived.js";
 export { universalIbeAdapter } from "./universal-ibe.js";
+export { universalKidsCommerceAdapter } from "./universal-kids-commerce.js";
 
 /**
  * Adapters keyed by the `source` a property's collectorConfig requests. An
@@ -28,6 +30,7 @@ export const RATE_ADAPTERS: Record<string, RateAdapter> = {
  */
 export function selectAdapter(cfg: Record<string, unknown> | null | undefined): RateAdapter {
   if (cfg?.adapter === "universal-ibe") return universalIbeAdapter;
+  if (cfg?.adapter === "universal-kids-commerce") return universalKidsCommerceAdapter;
   const source = typeof cfg?.source === "string" ? cfg.source : "observed";
   return RATE_ADAPTERS[source] ?? observedAdapter;
 }
