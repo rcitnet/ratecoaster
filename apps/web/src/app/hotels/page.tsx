@@ -26,12 +26,20 @@ export default async function HotelsPage({
   const params = await searchParams;
   const destination = DestinationSlug.catch("universal-orlando").parse(params.destination);
   const rateCode = RateCode.catch("APH").parse(params.rateCode);
-  const adults = Number(params.adults ?? 2);
+  // Straight off the query string, so it has to survive garbage: RateQuery
+  // accepts 1–8, and a NaN would 400 the whole page the same way limit:900 did.
+  const adultsRaw = Number(params.adults ?? 2);
+  const adults = Number.isFinite(adultsRaw)
+    ? Math.min(8, Math.max(1, Math.trunc(adultsRaw)))
+    : 2;
 
   const client = await getClient();
   const [properties, rates] = await Promise.all([
     safe(client.listProperties(destination), []),
-    safe(client.listRates({ destination, rateCode, adults, limit: 900 }), {
+    // 500 is the ceiling RateQuery allows; anything higher is rejected outright
+    // as invalid_query. The grid renders 28 date columns, so 500 rows covers
+    // ~31 dates even at 16 properties — comfortably more than is displayed.
+    safe(client.listRates({ destination, rateCode, adults, limit: 500 }), {
       items: [], attribution: [], gate: EMPTY_GATE,
     } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }),
   ]);

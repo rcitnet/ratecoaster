@@ -53,7 +53,9 @@ export default async function PropertyPage({
 
   const client = await getClient();
   const [rates, me, properties] = await Promise.all([
-    safe(client.listRates({ propertySlug: slug, rateCode, limit: 900 }), {
+    // Capped at 500 by RateQuery. One property, so this is 500 dates — more
+    // than the 365-day catalogue can ever return.
+    safe(client.listRates({ propertySlug: slug, rateCode, limit: 500 }), {
       items: [], attribution: [], gate: EMPTY_GATE,
     } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }),
     getMe(),
