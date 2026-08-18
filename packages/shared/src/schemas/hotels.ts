@@ -5,9 +5,8 @@ import { Cents, Currency, DestinationSlug, IsoDate, IsoInstant, RateSource } fro
  * Rate codes are the heart of this product.
  *
  * Universal's booking engine returns a different price for the same room on the
- * same night depending on which promo code is attached to the search. "APH" is
- * the Annual Passholder code; it is entered in the public Promo Code field and
- * requires no login, which is exactly why a rate tracker can see it at all.
+ * same night depending on the selected rate plan. APH is a separate public
+ * Annual Passholder rate selection rather than a promo-code fallback.
  *
  * We treat the code as a first-class dimension rather than a boolean flag,
  * because the interesting comparisons are between codes: what does the

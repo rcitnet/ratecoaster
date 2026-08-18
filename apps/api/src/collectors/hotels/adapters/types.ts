@@ -20,9 +20,9 @@ export type ReadingSink = (readings: RateReading[]) => Promise<void>;
  * A rate source behind the hotel collector.
  *
  * The collector interface (name, interval, isConfigured, run) is unchanged; the
- * adapter is the seam under it. Swapping the scraper for an affiliate feed — the
- * strategic pivot — is implementing this interface, not touching the runner,
- * persistence, or read paths.
+ * adapter is the seam under it. Direct observation is the primary source, while
+ * a future licensed or affiliate source can be added without touching the
+ * runner, persistence, or read paths.
  *
  * `collect` streams via `emit` rather than returning an array so a long crawl
  * stays durable against interruption (the scraper flushes per ~200 readings);

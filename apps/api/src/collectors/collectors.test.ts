@@ -10,7 +10,15 @@ import {
   observedAdapter,
   affiliateAdapter,
   derivedAdapter,
+  universalIbeAdapter,
 } from "./hotels/adapters/index.js";
+import {
+  buildUniversalRateUrl,
+  isUniversalRateUnavailablePage,
+  parseUniversalRatePage,
+  universalDayIndex,
+} from "./hotels/adapters/universal-ibe.js";
+import { selectRotatingDates } from "./hotels/schedule.js";
 import { normalizeDate } from "./tickets/index.js";
 import { parseCsv, csvToObjects } from "./framework/csv.js";
 import { mapFeedRecords, isPlaceholderFeedUrl, type TicketFeedConfig } from "./tickets/feed-config.js";
@@ -67,6 +75,64 @@ describe("dates", () => {
     assert.equal(ordered[0], "2026-10-25", "holiday should sort first");
     // Everything still present, nothing duplicated.
     assert.equal(new Set(ordered).size, 60);
+  });
+
+  test("keeps near dates hot while rotating through the rest of the window", () => {
+    const dates = dateRange("2026-09-01", 100);
+    const first = selectRotatingDates(dates, 0.25, 0, 360);
+    const second = selectRotatingDates(dates, 0.25, 360 * 60_000, 360);
+    assert.equal(first.length, 25);
+    assert.deepEqual(first.slice(0, 14), dates.slice(0, 14));
+    assert.deepEqual(second.slice(0, 14), dates.slice(0, 14));
+    assert.notDeepEqual(first.slice(14), second.slice(14));
+  });
+});
+
+describe("Universal reservation engine", () => {
+  const standardHtml = `
+    <a class="ws-button-small wsViewRateRoom" roomcode="STD2Q" rmid="76565"
+      amt="592.00" tax="74.00" ratetype="Flexible Rate" ratecode="0RACW"
+      access="" roomtype="Standard 2 Queen Beds">Book Now</a>`;
+  const aphHtml = `
+    <a class="ws-button-small wsViewRateRoom" roomcode="KIDS" rmid="76573"
+      amt="337.25" tax="42.17" ratetype="Annual Passholder Rate" ratecode="3APHW"
+      access="APH" roomtype="Future Rock Star Kids&#39; Suite">Book Now</a>`;
+
+  test("builds one-night STANDARD and APH URLs with the engine's Y2K date index", () => {
+    assert.equal(universalDayIndex("2026-08-24"), 9732);
+    const standard = new URL(buildUniversalRateUrl(14842, 641, "2026-08-24", "STANDARD"));
+    const aph = new URL(buildUniversalRateUrl(14842, 641, "2026-08-24", "APH"));
+    assert.equal(standard.searchParams.get("rate"), "0RACW");
+    assert.equal(standard.searchParams.get("access"), "");
+    assert.equal(aph.searchParams.get("rate"), "3APHW");
+    assert.equal(aph.searchParams.get("access"), "APH");
+    assert.equal(aph.searchParams.get("nights"), "1");
+  });
+
+  test("parses standard and passholder offers without crossing rate labels", () => {
+    const standard = parseUniversalRatePage(standardHtml + aphHtml, "STANDARD");
+    const aph = parseUniversalRatePage(standardHtml + aphHtml, "APH");
+    assert.deepEqual(standard, [{
+      roomCode: "STD2Q",
+      roomName: "Standard 2 Queen Beds",
+      nightlyCents: 59200,
+      totalCents: 66600,
+      available: true,
+    }]);
+    assert.equal(aph.length, 1);
+    assert.equal(aph[0]!.roomName, "Future Rock Star Kids' Suite");
+    assert.equal(aph[0]!.nightlyCents, 33725);
+    assert.equal(aph[0]!.totalCents, 37942);
+  });
+
+  test("rejects an APH-looking price when the access marker is missing", () => {
+    assert.deepEqual(parseUniversalRatePage(aphHtml.replace('access="APH"', 'access=""'), "APH"), []);
+  });
+
+  test("distinguishes a sold-out page from an unexpected parser break", () => {
+    assert.equal(isUniversalRateUnavailablePage("The property is currently unavailable."), true);
+    assert.equal(isUniversalRateUnavailablePage("The offer is not available or expired."), true);
+    assert.equal(isUniversalRateUnavailablePage("<html>new unexplained markup</html>"), false);
   });
 });
 
@@ -182,6 +248,13 @@ describe("rate source adapters", () => {
     assert.equal(selectAdapter(null), observedAdapter);
     assert.equal(selectAdapter({}), observedAdapter);
     assert.equal(selectAdapter({ adapter: "loews-portofino" }), observedAdapter);
+  });
+
+  test("selectAdapter uses the dedicated Universal driver for Universal hotel ids", () => {
+    assert.equal(
+      selectAdapter({ adapter: "universal-ibe", hotelId: 14842, hotelGroupId: 641 }),
+      universalIbeAdapter
+    );
   });
 
   test("selectAdapter resolves the requested source; unknown falls back to observed", () => {

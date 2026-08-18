@@ -13,15 +13,19 @@ const DESTS = [
 ];
 
 const CODES = [
+  { code: "STANDARD", label: "Standard" },
   { code: "APH", label: "Annual Passholder" },
-  { code: "STANDARD", label: "Everyone" },
-  { code: "FLR", label: "Florida Resident" },
 ];
 
 export default async function HotelsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ destination?: string; rateCode?: string; adults?: string }>;
+  searchParams: Promise<{
+    destination?: string;
+    rateCode?: string;
+    adults?: string;
+    available?: string;
+  }>;
 }) {
   const params = await searchParams;
   const destination = DestinationSlug.catch("universal-orlando").parse(params.destination);
@@ -32,6 +36,7 @@ export default async function HotelsPage({
   const adults = Number.isFinite(adultsRaw)
     ? Math.min(8, Math.max(1, Math.trunc(adultsRaw)))
     : 2;
+  const availableOnly = params.available === "1";
 
   const client = await getClient();
   const [properties, rates] = await Promise.all([
@@ -51,8 +56,12 @@ export default async function HotelsPage({
     if (!byProperty.has(rate.propertySlug)) byProperty.set(rate.propertySlug, new Map());
     byProperty.get(rate.propertySlug)!.set(rate.stayDate, rate);
   }
+  const visibleProperties = availableOnly
+    ? properties.filter((property) => byProperty.has(property.slug))
+    : properties;
   const lastObserved = rates.items.map((r) => r.observedAt).sort().at(-1);
-  const here = `/hotels?destination=${destination}&rateCode=${rateCode}`;
+  const availabilityParam = availableOnly ? "&available=1" : "";
+  const here = `/hotels?destination=${destination}&rateCode=${rateCode}&adults=${adults}${availabilityParam}`;
 
   return (
     <main className="section">
@@ -65,7 +74,7 @@ export default async function HotelsPage({
 
       <div className="chips">
         {DESTS.map((d) => (
-          <a key={d.slug} href={`/hotels?destination=${d.slug}&rateCode=${rateCode}`}
+          <a key={d.slug} href={`/hotels?destination=${d.slug}&rateCode=${rateCode}&adults=${adults}${availabilityParam}`}
              className={`chip ${destination === d.slug ? "on" : ""}`}>
             <span className="chip-dot" style={{ background: d.dot }} />
             {d.label}
@@ -75,11 +84,18 @@ export default async function HotelsPage({
 
       <div className="chips" style={{ marginTop: 0 }}>
         {CODES.map((c) => (
-          <a key={c.code} href={`/hotels?destination=${destination}&rateCode=${c.code}`}
+          <a key={c.code} href={`/hotels?destination=${destination}&rateCode=${c.code}&adults=${adults}${availabilityParam}`}
              className={`chip ${rateCode === c.code ? "on" : ""}`}>
             {c.label}
           </a>
         ))}
+        <a
+          href={`/hotels?destination=${destination}&rateCode=${rateCode}&adults=${adults}${availableOnly ? "" : "&available=1"}`}
+          className={`chip ${availableOnly ? "on" : ""}`}
+          aria-pressed={availableOnly}
+        >
+          Available only
+        </a>
       </div>
 
       {rates.items.length === 0 ? (
@@ -104,11 +120,10 @@ export default async function HotelsPage({
                 </tr>
               </thead>
               <tbody>
-                {properties.map((property) => {
-                  const row = byProperty.get(property.slug);
-                  if (!row) return null;
+                {visibleProperties.map((property) => {
+                  const row = byProperty.get(property.slug) ?? new Map();
                   const prices = [...row.values()].map((r) => r.nightlyCents);
-                  const best = Math.min(...prices);
+                  const best = prices.length > 0 ? Math.min(...prices) : null;
                   return (
                     <tr key={property.slug}>
                       <td className="sticky-col">
@@ -123,7 +138,7 @@ export default async function HotelsPage({
                       {dates.slice(0, 28).map((date) => {
                         const cell = row.get(date);
                         if (!cell) return <td key={date} className="num muted">—</td>;
-                        const isBest = cell.nightlyCents === best;
+                        const isBest = best !== null && cell.nightlyCents === best;
                         return (
                           <td key={date} className="num">
                             <span style={{

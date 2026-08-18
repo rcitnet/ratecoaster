@@ -3,19 +3,20 @@
 > **Corrected August 2026 — read `CAPTURING-PRICES.md` first.**
 > Direct inspection of `universalorlando.com` disproved three assumptions that
 > still shape parts of this file. For Universal Orlando specifically:
-> the passholder rate is selected by **URL, not a promo code**; the details page
-> has **no JSON API** (Angular, server-rendered — it needs DOM selectors); and
+> the passholder rate is selected by **URL, not a promo code**; the underlying
+> reservation engine has JSON endpoints but its server-rendered rate page is
+> sufficient for one-night collection; and
 > the headline price is a **stay average, not a nightly rate**.
 > The generic JSON workflow below still applies to any operator that *does*
 > expose a JSON endpoint, which the Hollywood partner engines may.
 
-The rate collectors are complete and tested. What they do **not** ship with is
-any third party's endpoint URL — those are undocumented, they change, and
-hardcoding them would make this repo a liability rather than a tool. Instead you
-capture one from your own browser, once, and drop it in as JSON.
+Universal Orlando is implemented directly through the `universal-ibe` adapter
+for both STANDARD and APH. Its eleven property IDs ship in seed data. The generic
+capture workflow below is only for other operators whose endpoints are not
+already represented by a dedicated adapter.
 
 This takes about ten minutes per operator. Four operators cover everything:
-`loews-universal` (all 11 Orlando hotels), `hilton`, `marriott`, `synxis`
+`universal-ibe` (all 11 Orlando hotels), `hilton`, `marriott`, `synxis`
 (Hollywood partners), and `universal-frisco`.
 
 ## Before you start — read this
@@ -26,15 +27,15 @@ reachable from a public link. That is a business risk you are choosing to take,
 not a technical detail. Some things that materially reduce it:
 
 - **Stay slow.** The default is 12 requests/minute per host. A full 365-day pass
-  across 11 hotels is roughly 16,000 requests spread over many hours. That is
+  across 11 hotels and two rate plans is roughly 8,000 requests spread over many hours. That is
   less traffic than a single enthusiastic human comparison-shopping.
 - **Identify yourself.** `COLLECTOR_USER_AGENT` should name your bot and carry a
   contact address. If you are causing a problem, let them tell you instead of
   discovering it as a silent IP ban.
 - **Honour the signals.** The HTTP client already respects `Retry-After` and
   backs off on 429. Do not tune that out.
-- **Ask first, if you can.** Loews and Universal both run affiliate programs.
-  Sanctioned access is slower to get and far more durable than scraping.
+- **Review the operator's terms.** Public visibility does not automatically
+  grant permission for automated collection.
 
 ## Steps
 
@@ -45,16 +46,16 @@ not a technical detail. Some things that materially reduce it:
    field. For operators that do use a promo box, enter the code there.
 4. Find the request that returns room rates — usually the largest JSON response.
    Right-click it → **Copy** → **Copy as HAR** (or *Save all as HAR with content*).
-5. Save it as `har/loews.har` in the repo root (the `har/` directory is
+5. Save it as `har/operator.har` in the repo root (the `har/` directory is
    gitignored — HAR files contain your cookies).
 6. Generate a config skeleton:
 
    ```bash
-   npm run -w @ratecoaster/api har:import -- har/loews.har loews-universal
+   npm run -w @ratecoaster/api har:import -- har/operator.har captured-operator
    ```
 
    The importer finds candidate rate responses, guesses `roomsPath` and the
-   price fields, and writes `config/endpoints/loews-universal.json`.
+   price fields, and writes `config/endpoints/captured-operator.json`.
 7. Open that file and fix up the placeholders. Replace the literal dates,
    occupancy, and promo code in `urlTemplate` with `{checkIn}`, `{checkOut}`,
    `{adults}`, `{children}`, `{rateCode}`, `{hotelCode}`.
@@ -64,7 +65,7 @@ not a technical detail. Some things that materially reduce it:
 
    ```bash
    npm run -w @ratecoaster/api collect -- --only hotel-rates --dry-run
-   npm run -w @ratecoaster/api verify:endpoint -- loews-universal
+   npm run -w @ratecoaster/api verify:endpoint -- captured-operator
    ```
 
 10. When the parsed output looks right, set `COLLECTOR_DRY_RUN=0`.
@@ -103,7 +104,7 @@ which is normal, and is itself worth surfacing to users.
 
 ```json
 {
-  "name": "loews-universal",
+  "name": "captured-operator",
   "capturedAt": "2026-08-06",
   "request": {
     "method": "GET",

@@ -35,6 +35,7 @@ async function main() {
           includesExpressPass: p.includesExpressPass,
           earlyParkAdmission: p.earlyParkAdmission,
           roomCount: p.roomCount,
+          collectorConfig: p.collectorConfig,
         },
       });
   }

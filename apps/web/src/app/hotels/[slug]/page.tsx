@@ -50,6 +50,10 @@ export default async function PropertyPage({
   const { slug } = await params;
   const search = await searchParams;
   const rateCode = RateCode.catch("APH").parse(search.rateCode);
+  const rateChoices = [
+    { code: "STANDARD", label: "Standard" },
+    { code: "APH", label: "Annual Passholder" },
+  ] as const;
 
   const client = await getClient();
   const [rates, me, properties] = await Promise.all([
@@ -89,6 +93,19 @@ export default async function PropertyPage({
     <main className="section">
       <a href="/hotels" className="tiny muted">← All hotels</a>
       <h1 style={{ marginTop: 10 }}>{property.name}</h1>
+
+      <div className="chips" style={{ margin: "16px 0 4px" }} aria-label="Rate type">
+        {rateChoices.map((choice) => (
+          <a
+            key={choice.code}
+            href={`/hotels/${slug}?rateCode=${choice.code}${selectedDate ? `&stayDate=${selectedDate}` : ""}`}
+            className={`chip ${rateCode === choice.code ? "on" : ""}`}
+            aria-pressed={rateCode === choice.code}
+          >
+            {choice.label}
+          </a>
+        ))}
+      </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "14px 0 20px" }}>
         <span className="badge badge-blue">{TIER_LABELS[property.tier] ?? property.tier}</span>
@@ -146,9 +163,9 @@ export default async function PropertyPage({
           <thead>
             <tr>
               <th>Date</th>
-              <th className="num">Nightly</th>
-              <th className="num">Public rate</th>
-              <th className="num">You save</th>
+              <th className="num">{rateCode === "APH" ? "Passholder" : "Standard"}</th>
+              {rateCode === "APH" ? <th className="num">Standard</th> : null}
+              {rateCode === "APH" ? <th className="num">You save</th> : null}
               <th className="num">Lowest seen</th>
               <th className="num">Checked</th>
             </tr>
@@ -162,12 +179,16 @@ export default async function PropertyPage({
                   </a>
                 </td>
                 <td className="num" style={{ fontWeight: 600 }}>{centsToDisplay(rate.nightlyCents)}</td>
-                <td className="num muted">{centsToDisplay(rate.standardNightlyCents)}</td>
-                <td className="num">
-                  {rate.savingsCents && rate.savingsCents > 0 ? (
-                    <span className="delta-down">{centsToDisplay(rate.savingsCents)}</span>
-                  ) : <span className="muted">—</span>}
-                </td>
+                {rateCode === "APH" ? (
+                  <td className="num muted">{centsToDisplay(rate.standardNightlyCents)}</td>
+                ) : null}
+                {rateCode === "APH" ? (
+                  <td className="num">
+                    {rate.savingsCents && rate.savingsCents > 0 ? (
+                      <span className="delta-down">{centsToDisplay(rate.savingsCents)}</span>
+                    ) : <span className="muted">—</span>}
+                  </td>
+                ) : null}
                 <td className="num muted">{centsToDisplay(rate.historicalLowCents)}</td>
                 <td className="num muted tiny">{relativeTime(rate.observedAt)}</td>
               </tr>
