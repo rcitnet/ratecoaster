@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { properties } from "@ratecoaster/db/schema";
 import { persistRateReadings, type RateReading } from "../framework/persist.js";
 import type { Collector, CollectorContext } from "../framework/types.js";
@@ -22,6 +22,8 @@ export interface HotelCollectorOptions {
    */
   sliceFraction?: number;
   nights?: number;
+  /** Restrict a manual/canary run to one exact property slug. */
+  propertySlug?: string;
 }
 
 /**
@@ -38,16 +40,21 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
     sliceFraction: options.sliceFraction ?? 0.25,
     nights: options.nights ?? 1,
   };
+  const propertyFilter = options.propertySlug
+    ? and(eq(properties.active, true), eq(properties.slug, options.propertySlug))
+    : eq(properties.active, true);
 
   return {
     name: "hotel-rates",
-    description: `Hotel rates, ${params.lookaheadDays}-day lookahead, all room types and occupancies`,
+    description: `Hotel rates, ${params.lookaheadDays}-day lookahead, all room types and occupancies${options.propertySlug ? `, property ${options.propertySlug}` : ""}`,
     intervalMinutes: 360,
 
     async isConfigured(ctx: CollectorContext) {
-      const rows = await ctx.db.select().from(properties).where(eq(properties.active, true));
+      const rows = await ctx.db.select().from(properties).where(propertyFilter);
       if (rows.length === 0) {
-        return { ready: false, reason: "no properties seeded — run `npm run db:seed`" };
+        return options.propertySlug
+          ? { ready: false, reason: `no active property matches ${options.propertySlug}` }
+          : { ready: false, reason: "no properties seeded — run `npm run db:seed`" };
       }
 
       // Ready if at least one property is collectable by its chosen adapter.
@@ -69,7 +76,7 @@ export function createHotelRateCollector(options: HotelCollectorOptions = {}): C
 
     async run(ctx: CollectorContext) {
       const { db, stats } = ctx;
-      const rows = await db.select().from(properties).where(eq(properties.active, true));
+      const rows = await db.select().from(properties).where(propertyFilter);
       const emit = (readings: RateReading[]) => persistRateReadings(db, readings, stats);
 
       for (const property of rows) {

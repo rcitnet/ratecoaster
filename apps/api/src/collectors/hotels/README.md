@@ -73,6 +73,16 @@ not a technical detail. Some things that materially reduce it:
    npm run -w @ratecoaster/api verify:endpoint -- captured-operator
    ```
 
+   For a safe one-property canary, add the exact seeded slug:
+
+   ```bash
+   npm run -w @ratecoaster/api collect -- --only hotel-rates --property universal-kids-hotel --dry-run
+   ```
+
+   Remove `--dry-run` only after the canary plans the expected requests. The
+   property filter affects manual runs only; scheduled collection remains
+   unchanged.
+
 10. When the parsed output looks right, set `COLLECTOR_DRY_RUN=0`.
 
 ## Confirming the discount actually applied

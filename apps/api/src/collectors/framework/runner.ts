@@ -41,7 +41,8 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
   const setting = await getCollectorSetting(collector.name);
   const previousDryRun = process.env.COLLECTOR_DRY_RUN;
   const forceDryRun = process.env.RATECOASTER_FORCE_DRY_RUN === "1";
-  process.env.COLLECTOR_DRY_RUN = setting.dryRun || forceDryRun ? "1" : "0";
+  const isDryRun = setting.dryRun || forceDryRun;
+  process.env.COLLECTOR_DRY_RUN = isDryRun ? "1" : "0";
 
   const restoreEnv = () => {
     if (previousDryRun === undefined) delete process.env.COLLECTOR_DRY_RUN;
@@ -89,13 +90,15 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
 
   try {
     await collector.run({ db, stats, logger });
-    if (stats.parsedCount === 0) {
+    if (stats.errorCount > 0) {
+      status = "partial";
+    } else if (stats.parsedCount === 0 && isDryRun) {
+      logger.info(`dry-run planned ${stats.requestCount} requests; no requests were sent`);
+    } else if (stats.parsedCount === 0) {
       status = "partial";
       logger.warn(
         "run finished but parsed 0 records — the upstream response shape has probably changed"
       );
-    } else if (stats.errorCount > 0) {
-      status = "partial";
     }
   } catch (err) {
     status = "failed";
@@ -120,7 +123,7 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
         notes: {
           ...stats.notes,
           durationMs,
-          dryRun: setting.dryRun,
+          dryRun: isDryRun,
           ...(thrown ? { error: String(thrown) } : {}),
         },
       })

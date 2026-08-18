@@ -29,6 +29,36 @@ import { parseCsv, csvToObjects } from "./framework/csv.js";
 import { mapFeedRecords, isPlaceholderFeedUrl, type TicketFeedConfig } from "./tickets/feed-config.js";
 import { normalizeName, slugify } from "./waits/providers.js";
 import type { EndpointConfig } from "./hotels/endpoint-config.js";
+import { parseCollectArgs } from "../jobs/collect-args.js";
+
+describe("collector CLI arguments", () => {
+  test("accepts a one-property hotel canary", () => {
+    assert.deepEqual(
+      parseCollectArgs(["--only", "hotel-rates", "--property", "universal-kids-hotel"]),
+      {
+        dryRun: false,
+        list: false,
+        only: "hotel-rates",
+        propertySlug: "universal-kids-hotel",
+      }
+    );
+  });
+
+  test("rejects property filters for unrelated collectors", () => {
+    assert.throws(
+      () => parseCollectArgs(["--only", "wait-times", "--property", "universal-kids-hotel"]),
+      /only be used with --only hotel-rates/
+    );
+  });
+
+  test("rejects a missing or malformed property slug", () => {
+    assert.throws(() => parseCollectArgs(["--only", "hotel-rates", "--property"]), /requires a value/);
+    assert.throws(
+      () => parseCollectArgs(["--only", "hotel-rates", "--property", "../other"]),
+      /invalid property slug/
+    );
+  });
+});
 
 describe("money", () => {
   test("parses currency strings and numbers into cents", () => {
