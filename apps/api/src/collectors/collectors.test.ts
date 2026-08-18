@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseMoneyToCents, centsToDisplay } from "@ratecoaster/shared";
+import { parseMoneyToCents, centsToDisplay, RateQuery } from "@ratecoaster/shared";
+import { PROPERTIES, RETIRED_PROPERTY_SLUGS } from "@ratecoaster/db/src/seed-data.js";
 import { addDays, dateRange, daysBetween, prioritizeDates, todayInTimezone } from "./framework/dates.js";
 import { extractPath, extractOne, renderTemplate } from "./hotels/endpoint-config.js";
 import { parseOffers, checkRateCode } from "./hotels/index.js";
@@ -31,6 +32,20 @@ import { normalizeName, slugify } from "./waits/providers.js";
 import type { EndpointConfig } from "./hotels/endpoint-config.js";
 import { parseCollectArgs } from "../jobs/collect-args.js";
 
+describe("hotel catalogue", () => {
+  test("excludes Hollywood-area hotels from the public collection set", () => {
+    assert.equal(
+      PROPERTIES.some((property) => property.destination === "universal-hollywood"),
+      false
+    );
+    const retiredSlugs = new Set<string>(RETIRED_PROPERTY_SLUGS);
+    assert.equal(
+      PROPERTIES.some((property) => retiredSlugs.has(property.slug)),
+      false
+    );
+  });
+});
+
 describe("collector CLI arguments", () => {
   test("accepts a one-property hotel canary", () => {
     assert.deepEqual(
@@ -57,6 +72,14 @@ describe("collector CLI arguments", () => {
       () => parseCollectArgs(["--only", "hotel-rates", "--property", "../other"]),
       /invalid property slug/
     );
+  });
+});
+
+describe("hotel rate queries", () => {
+  test("accepts a room type UUID and rejects arbitrary identifiers", () => {
+    const roomTypeId = "00000000-0000-4000-8000-000000000001";
+    assert.equal(RateQuery.parse({ roomTypeId }).roomTypeId, roomTypeId);
+    assert.equal(RateQuery.safeParse({ roomTypeId: "standard-room" }).success, false);
   });
 });
 

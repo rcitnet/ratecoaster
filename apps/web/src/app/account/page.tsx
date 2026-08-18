@@ -57,8 +57,8 @@ export default async function AccountPage() {
           <div className="hero-kicker">Coming soon</div>
           <h2>Pro</h2>
           <p>
-            Every room type and occupancy, cross-hotel comparisons, and best-time-to-book modelling
-            built on the full price history we&apos;re already collecting.
+            Cross-hotel comparisons and best-time-to-book modelling built on the full price history
+            we&apos;re already collecting.
           </p>
           <div className="paywall-actions">
             <span className="btn btn-ghost" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff", cursor: "default" }}>

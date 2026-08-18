@@ -148,9 +148,37 @@ demoApp.get("/v1/properties", (c) => {
   );
 });
 
+function demoRoomTypes(propertySlug: string) {
+  const propertyIndex = Math.max(0, PROPERTIES.findIndex((property) => property.slug === propertySlug));
+  return [
+    { name: "Standard Room", maxOccupancy: 4 },
+    { name: "Pool View", maxOccupancy: 4 },
+    { name: "Suite", maxOccupancy: 6 },
+  ].map((room, roomIndex) => ({
+    id: `00000000-0000-4000-8000-${String(propertyIndex * 10 + roomIndex + 1).padStart(12, "0")}`,
+    propertyId: `demo-${propertyIndex}`,
+    externalCode: `DEMO-${roomIndex + 1}`,
+    ...room,
+  }));
+}
+
+demoApp.get("/v1/rates/options", (c) => {
+  const propertySlug = c.req.query("propertySlug");
+  const destination = c.req.query("destination");
+  const property = propertySlug
+    ? PROPERTIES.find((candidate) => candidate.slug === propertySlug)
+    : undefined;
+  const resolvedDestination = property?.destination ?? destination;
+  return c.json({
+    rateCodes: resolvedDestination === "universal-kids-frisco" ? ["STANDARD"] : ["STANDARD", "APH"],
+    roomTypes: property ? demoRoomTypes(property.slug) : [],
+  });
+});
+
 demoApp.get("/v1/rates", (c) => {
   const destination = c.req.query("destination") ?? "universal-orlando";
   const propertySlug = c.req.query("propertySlug");
+  const roomTypeId = c.req.query("roomTypeId");
   const rateCode = c.req.query("rateCode") ?? "APH";
   const today = todayInTimezone("America/New_York");
 
@@ -164,6 +192,8 @@ demoApp.get("/v1/rates", (c) => {
 
   const items = [];
   for (const p of props) {
+    const roomType = demoRoomTypes(p.slug).find((room) => room.id === roomTypeId)
+      ?? demoRoomTypes(p.slug)[0]!;
     for (let i = 0; i < span; i++) {
       const stayDate = addDays(today, i);
       const nightly = sampleRate(p.slug, p.tier, stayDate, rateCode);
@@ -177,7 +207,7 @@ demoApp.get("/v1/rates", (c) => {
         rateCode,
         nightlyCents: nightly,
         totalCents: Math.round(nightly * 1.19),
-        roomTypeName: null,
+        roomTypeName: roomType.name,
         available: seed(p.slug, stayDate, "avail") > 0.08,
         observedAt: new Date(Date.now() - 1000 * 60 * 37).toISOString(),
         standardNightlyCents: rateCode === "STANDARD" ? null : standard,

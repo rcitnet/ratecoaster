@@ -1,4 +1,9 @@
-import { centsToDisplay, RateCode } from "@ratecoaster/shared";
+import {
+  centsToDisplay,
+  RateCode,
+  RATE_CODE_LABELS,
+  type RateCode as RateCodeValue,
+} from "@ratecoaster/shared";
 import {
   getClient, EMPTY_GATE, formatLongDate, formatStayDate, getMe, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
@@ -45,37 +50,18 @@ export default async function PropertyPage({
   params, searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ stayDate?: string; rateCode?: string }>;
+  searchParams: Promise<{ stayDate?: string; rateCode?: string; roomTypeId?: string }>;
 }) {
   const { slug } = await params;
   const search = await searchParams;
-  const rateCode = RateCode.catch("APH").parse(search.rateCode);
-  const rateChoices = [
-    { code: "STANDARD", label: "Standard" },
-    { code: "APH", label: "Annual Passholder" },
-  ] as const;
-
   const client = await getClient();
-  const [rates, me, properties] = await Promise.all([
-    // Capped at 500 by RateQuery. One property, so this is 500 dates — more
-    // than the 365-day catalogue can ever return.
-    safe(client.listRates({ propertySlug: slug, rateCode, limit: 500 }), {
-      items: [], attribution: [], gate: EMPTY_GATE,
-    } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }),
+  const [me, properties, filterOptions] = await Promise.all([
     getMe(),
     safe(client.listProperties(), []),
+    safe(client.rateFilterOptions({ propertySlug: slug }), { rateCodes: [], roomTypes: [] }),
   ]);
 
   const property = properties.find((p) => p.slug === slug);
-  const gate = (rates as { gate?: typeof EMPTY_GATE }).gate ?? EMPTY_GATE;
-  const selectedDate = search.stayDate ?? rates.items[0]?.stayDate;
-
-  // Price history is a free-account feature; the API returns 402 for anonymous
-  // callers, so an empty array here means "locked", not "no data".
-  const history = selectedDate && me.entitlements.priceHistory
-    ? await safe(client.rateHistory(slug, selectedDate, rateCode), [])
-    : [];
-
   if (!property) {
     return (
       <main className="section">
@@ -86,26 +72,88 @@ export default async function PropertyPage({
     );
   }
 
+  const availableRateCodes: RateCodeValue[] = filterOptions.rateCodes.length > 0
+    ? filterOptions.rateCodes
+    : ["STANDARD"];
+  const requestedRateCode = search.rateCode
+    ? RateCode.catch("STANDARD").parse(search.rateCode)
+    : null;
+  const rateCode = requestedRateCode && availableRateCodes.includes(requestedRateCode)
+    ? requestedRateCode
+    : availableRateCodes.includes("APH")
+      ? "APH"
+      : availableRateCodes[0]!;
+  const rateChoices = availableRateCodes.map((code) => ({
+    code,
+    label: RATE_CODE_LABELS[code],
+  }));
+  const roomTypeId = filterOptions.roomTypes.some((room) => room.id === search.roomTypeId)
+    ? search.roomTypeId
+    : undefined;
+  const selectedRoomType = filterOptions.roomTypes.find((room) => room.id === roomTypeId);
+  const rates = await safe(
+    client.listRates({ propertySlug: slug, rateCode, roomTypeId, limit: 500 }),
+    {
+      items: [], attribution: [], gate: EMPTY_GATE,
+    } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }
+  );
+  const gate = (rates as { gate?: typeof EMPTY_GATE }).gate ?? EMPTY_GATE;
+  const selectedDate = search.stayDate ?? rates.items[0]?.stayDate;
+
+  // Price history is a free-account feature; the API returns 402 for anonymous
+  // callers, so an empty array here means "locked", not "no data".
+  const history = selectedDate && me.entitlements.priceHistory
+    ? await safe(client.rateHistory(slug, selectedDate, rateCode, roomTypeId), [])
+    : [];
+
   const cheapest = [...rates.items].sort((a, b) => a.nightlyCents - b.nightlyCents)[0];
-  const here = `/hotels/${slug}`;
+  const roomTypeParam = roomTypeId ? `&roomTypeId=${encodeURIComponent(roomTypeId)}` : "";
+  const here = `/hotels/${slug}?rateCode=${rateCode}${roomTypeParam}`;
 
   return (
     <main className="section">
       <a href="/hotels" className="tiny muted">← All hotels</a>
       <h1 style={{ marginTop: 10 }}>{property.name}</h1>
 
-      <div className="chips" style={{ margin: "16px 0 4px" }} aria-label="Rate type">
-        {rateChoices.map((choice) => (
+      {rateChoices.length > 1 ? (
+        <div className="chips" style={{ margin: "16px 0 4px" }} aria-label="Rate type">
+          {rateChoices.map((choice) => (
           <a
             key={choice.code}
-            href={`/hotels/${slug}?rateCode=${choice.code}${selectedDate ? `&stayDate=${selectedDate}` : ""}`}
+            href={`/hotels/${slug}?rateCode=${choice.code}${selectedDate ? `&stayDate=${selectedDate}` : ""}${roomTypeParam}`}
             className={`chip ${rateCode === choice.code ? "on" : ""}`}
             aria-pressed={rateCode === choice.code}
           >
             {choice.label}
           </a>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : null}
+
+      {filterOptions.roomTypes.length > 1 ? (
+        <form
+          action={`/hotels/${slug}`}
+          method="get"
+          style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap", margin: "14px 0 20px" }}
+        >
+          <input type="hidden" name="rateCode" value={rateCode} />
+          {selectedDate ? <input type="hidden" name="stayDate" value={selectedDate} /> : null}
+          <label style={{ minWidth: 260 }}>
+            <span className="tiny muted" style={{ display: "block", marginBottom: 5, fontWeight: 700 }}>
+              ROOM TYPE
+            </span>
+            <select className="field" name="roomTypeId" defaultValue={roomTypeId ?? ""}>
+              <option value="">Cheapest available room</option>
+              {filterOptions.roomTypes.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}{room.maxOccupancy ? ` · sleeps ${room.maxOccupancy}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="btn btn-blue btn-sm">Apply</button>
+        </form>
+      ) : null}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "14px 0 20px" }}>
         <span className="badge badge-blue">{TIER_LABELS[property.tier] ?? property.tier}</span>
@@ -124,6 +172,9 @@ export default async function PropertyPage({
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 4 }}>
             <span className="deal-price">{centsToDisplay(cheapest.nightlyCents)}</span>
             <span className="muted">on {formatLongDate(cheapest.stayDate)}</span>
+          </div>
+          <div className="tiny muted" style={{ marginTop: 4 }}>
+            {selectedRoomType?.name ?? cheapest.roomTypeName ?? "Cheapest available room"}
           </div>
         </div>
       ) : null}
@@ -158,11 +209,13 @@ export default async function PropertyPage({
       {gate.gated ? <PaywallInline gate={gate} returnTo={here} /> : null}
 
       <h2 style={{ marginTop: 34 }}>Upcoming nights</h2>
+      {selectedRoomType ? <p className="tiny muted">Showing {selectedRoomType.name}.</p> : null}
       <div className={`table-wrap ${gate.gated ? "locked-preview" : ""}`} style={{ marginTop: 14 }}>
         <table>
           <thead>
             <tr>
               <th>Date</th>
+              <th>Room type</th>
               <th className="num">{rateCode === "APH" ? "Passholder" : "Standard"}</th>
               {rateCode === "APH" ? <th className="num">Standard</th> : null}
               {rateCode === "APH" ? <th className="num">You save</th> : null}
@@ -174,10 +227,11 @@ export default async function PropertyPage({
             {rates.items.slice(0, 60).map((rate) => (
               <tr key={rate.stayDate}>
                 <td>
-                  <a href={`/hotels/${slug}?stayDate=${rate.stayDate}&rateCode=${rateCode}`}>
+                  <a href={`/hotels/${slug}?stayDate=${rate.stayDate}&rateCode=${rateCode}${roomTypeParam}`}>
                     {formatStayDate(rate.stayDate)}
                   </a>
                 </td>
+                <td>{rate.roomTypeName ?? "Room"}</td>
                 <td className="num" style={{ fontWeight: 600 }}>{centsToDisplay(rate.nightlyCents)}</td>
                 {rateCode === "APH" ? (
                   <td className="num muted">{centsToDisplay(rate.standardNightlyCents)}</td>

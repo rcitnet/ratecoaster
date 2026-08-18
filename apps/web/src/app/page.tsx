@@ -6,7 +6,11 @@ export const revalidate = 60;
 
 export default async function DealsPage() {
   const client = await getClient();
-  const [deals, me] = await Promise.all([safe(client.listDeals({ limit: 24 }), []), getMe()]);
+  const [deals, me, properties] = await Promise.all([
+    safe(client.listDeals({ limit: 24 }), []),
+    getMe(),
+    safe(client.listProperties(), []),
+  ]);
 
   const cheapest = deals[0];
   const withExpress = deals.filter((d) => d.includesExpressPass).length;
@@ -19,9 +23,9 @@ export default async function DealsPage() {
         </div>
         <h1>The best week to go is cheaper than you think.</h1>
         <p className="lede">
-          Passholder and public rates for every Universal hotel — Orlando, Hollywood and the new
-          Frisco resort, kept up to date through the day. We&apos;ll show you which nights are
-          genuinely a bargain, not just cheap.
+          Passholder and public rates for Universal resort hotels in Orlando and Frisco, kept up
+          to date through the day. We&apos;ll show you which nights are genuinely a bargain, not
+          just cheap.
         </p>
         <div className="hero-actions">
           <a href="/hotels" className="btn btn-primary btn-lg">
@@ -34,7 +38,7 @@ export default async function DealsPage() {
 
         <div className="hero-stats">
           <div>
-            <div className="hero-stat-value">16</div>
+            <div className="hero-stat-value">{properties.length}</div>
             <div className="hero-stat-label">hotels tracked</div>
           </div>
           <div>

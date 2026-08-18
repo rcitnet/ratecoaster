@@ -4,6 +4,7 @@ import {
   CurrentRate,
   Deal,
   Property,
+  RateFilterOptions,
   RateHistoryPoint,
   type RateQuery,
 } from "./schemas/hotels.js";
@@ -113,11 +114,15 @@ export class RateCoasterClient {
     );
   }
 
-  rateHistory(propertySlug: string, stayDate: string, rateCode = "APH") {
+  rateFilterOptions(query: { destination?: string; propertySlug?: string }) {
+    return this.request("/v1/rates/options", RateFilterOptions, { query });
+  }
+
+  rateHistory(propertySlug: string, stayDate: string, rateCode = "APH", roomTypeId?: string) {
     return this.request(
       `/v1/rates/${encodeURIComponent(propertySlug)}/history`,
       z.array(RateHistoryPoint),
-      { query: { stayDate, rateCode } }
+      { query: { stayDate, rateCode, roomTypeId } }
     );
   }
 

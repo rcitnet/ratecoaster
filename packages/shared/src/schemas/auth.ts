@@ -34,7 +34,7 @@ export const Entitlements = z.object({
   alerts: z.boolean(),
   /** Max simultaneous watched date ranges. */
   maxWatches: z.number().int().nonnegative(),
-  /** Every room type and occupancy rather than just the cheapest. */
+  /** Room-type breakdowns are available in the hotel rate explorer. */
   allRoomTypes: z.boolean(),
   /** Cross-hotel comparison and "best time to book" modelling. */
   advancedInsights: z.boolean(),
@@ -50,7 +50,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlements> = {
     priceHistory: false,
     alerts: false,
     maxWatches: 0,
-    allRoomTypes: false,
+    allRoomTypes: true,
     advancedInsights: false,
     admin: false,
   },
@@ -61,7 +61,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlements> = {
     priceHistory: true,
     alerts: true,
     maxWatches: 5,
-    allRoomTypes: false,
+    allRoomTypes: true,
     advancedInsights: false,
     admin: false,
   },
