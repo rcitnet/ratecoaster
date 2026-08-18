@@ -27,3 +27,24 @@ export function selectRotatingDates(
 
   return [...hot, ...rotating];
 }
+
+/**
+ * Select a bounded, deterministic batch for a scheduled run. Advancing by the
+ * batch size keeps every item on a predictable cadence while wrapping cleanly
+ * when the total is not divisible by the batch size.
+ */
+export function selectRotatingBatch<T>(
+  items: readonly T[],
+  batchSize: number,
+  nowMs = Date.now(),
+  intervalMinutes = 360
+): T[] {
+  if (items.length === 0) return [];
+
+  const count = Math.min(items.length, Math.max(1, Math.floor(batchSize)));
+  if (count === items.length) return [...items];
+
+  const runSlot = Math.floor(nowMs / (intervalMinutes * 60_000));
+  const offset = (runSlot * count) % items.length;
+  return Array.from({ length: count }, (_, index) => items[(offset + index) % items.length]!);
+}

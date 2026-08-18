@@ -80,8 +80,13 @@ not a technical detail. Some things that materially reduce it:
    ```
 
    Remove `--dry-run` only after the canary plans the expected requests. The
-   property filter affects manual runs only; scheduled collection remains
-   unchanged.
+   property filter affects that manual run only and does not alter the scheduled
+   rotation.
+
+   Scheduled runs rotate through three collectable properties at a time. With
+   twelve configured hotels, each property is refreshed once per day while no
+   six-hour run needs to crawl the entire portfolio. The selection is recorded
+   in the collector run notes and logged before requests begin.
 
 10. When the parsed output looks right, set `COLLECTOR_DRY_RUN=0`.
 

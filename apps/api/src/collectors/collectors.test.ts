@@ -23,7 +23,7 @@ import {
   buildKidsHotelSearchUrl,
   parseKidsHotelResponse,
 } from "./hotels/adapters/universal-kids-commerce.js";
-import { selectRotatingDates } from "./hotels/schedule.js";
+import { selectRotatingBatch, selectRotatingDates } from "./hotels/schedule.js";
 import { normalizeDate } from "./tickets/index.js";
 import { parseCsv, csvToObjects } from "./framework/csv.js";
 import { mapFeedRecords, isPlaceholderFeedUrl, type TicketFeedConfig } from "./tickets/feed-config.js";
@@ -120,6 +120,16 @@ describe("dates", () => {
     assert.deepEqual(first.slice(0, 14), dates.slice(0, 14));
     assert.deepEqual(second.slice(0, 14), dates.slice(0, 14));
     assert.notDeepEqual(first.slice(14), second.slice(14));
+  });
+
+  test("rotates bounded property batches without starving wraparound items", () => {
+    const properties = ["a", "b", "c", "d", "e"];
+    const interval = 360 * 60_000;
+
+    assert.deepEqual(selectRotatingBatch(properties, 2, 0), ["a", "b"]);
+    assert.deepEqual(selectRotatingBatch(properties, 2, interval), ["c", "d"]);
+    assert.deepEqual(selectRotatingBatch(properties, 2, interval * 2), ["e", "a"]);
+    assert.deepEqual(selectRotatingBatch(properties, 10, 0), properties);
   });
 });
 
