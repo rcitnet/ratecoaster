@@ -115,9 +115,10 @@ export function EndpointWizard({ name }: { name: string }) {
           <h3>Upload a HAR capture</h3>
           <p className="muted" style={{ fontSize: 15, marginTop: 8 }}>
             In your browser, open the booking page, press F12, go to <b>Network</b>, filter to{" "}
-            <b>Fetch/XHR</b>, and run a search with <code>APH</code> in the promo field. Right-click
-            the request that returned prices and choose <b>Copy as HAR</b> — or save all with
-            content. Then drop the file here.
+            <b>Fetch/XHR</b>, and run a search in the discounted context — for Universal Orlando
+            that means entering through the separate passholder link, as there is no promo field.
+            Right-click the request that returned prices and choose <b>Copy as HAR</b> — or save
+            all with content. Then drop the file here.
           </p>
           <input
             type="file"
@@ -234,10 +235,12 @@ export function EndpointWizard({ name }: { name: string }) {
               <b>{testResult.message}</b>
               {testResult.rateCodeApplied === false ? (
                 <p style={{ margin: "8px 0 0", fontSize: 14 }}>
-                  The promo code wasn&apos;t applied, so these are public rates. Storing them as
+                  The discount didn&apos;t apply, so these are public rates. Storing them as
                   passholder prices would show a discount that doesn&apos;t exist — the collector
-                  discards them. Fix <code>rateCodeAppliedPath</code>, or try a date where the
-                  passholder rate is published.
+                  discards them. On a promo-code source, check{" "}
+                  <code>rateCodeAppliedPath</code>; on Universal Orlando, check that the capture
+                  came from the passholder link. Or try a date where the passholder rate is
+                  published.
                 </p>
               ) : null}
             </div>

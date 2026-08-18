@@ -100,14 +100,21 @@ typo in a loop bound.
 
 ### The one bug worth guarding against
 
-Booking engines routinely accept an inapplicable promo code and silently return
-the **public** rate. If you do not detect that, you store standard prices
-labelled `APH` and show users a passholder discount that does not exist — worse
-than showing nothing, because they will act on it.
+Storing a passholder discount that does not exist is worse than showing nothing,
+because users act on it — they book believing they saved $200 a night when they
+did not.
 
-Set `rateCodeAppliedPath` in your endpoint config to the field that echoes the
-applied rate plan. Readings that fail the check are discarded, and the count
-surfaces on `/admin/status`.
+How you detect it depends on the source. Universal Orlando selects the
+passholder rate by **URL, not a promo code**, so the check is that the
+strike-through public price and the "Annual Passholder Rate Discount" label are
+both present. Operators that *do* take a promo code can silently ignore it and
+quote the public rate, which is what `rateCodeAppliedPath` guards against.
+Either way, readings that fail the check are discarded and the count surfaces on
+`/admin/status`. See `CAPTURING-PRICES.md`.
+
+Second hazard, same consequence: Universal's room cards show a **stay average**,
+not a nightly rate. Querying one night at a time keeps the two identical, which
+is why the collector defaults to `nights: 1`.
 
 ## Crawl volume
 
@@ -166,9 +173,11 @@ API returns in every response so no client can forget it.
 
 Hotel, ticket, and Express pricing is different. Automated querying of those
 booking engines is very likely contrary to the operators' terms of service, even
-though the passholder rate needs no login and comes from a public promo-code
-field. **That is a business risk you are choosing to take, not a technical
-detail.** The code is built to minimise impact:
+though the passholder rate needs no login and is reachable from a public link.
+**That is a business risk you are choosing to take, not a technical detail.**
+Public nightly rates are moving to affiliate feeds, which is sanctioned access;
+what no feed carries is the passholder rate. The code is built to minimise
+impact:
 
 - Conservative default rate limits (12 req/min/host), token-bucket paced
 - Honest, contactable `User-Agent` — no browser spoofing

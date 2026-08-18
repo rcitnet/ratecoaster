@@ -1,5 +1,14 @@
 # Capturing a booking-engine endpoint
 
+> **Corrected August 2026 — read `CAPTURING-PRICES.md` first.**
+> Direct inspection of `universalorlando.com` disproved three assumptions that
+> still shape parts of this file. For Universal Orlando specifically:
+> the passholder rate is selected by **URL, not a promo code**; the details page
+> has **no JSON API** (Angular, server-rendered — it needs DOM selectors); and
+> the headline price is a **stay average, not a nightly rate**.
+> The generic JSON workflow below still applies to any operator that *does*
+> expose a JSON endpoint, which the Hollywood partner engines may.
+
 The rate collectors are complete and tested. What they do **not** ship with is
 any third party's endpoint URL — those are undocumented, they change, and
 hardcoding them would make this repo a liability rather than a tool. Instead you
@@ -13,8 +22,8 @@ This takes about ten minutes per operator. Four operators cover everything:
 
 Automated querying of a booking engine is very likely contrary to the operator's
 terms of service, even though the annual-passholder rate needs no login and is
-quoted from a public promo-code field. That is a business risk you are choosing
-to take, not a technical detail. Some things that materially reduce it:
+reachable from a public link. That is a business risk you are choosing to take,
+not a technical detail. Some things that materially reduce it:
 
 - **Stay slow.** The default is 12 requests/minute per host. A full 365-day pass
   across 11 hotels is roughly 16,000 requests spread over many hours. That is
@@ -31,7 +40,9 @@ to take, not a technical detail. Some things that materially reduce it:
 
 1. Open the hotel's booking page in Chrome and search a date with **two adults**.
 2. DevTools → **Network** → filter **Fetch/XHR**.
-3. Run the same search again with the promo code `APH` in the promo field.
+3. Run the search again in the discounted context. For Universal Orlando that
+   means entering through the **separate passholder link** — there is no promo
+   field. For operators that do use a promo box, enter the code there.
 4. Find the request that returns room rates — usually the largest JSON response.
    Right-click it → **Copy** → **Copy as HAR** (or *Save all as HAR with content*).
 5. Save it as `har/loews.har` in the repo root (the `har/` directory is
@@ -58,12 +69,18 @@ to take, not a technical detail. Some things that materially reduce it:
 
 10. When the parsed output looks right, set `COLLECTOR_DRY_RUN=0`.
 
-## Getting `rateCodeAppliedPath` right
+## Confirming the discount actually applied
 
-This is the field worth spending time on.
+This is the check worth spending time on, whatever form it takes.
 
-Booking engines routinely accept an invalid or inapplicable promo code and
-silently return the **public** rate, with no error. If you do not detect that,
+**Universal Orlando does not use a promo code**, so `rateCodeAppliedPath` cannot
+protect you there — the equivalent check is that `s.strike-through-price` and the
+`p.savings` "Annual Passholder Rate Discount" label are both present. If either
+is missing you are looking at public rates. See `CAPTURING-PRICES.md`.
+
+For operators that *do* take a promo code, the original hazard stands: booking
+engines routinely accept an invalid or inapplicable promo code and silently
+return the **public** rate, with no error. If you do not detect that,
 you will store standard prices labelled `APH` and show users a passholder
 discount that does not exist — which is worse than showing nothing, because they
 will act on it.
@@ -99,7 +116,7 @@ which is normal, and is itself worth surfacing to users.
     "fields": {
       "roomCode": "roomTypeCode",
       "roomName": "roomTypeName",
-      "nightly": "rates[0].averageNightlyRate",
+      "nightly": "rates[0].nightlyRate",
       "total": "rates[0].totalAmount",
       "available": "isAvailable",
       "maxOccupancy": "maxOccupancy"

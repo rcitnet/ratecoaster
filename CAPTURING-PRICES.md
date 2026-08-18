@@ -2,134 +2,204 @@
 
 Wait times work with no setup because two public APIs hand them over freely.
 Prices are different: Universal and Loews have no public price API, so the only
-way to see a price is to ask their booking page the same question a customer
-would — and to do that, you have to know what their page actually sends.
+way to see a price is to ask their booking pages the same question a customer
+would — and to do that, you have to know what their pages actually contain.
 
-That's what this is. You do one capture per source, in your own browser, and
-paste the result into a config file. About 15 minutes each. You only do it once
-per source, though you'll redo it whenever they change their site.
+> **Rewritten August 2026.** The hotel section below was corrected after
+> inspecting `universalorlando.com` directly. Three things this guide previously
+> told you were wrong: that the passholder rate comes from a promo-code field,
+> that a JSON pricing API sits behind the page, and that the headline price is a
+> nightly rate. All three are covered in *What's actually there*. If you read the
+> old version, re-read that section before capturing anything.
 
 ---
 
 ## Read this first
 
 Automated querying of a booking engine is very likely contrary to Universal's
-and Loews' terms of service, even though the passholder rate comes from a public
-promo-code field and needs no login. **That is a business risk you are choosing
-to take, not a technical detail.** Nobody can promise you it's fine.
+and Loews' terms of service. **That is a business risk you are choosing to take,
+not a technical detail.** Nobody can promise you it's fine.
 
 Things that materially reduce it, all already built in:
 
-- **12 requests/minute per host.** A full 365-day pass across 11 hotels is
-  ~32,000 requests spread over many hours — less traffic than one enthusiastic
-  human comparison-shopping.
+- **12 requests/minute per host**, spread over hours.
 - **An honest, contactable `User-Agent`.** If you're causing a problem, let them
   email you rather than discovering it as a silent IP ban.
 - **`Retry-After` respected**, full-jitter backoff on 429.
 - **Dry run on by default.** Nothing is fetched until you deliberately switch it
-  off.
+  off, per collector.
 
-Worth doing in parallel: Loews and Universal both run affiliate programmes.
-Sanctioned access is slower to get and far more durable than this.
+**Scope has narrowed.** Public nightly rates are moving to affiliate feeds (see
+`CONFIGURING-AFFILIATE-FEEDS.md`), which is sanctioned access and far more
+durable. What no feed will ever carry is the **annual passholder rate** — it is a
+membership discount, and OTAs don't have it. So this capture is now mainly about
+the passholder side, and about sampling it sparsely to derive a discount rather
+than crawling all 365 days.
 
 ---
 
-## The one mistake that matters
+## What's actually there (verified August 2026)
 
-Booking engines routinely accept a promo code they don't honour and quietly
-return the **public** rate instead, with no error.
+Checked against Universal Cabana Bay Beach Resort, 13–19 October 2026, 2 guests.
 
-If you don't detect that, you store standard prices labelled `APH` and show
-families a passholder discount that doesn't exist. That is worse than showing
-nothing, because they'll act on it — book a room believing they saved $200 a
-night when they didn't.
+### The passholder rate is a separate link, not a promo code
 
-Every capture below has a step for this. Don't skip it.
+There is no promo/rate-code box to type `APH` into. The passholder context is
+carried by the URL itself:
+
+```
+/hotels/en/us/hotel-details/<searchId>|1/<hotelCode>
+```
+
+`UECBB` is Cabana Bay. `<searchId>` (e.g. `2929478715945930566`) encodes the
+dates and occupancy and is minted by the search that created it.
+
+### Both rates appear together, per room
+
+Each of the 28 room types on that page renders as:
+
+```html
+<p class="price" data-aui="Standard 2 Queen Beds-price-per-stay-amount"> $187.47 </p>
+<s class="strike-through-price"> $261.17 </s>
+<p class="average-text">Average per night</p>
+<p class="savings">Annual Passholder Rate Discount</p>
+```
+
+Passholder price, public price struck through, and a label naming the discount.
+**One request gives you both sides and therefore the discount** — you do not need
+to query twice and diff, which is what the sampling design assumed.
+
+### There is no JSON pricing API on this page
+
+Reloading the details page with network capture running produced eight requests,
+all analytics (Yahoo, Adobe, Akamai). No `__NEXT_DATA__`, no JSON `<script>`
+tags. It is an Angular application rendering prices server-side.
+
+That matters: the `roomsPath` + JSON field-path shape in `EndpointConfig` has
+nothing to point at here. **This source needs a DOM-selector adapter, not a JSON
+one.** The `data-aui` attributes are test-automation hooks and tend to survive
+redesigns better than CSS class names, so prefer them as selectors.
+
+Still unconfirmed: whether the *search submission* hits a JSON endpoint even
+though the details page does not. Worth watching for during your capture — if
+one exists, it beats scraping the DOM.
+
+### The headline price is an average, not a nightly rate
+
+This is the one most likely to corrupt the dataset silently. `$187.47` is the
+average across the whole stay. The checkout breaks the same booking out per
+night:
+
+| Night | Rate |
+|---|---|
+| Tue 13 Oct | $146.30 |
+| Wed 14 Oct | $154.85 |
+| Thu 15 Oct | $201.40 |
+| Fri 16 Oct | $231.80 |
+| Sat 17 Oct | $263.15 |
+| Sun 18 Oct | $127.30 |
+
+$1,124.80 over six nights ÷ 6 = $187.47. Saturday is **2.07×** Sunday.
+
+Note the contradiction on the page: the `data-aui` attribute says
+`price-per-stay-amount` while the visible label says "Average per night". The
+label is correct. Trust the arithmetic, not the attribute name.
+
+### The cart is session-bound
+
+The details URL renders for anyone. `/hotels/en/us/shopping-cart/<searchId>|1`
+redirects to the generic hotel listing without the cookies from the search that
+created it. Read-only price viewing works from a cold start; checkout state does
+not.
+
+---
+
+## The two mistakes that matter
+
+### 1. Storing an average as a nightly rate
+
+`rate_current` and `rate_observations` are keyed per `stayDate`. Write $187.47
+against all six dates above and you are wrong on five of them — and you erase
+precisely the signal this site exists to surface, which nights are cheap.
+
+**Query one night at a time.** With `nights: 1`, the average *is* that night's
+rate, and the problem disappears. The collector already defaults to this. That
+default is load-bearing: anyone who later "optimises" it to 7-night queries for
+7× fewer requests will silently corrupt every row without a single error.
+
+If you want the nightly curve cheaply, the checkout is where it lives — one cart
+request exposed six nights individually. That would be a ~7× volume saving over
+one-request-per-night. Two things to establish first: it needs a live session,
+and it is **not yet confirmed** whether cart nightly figures stay
+passholder-discounted or revert to public rates. Verify before relying on it.
+
+### 2. Recording a discount that didn't apply
+
+The old guard, `rateCodeAppliedPath`, was built for a promo code the engine might
+silently ignore. **That failure cannot happen when the rate is selected by URL**,
+so the guard is watching the wrong thing. The real check is simpler and stronger:
+
+- `s.strike-through-price` is present, **and**
+- `p.savings` reads "Annual Passholder Rate Discount"
+
+Both present → you have passholder pricing. Either missing → you are looking at
+public rates; discard rather than store them as `APH`.
+
+The reasoning is unchanged even though the mechanism is: a wrong discount is
+worse than no data, because families act on it. Someone books believing they
+saved $200 a night when they didn't.
 
 ---
 
 ## Source 1 — Universal Orlando hotels
 
-This is the big one: 11 hotels, and the reason the site exists.
-
 ### Capture
 
-1. Open `universalorlando.com`, go to **Hotels**, and start a booking search for
-   one hotel — say Cabana Bay — with **2 adults**, a date about 45 days out.
-2. Before you hit search: press **F12** → **Network** tab → click the **Fetch/XHR**
-   filter. Tick **Preserve log**.
-3. Run the search. You'll see a burst of requests.
-4. Run it **again**, this time with `APH` typed into the promo/rate code field.
-5. Find the request that returned the room prices. It's usually the largest JSON
-   response — click through the biggest few and look at the **Response** tab
-   until you see room names and dollar amounts.
-6. Right-click that request → **Copy** → **Copy as HAR**.
+1. Start from the **passholder booking entry point** — the separate passholder
+   link, not a promo field. Pick one hotel, 2 adults, a date ~45 days out.
+2. Press **F12** → **Network** → filter **Fetch/XHR** → tick **Preserve log**
+   *before* running the search.
+3. Run the search. Watch for any JSON response containing room names and prices:
+   that would be the search endpoint, and it is preferable to DOM scraping if it
+   exists.
+4. On the details page, note the **hotel code** — the last path segment
+   (`UECBB` for Cabana Bay).
+5. Right-click the most promising request → **Copy** → **Copy as HAR**, with
+   content. Save it as `har/loews.har` on the server.
 
-   > If you only see "Save all as HAR", that's fine too — just make sure it's
-   > *with content*. A HAR without response bodies is useless here.
+`har/` is gitignored — HAR files contain your session cookies.
 
-7. Save it on the server as `har/loews.har`:
+### If the search returned JSON
 
-   ```bash
-   mkdir -p /home/ratecoaster/app/har
-   nano /home/ratecoaster/app/har/loews.har     # paste, then Ctrl+O, Ctrl+X
-   ```
-
-   `har/` is gitignored — HAR files contain your session cookies.
-
-### Generate the config
+Use the existing importer; the JSON path config applies:
 
 ```bash
 cd /home/ratecoaster/app
 npm run -w @ratecoaster/api har:import -- har/loews.har loews-universal
 ```
 
-It finds the response that looks most like a list of room offers, guesses the
-paths, and writes `config/endpoints/loews-universal.json`. It prints a sample
-offer so you can check its guesses.
+Then replace the captured literals with placeholders — `{hotelCode} {checkIn}
+{checkOut} {nights} {adults} {children} {currency}` — and check that the price
+field is a **nightly** figure, not a stay average or total.
 
-### Fix up the config
+### If it did not (what we observed)
 
-Open `config/endpoints/loews-universal.json` and do three things:
+The details page has no JSON to import, so the adapter needs DOM selectors:
 
-**1. Replace the literal values in `urlTemplate` with placeholders.** The
-capture has real dates and numbers baked in:
+| Field | Selector |
+|---|---|
+| Room block | `.rooms-wrapper` |
+| Room name | `h2.title` |
+| Passholder price | `p.price` (or `[data-aui$="-price-per-stay-amount"]`) |
+| Public price | `s.strike-through-price` |
+| Discount confirmation | `p.savings` |
 
-```
-...&arrive=2026-10-01&depart=2026-10-02&adults=2&promo=APH
-```
+Both prices are stay averages, so this is only safe with one-night queries.
 
-becomes:
-
-```
-...&arrive={checkIn}&depart={checkOut}&adults={adults}&promo={rateCode}
-```
-
-Available: `{hotelCode} {checkIn} {checkOut} {nights} {adults} {children} {rateCode} {currency}`
-
-**2. Check the field paths** against the sample offer it printed. `nightly` must
-point at the per-night price, not the total.
-
-**3. Set `rateCodeAppliedPath`** — the important one. Find the field in the
-response that echoes which rate plan was applied. Often `ratePlanCode`,
-`appliedRatePlan`, `rateCategory`, or a `messages[]` entry saying the code was
-invalid. Then:
-
-```json
-"rateCodeAppliedPath": "data.ratePlan.code",
-"rateCodeAppliedEquals": "APH"
-```
-
-Compare your two captures — the one with `APH` and the one without. Whatever
-differs between them is the field you want.
-
-### Add the hotel codes
-
-Each hotel has its own identifier in the booking engine. You'll see it in the
-captured URL. Put them in `packages/db/src/seed-data.ts`:
+### Hotel codes
 
 ```ts
-collectorConfig: { adapter: "loews-universal", hotelCode: "CABANA" },
+collectorConfig: { adapter: "loews-universal", hotelCode: "UECBB" },
 ```
 
 Then re-seed:
@@ -144,26 +214,43 @@ ten — a mistake repeated across 11 hotels is 11 times the cleanup.
 ### Test with a single request
 
 ```bash
-npm run -w @ratecoaster/api verify:endpoint -- loews-universal CABANA APH
+npm run -w @ratecoaster/api verify:endpoint -- loews-universal UECBB APH
 ```
 
-This sends **one** request and prints what the parser made of it. Nothing is
-written to the database. You want a list of room types with sensible nightly
-prices.
+One request, nothing written to the database. You want a list of room types with
+sensible nightly prices, and the discount confirmation present.
 
-If it warns the rate code wasn't applied, your `rateCodeAppliedPath` is wrong —
-or the passholder rate genuinely isn't published for that date, which is normal
-further out. Try a date 30–60 days ahead.
+### Open questions
+
+Worth resolving on your next capture, while you are inside the flow:
+
+- **How `<searchId>` is minted for arbitrary dates.** This is the crux of
+  automating anything here — without it you cannot ask about a date of your
+  choosing.
+- **Whether the search submission returns JSON.** If it does, prefer it and skip
+  the DOM entirely.
+- **Whether cart nightly rates keep the passholder discount.** Decides whether
+  the ~7× volume saving is real.
 
 ---
 
 ## Source 2 — Ticket prices
 
-Same process, different page, and much cheaper to run: ticket storefronts return
-a **whole calendar** in one response, so ~12 requests covers a year.
+> **Unverified.** The hotel findings above came from direct inspection. The
+> ticket and Express sections below still assume a JSON storefront API and have
+> **not** been re-checked since. Treat the shape as a hypothesis: if the ticket
+> store also renders server-side, the same DOM-adapter conclusion applies.
+>
+> Note also that tickets are the one product an affiliate feed *does* cover —
+> Undercover Tourist via CJ. Wiring that up (`CONFIGURING-AFFILIATE-FEEDS.md`) is
+> sanctioned, durable and probably less work than capturing this.
 
-1. Go to Universal Orlando's ticket store and pick a multi-day ticket.
-2. Open the date picker — that's what triggers the pricing call.
+If you do capture it, storefronts are much cheaper to poll than hotels: they
+usually return a **whole calendar** in one response, so ~12 requests covers a
+year.
+
+1. Open the ticket store and pick a multi-day ticket.
+2. Open the date picker — that is what triggers the pricing call.
 3. In **Network → Fetch/XHR**, find the response containing a list of dates with
    prices.
 4. Copy as HAR, save as `har/tickets.har`, then:
@@ -172,67 +259,58 @@ a **whole calendar** in one response, so ~12 requests covers a year.
    npm run -w @ratecoaster/api har:import -- har/tickets.har universal-orlando-tickets
    ```
 
-The config shape is the same, with one difference in meaning: `roomsPath` points
-at the array of **dates**, and the `roomCode` field holds the **date** rather
-than a room code. That's a slight abuse of the field names — it kept one config
-format for both instead of two nearly identical ones.
+In the config, `roomsPath` points at the array of **dates**, and the `roomCode`
+field holds the **date** rather than a room code. That is a deliberate abuse of
+the field names — it kept one config format for both instead of two nearly
+identical ones.
 
 Set `productCode` for each ticket in `seed-data.ts`, same as `hotelCode`.
 
----
-
 ## Source 3 — Express Pass
 
-Identical to tickets. The Express Pass purchase page has its own date-priced
-calendar.
+Same process and the same caveat. The Express purchase page has its own
+date-priced calendar.
 
 ```bash
 npm run -w @ratecoaster/api har:import -- har/express.har universal-orlando-express
 ```
 
-Express is the most volatile price on the property — it can more than double
-between a quiet Tuesday and a holiday Saturday, and it re-prices during the day.
-That's why its collector runs every 4 hours rather than every 12.
+No reseller carries Express, so there is no affiliate alternative here — if you
+want this data, capture is the only route. It is also the most volatile price on
+the property, which is why its collector runs every 4 hours rather than every 12.
 
 ---
 
 ## Going live
 
-Only when `verify:endpoint` gives you sensible output:
+Only when `verify:endpoint` gives you sensible output.
 
-```bash
-nano /home/ratecoaster/app/.env
-```
-
-Change:
-
-```
-COLLECTOR_DRY_RUN=0
-```
-
-Then run one collector by hand and watch it:
+Dry run is per collector, so you no longer edit `COLLECTOR_DRY_RUN` in `.env` for
+this. Go to **`/admin/collectors`** and switch the one collector you have just
+verified off dry run, leaving the others muzzled. Then run it by hand and watch:
 
 ```bash
 cd /home/ratecoaster/app && set -a && . ./.env && set +a && npm run collect -- --only hotel-rates
-```
-
-Restart the API so it picks up the change:
-
-```bash
-sudo systemctl restart ratecoaster-api
 ```
 
 ### Watch `/admin/status` for the first few days
 
 That page is the early warning system. Two things to look for:
 
-- **"Parsed nothing"** — the run completed but returned no rows. That's what a
-  changed response shape looks like: no error, no crash, just silence. It's the
+- **"Parsed nothing"** — the run completed but returned no rows. That is what a
+  changed page structure looks like: no error, no crash, just silence. It is the
   failure most likely to go unnoticed for weeks.
-- **`rateCodeRejected` counts climbing** — the engine is ignoring your promo
-  code. Either the passholder rate isn't published for those dates, or your
-  detection is misconfigured. Either way, those readings are discarded rather
-  than shown as fake discounts.
+- **Discount-confirmation failures climbing** — the passholder markers are
+  missing, so readings are being discarded rather than stored as fake discounts.
+  Either the rate genuinely is not published for those dates, or the page changed
+  and your selectors need re-checking.
+
+### Sanity-check the numbers once, by hand
+
+Before you trust a single row: take one date the collector stored, open the same
+search in a browser, and confirm the nightly figure matches. This is the only
+check that catches an average-vs-nightly error, because that failure produces
+perfectly plausible numbers.
 
 ---
 
@@ -241,6 +319,6 @@ That page is the early warning system. Two things to look for:
 It will, eventually — booking engines change without warning. The symptom is
 almost always `/admin/status` showing "parsed nothing" rather than an error.
 
-Recapture the HAR and re-run `har:import`. Nothing else needs touching: no code
-changes, no deploy. That's the entire reason the endpoints live in config
-instead of in TypeScript.
+Recapture, update the selectors or paths in the config, and you are done: no code
+changes, no deploy. That is the entire reason these live in config rather than in
+TypeScript.
