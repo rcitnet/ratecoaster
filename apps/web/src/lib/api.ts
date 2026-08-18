@@ -24,6 +24,20 @@ export async function getClient(): Promise<RateCoasterClient> {
   });
 }
 
+/**
+ * Next signals "this route cannot be static" by throwing from `cookies()`
+ * during the build's prerender pass. That is control flow, not a failure, and
+ * it must reach Next — swallowing it both breaks the mechanism and prints a
+ * stack trace for every page on a perfectly healthy build.
+ */
+function isDynamicUsage(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { digest?: unknown }).digest === "DYNAMIC_SERVER_USAGE"
+  );
+}
+
 /** Raw fetch for endpoints not on the typed client yet. */
 export async function apiFetch<T>(path: string, fallback: T): Promise<T> {
   try {
@@ -35,6 +49,7 @@ export async function apiFetch<T>(path: string, fallback: T): Promise<T> {
     if (!res.ok) return fallback;
     return (await res.json()) as T;
   } catch (err) {
+    if (isDynamicUsage(err)) throw err;
     console.error(`[web] ${path} failed:`, err);
     return fallback;
   }
@@ -57,6 +72,7 @@ export async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   try {
     return await promise;
   } catch (err) {
+    if (isDynamicUsage(err)) throw err;
     console.error("[web] API call failed:", err);
     return fallback;
   }

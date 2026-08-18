@@ -42,6 +42,11 @@ echo "==> Building the website"
 run_as_app "set -a && . ./.env && set +a && NODE_ENV=production npm run -w @ratecoaster/web build"
 
 echo "==> Restarting services"
+# Pick up any change to the unit files first. Without this, systemd restarts
+# from its cached definition and warns that the units changed on disk — so an
+# edited unit file appears deployed, reports "running", and is silently still
+# running the old configuration.
+sudo systemctl daemon-reload
 sudo systemctl restart ratecoaster-api
 sudo systemctl restart ratecoaster-web
 
