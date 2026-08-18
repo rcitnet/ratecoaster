@@ -1,6 +1,7 @@
+import { inArray } from "drizzle-orm";
 import { closeDb, getDb } from "./index.js";
 import { parks, properties, ticketProducts } from "./schema.js";
-import { PARKS, PROPERTIES, TICKET_PRODUCTS } from "./seed-data.js";
+import { PARKS, PROPERTIES, RETIRED_PROPERTY_SLUGS, TICKET_PRODUCTS } from "./seed-data.js";
 
 /**
  * Idempotent seed. Safe to re-run: reference rows are upserted on their slug so
@@ -25,6 +26,7 @@ async function main() {
         latitude: p.latitude,
         longitude: p.longitude,
         collectorConfig: p.collectorConfig,
+        active: true,
       })
       .onConflictDoUpdate({
         target: properties.slug,
@@ -36,10 +38,19 @@ async function main() {
           earlyParkAdmission: p.earlyParkAdmission,
           roomCount: p.roomCount,
           collectorConfig: p.collectorConfig,
+          active: true,
         },
       });
   }
   console.log(`seeded ${PROPERTIES.length} properties`);
+
+  // Keep their historical observations for audit/history, but ensure removed
+  // properties vanish from the catalogue and are no longer collected.
+  await db
+    .update(properties)
+    .set({ active: false })
+    .where(inArray(properties.slug, [...RETIRED_PROPERTY_SLUGS]));
+  console.log(`retired ${RETIRED_PROPERTY_SLUGS.length} properties`);
 
   for (const p of PARKS) {
     await db

@@ -200,9 +200,9 @@ Sanctioned access is slower to obtain and far more durable.
   300-room hotel. Neither wait-time provider covers it yet, so its park row has
   null provider IDs and the collector skips it — it will start working with no
   code change once coverage lands.
-- **Hollywood has no Universal-operated on-site hotels.** The partner hotels
-  (Hilton, Sheraton, The Garland) run on separate booking engines and need their
-  own endpoint captures.
+- **Hollywood hotel tracking is intentionally out of scope.** Universal Studios
+  Hollywood has no Universal-operated on-site hotel, and the surrounding market
+  has too many unaffiliated choices for a useful, bounded comparison.
 
 ## Adding the mobile app
 

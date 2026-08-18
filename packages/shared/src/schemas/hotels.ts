@@ -45,7 +45,7 @@ export const PropertyTier = z.enum([
   "universal-classic",
   "prime-value",
   "value",
-  "partner", // Hollywood partner hotels, not Universal-operated
+  "partner", // Other official resort-hotel classifications
 ]);
 export type PropertyTier = z.infer<typeof PropertyTier>;
 
@@ -76,6 +76,13 @@ export const RoomType = z.object({
   maxOccupancy: z.number().int().positive().nullable(),
 });
 export type RoomType = z.infer<typeof RoomType>;
+
+/** Filter controls backed by rate data that actually exists. */
+export const RateFilterOptions = z.object({
+  rateCodes: z.array(RateCode),
+  roomTypes: z.array(RoomType),
+});
+export type RateFilterOptions = z.infer<typeof RateFilterOptions>;
 
 /**
  * Occupancy is part of the query key, not part of the response: the booking
@@ -191,6 +198,7 @@ export type Deal = z.infer<typeof Deal>;
 export const RateQuery = z.object({
   destination: DestinationSlug.optional(),
   propertySlug: z.string().optional(),
+  roomTypeId: z.string().uuid().optional(),
   rateCode: RateCode.default("APH"),
   from: IsoDate.optional(),
   to: IsoDate.optional(),

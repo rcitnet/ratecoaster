@@ -1,4 +1,10 @@
-import { centsToDisplay, DestinationSlug, RateCode } from "@ratecoaster/shared";
+import {
+  centsToDisplay,
+  DestinationSlug,
+  RateCode,
+  RATE_CODE_LABELS,
+  type RateCode as RateCodeValue,
+} from "@ratecoaster/shared";
 import {
   getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
@@ -8,14 +14,8 @@ export const revalidate = 60;
 
 const DESTS = [
   { slug: "universal-orlando", label: "Orlando", dot: "#3355ee" },
-  { slug: "universal-hollywood", label: "Hollywood", dot: "#8b5cf6" },
   { slug: "universal-kids-frisco", label: "Frisco", dot: "#ffc53d" },
-];
-
-const CODES = [
-  { code: "STANDARD", label: "Standard" },
-  { code: "APH", label: "Annual Passholder" },
-];
+] as const;
 
 export default async function HotelsPage({
   searchParams,
@@ -28,8 +28,10 @@ export default async function HotelsPage({
   }>;
 }) {
   const params = await searchParams;
-  const destination = DestinationSlug.catch("universal-orlando").parse(params.destination);
-  const rateCode = RateCode.catch("APH").parse(params.rateCode);
+  const requestedDestination = DestinationSlug.catch("universal-orlando").parse(params.destination);
+  const destination = requestedDestination === "universal-hollywood"
+    ? "universal-orlando"
+    : requestedDestination;
   // Straight off the query string, so it has to survive garbage: RateQuery
   // accepts 1–8, and a NaN would 400 the whole page the same way limit:900 did.
   const adultsRaw = Number(params.adults ?? 2);
@@ -39,6 +41,25 @@ export default async function HotelsPage({
   const availableOnly = params.available === "1";
 
   const client = await getClient();
+  const filterOptions = await safe(client.rateFilterOptions({ destination }), {
+    rateCodes: [],
+    roomTypes: [],
+  });
+  const availableRateCodes: RateCodeValue[] = filterOptions.rateCodes.length > 0
+    ? filterOptions.rateCodes
+    : ["STANDARD"];
+  const requestedRateCode = params.rateCode
+    ? RateCode.catch("STANDARD").parse(params.rateCode)
+    : null;
+  const rateCode = requestedRateCode && availableRateCodes.includes(requestedRateCode)
+    ? requestedRateCode
+    : availableRateCodes.includes("APH")
+      ? "APH"
+      : availableRateCodes[0]!;
+  const rateChoices = availableRateCodes.map((code) => ({
+    code,
+    label: RATE_CODE_LABELS[code],
+  }));
   const [properties, rates] = await Promise.all([
     safe(client.listProperties(destination), []),
     // 500 is the ceiling RateQuery allows; anything higher is rejected outright
@@ -67,8 +88,10 @@ export default async function HotelsPage({
     <main className="section">
       <h1>Hotel rates</h1>
       <p className="lede" style={{ marginTop: 12 }}>
-        The cheapest available room at every hotel, night by night. Switch rate type to see exactly
-        what the passholder discount is worth on each date.
+        The cheapest available room at every hotel, night by night.
+        {availableRateCodes.includes("APH")
+          ? " Switch rate type to see exactly what the passholder discount is worth on each date."
+          : " Rates shown are the plans currently published for this destination."}
         {lastObserved ? ` Updated ${relativeTime(lastObserved)}.` : ""}
       </p>
 
@@ -83,12 +106,12 @@ export default async function HotelsPage({
       </div>
 
       <div className="chips" style={{ marginTop: 0 }}>
-        {CODES.map((c) => (
+        {rateChoices.length > 1 ? rateChoices.map((c) => (
           <a key={c.code} href={`/hotels?destination=${destination}&rateCode=${c.code}&adults=${adults}${availabilityParam}`}
              className={`chip ${rateCode === c.code ? "on" : ""}`}>
             {c.label}
           </a>
-        ))}
+        )) : null}
         <a
           href={`/hotels?destination=${destination}&rateCode=${rateCode}&adults=${adults}${availableOnly ? "" : "&available=1"}`}
           className={`chip ${availableOnly ? "on" : ""}`}

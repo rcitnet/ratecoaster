@@ -1,12 +1,71 @@
 import { Hono } from "hono";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
-import { properties, rateCurrent, rateObservations } from "@ratecoaster/db/schema";
-import { RateQuery } from "@ratecoaster/shared";
+import { properties, rateCurrent, rateObservations, roomTypes } from "@ratecoaster/db/schema";
+import { DestinationSlug, RateCode, RateQuery } from "@ratecoaster/shared";
 import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
 import { gateDateWindow, requireFeature, tierOf } from "../lib/entitlements.js";
 
 export const ratesRouter = new Hono();
+
+/** Filter controls derived from current observations, not assumed capabilities. */
+ratesRouter.get("/options", async (c) => {
+  const db = getDb();
+  const destination = c.req.query("destination");
+  const propertySlug = c.req.query("propertySlug");
+  const parsedDestination = destination ? DestinationSlug.safeParse(destination) : null;
+  if (parsedDestination && !parsedDestination.success) {
+    return c.json({ error: { code: "invalid_query", message: "bad destination" } }, 400);
+  }
+
+  const propertyFilter = [eq(properties.active, true)];
+  if (parsedDestination?.success) {
+    propertyFilter.push(eq(properties.destination, parsedDestination.data));
+  }
+  if (propertySlug) propertyFilter.push(eq(properties.slug, propertySlug));
+  const props = await db.select({ id: properties.id }).from(properties).where(and(...propertyFilter));
+  if (props.length === 0) return c.json({ rateCodes: [], roomTypes: [] });
+
+  const propertyIds = props.map((property) => property.id);
+  const [codes, rooms] = await Promise.all([
+    db
+      .selectDistinct({ rateCode: rateCurrent.rateCode })
+      .from(rateCurrent)
+      .where(
+        and(
+          inArray(rateCurrent.propertyId, propertyIds),
+          eq(rateCurrent.available, true)
+        )
+      ),
+    propertySlug
+      ? db
+          .selectDistinct({
+            id: roomTypes.id,
+            propertyId: roomTypes.propertyId,
+            externalCode: roomTypes.externalCode,
+            name: roomTypes.name,
+            maxOccupancy: roomTypes.maxOccupancy,
+          })
+          .from(roomTypes)
+          .innerJoin(rateCurrent, eq(rateCurrent.roomTypeId, roomTypes.id))
+          .where(
+            and(
+              inArray(roomTypes.propertyId, propertyIds),
+              eq(rateCurrent.available, true)
+            )
+          )
+          .orderBy(asc(roomTypes.name))
+      : Promise.resolve([]),
+  ]);
+
+  const codeOrder = new Map(RateCode.options.map((code, index) => [code, index]));
+  return c.json({
+    rateCodes: codes
+      .map(({ rateCode }) => rateCode)
+      .sort((a, b) => (codeOrder.get(a) ?? 999) - (codeOrder.get(b) ?? 999)),
+    roomTypes: rooms,
+  });
+});
 
 /**
  * GET /v1/rates
@@ -71,8 +130,10 @@ ratesRouter.get("/", async (c) => {
         previousCents: rateCurrent.previousCents,
         observedAt: rateCurrent.observedAt,
         roomTypeId: rateCurrent.roomTypeId,
+        roomTypeName: roomTypes.name,
       })
       .from(rateCurrent)
+      .leftJoin(roomTypes, eq(rateCurrent.roomTypeId, roomTypes.id))
       .where(
         and(
           inArray(rateCurrent.propertyId, propertyIds),
@@ -80,6 +141,7 @@ ratesRouter.get("/", async (c) => {
           eq(rateCurrent.nights, q.nights),
           eq(rateCurrent.adults, q.adults),
           eq(rateCurrent.children, q.children),
+          q.roomTypeId ? eq(rateCurrent.roomTypeId, q.roomTypeId) : sql`true`,
           gte(rateCurrent.stayDate, from),
           lte(rateCurrent.stayDate, to),
           eq(rateCurrent.available, true)
@@ -106,12 +168,16 @@ ratesRouter.get("/", async (c) => {
   };
 
   const targetByKey = dedupe(target);
-  const standardByKey = dedupe(standard);
+  const standardByKey = new Map(
+    standard.map((row) => [`${row.propertyId}|${row.stayDate}|${row.roomTypeId ?? ""}`, row])
+  );
 
   const items = [...targetByKey.values()]
     .map((row) => {
       const property = propertyById.get(row.propertyId)!;
-      const std = standardByKey.get(`${row.propertyId}|${row.stayDate}`);
+      const std = standardByKey.get(
+        `${row.propertyId}|${row.stayDate}|${row.roomTypeId ?? ""}`
+      );
       return {
         propertyId: row.propertyId,
         propertySlug: property.slug,
@@ -120,7 +186,7 @@ ratesRouter.get("/", async (c) => {
         rateCode: q.rateCode,
         nightlyCents: row.nightlyCents,
         totalCents: row.totalCents,
-        roomTypeName: null,
+        roomTypeName: row.roomTypeName,
         available: row.available,
         source: row.source,
         isEstimated: row.isEstimated,
@@ -148,7 +214,13 @@ ratesRouter.get("/:slug/history", async (c) => {
   const db = getDb();
   const slug = c.req.param("slug");
   const stayDate = c.req.query("stayDate");
-  const rateCode = (c.req.query("rateCode") ?? "APH") as "APH";
+  const parsedHistoryQuery = RateQuery.pick({ rateCode: true, roomTypeId: true }).safeParse(
+    c.req.query()
+  );
+  if (!parsedHistoryQuery.success) {
+    return c.json({ error: { code: "invalid_query", message: "bad rate or room type" } }, 400);
+  }
+  const { rateCode, roomTypeId } = parsedHistoryQuery.data;
 
   // Price history is a free-account feature. 402 rather than 403 so the client
   // can distinguish "you need to sign up" from "you are not allowed at all".
@@ -186,7 +258,8 @@ ratesRouter.get("/:slug/history", async (c) => {
       and(
         eq(rateObservations.propertyId, property.id),
         eq(rateObservations.stayDate, stayDate),
-        eq(rateObservations.rateCode, rateCode)
+        eq(rateObservations.rateCode, rateCode),
+        roomTypeId ? eq(rateObservations.roomTypeId, roomTypeId) : sql`true`
       )
     )
     .groupBy(rateObservations.observedAt)
@@ -217,6 +290,7 @@ export const dealsRouter = new Hono().get("/", async (c) => {
   const to = addDays(from, 120);
 
   const filters = [
+    eq(properties.active, true),
     gte(rateCurrent.stayDate, from),
     lte(rateCurrent.stayDate, to),
     eq(rateCurrent.available, true),

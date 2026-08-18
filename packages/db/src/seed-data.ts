@@ -26,6 +26,13 @@ export type PropertySeed = {
   collectorConfig: Record<string, unknown>;
 };
 
+/** Properties deliberately removed from the public hotel product. */
+export const RETIRED_PROPERTY_SLUGS = [
+  "hilton-universal-city",
+  "sheraton-universal",
+  "garland",
+] as const;
+
 /**
  * `collectorConfig.hotelCode` is the operator's own identifier for the property
  * in its booking engine. Fill these in from a HAR capture — see
@@ -196,54 +203,6 @@ export const PROPERTIES: PropertySeed[] = [
     latitude: 28.4408,
     longitude: -81.4645,
     collectorConfig: { adapter: "universal-ibe", hotelId: 15783, hotelGroupId: 641 },
-  },
-
-  // ---- Universal Hollywood partner hotels ----
-  // USH has no Universal-operated on-site hotels. These are independently
-  // operated "Universal Partner Hotels", each on its own booking engine, which
-  // is why every one of them needs its own adapter entry rather than sharing
-  // the Loews adapter.
-  {
-    destination: "universal-hollywood",
-    slug: "hilton-universal-city",
-    name: "Hilton Los Angeles/Universal City",
-    tier: "partner",
-    operator: "Hilton",
-    onSite: false,
-    includesExpressPass: false,
-    earlyParkAdmission: true,
-    roomCount: 495,
-    latitude: 34.1372,
-    longitude: -118.3531,
-    collectorConfig: { adapter: "hilton", ctyhocn: null },
-  },
-  {
-    destination: "universal-hollywood",
-    slug: "sheraton-universal",
-    name: "Sheraton Universal Hotel",
-    tier: "partner",
-    operator: "Marriott",
-    onSite: false,
-    includesExpressPass: false,
-    earlyParkAdmission: true,
-    roomCount: 451,
-    latitude: 34.1395,
-    longitude: -118.3546,
-    collectorConfig: { adapter: "marriott", marshaCode: null },
-  },
-  {
-    destination: "universal-hollywood",
-    slug: "garland",
-    name: "The Garland",
-    tier: "partner",
-    operator: "Independent",
-    onSite: false,
-    includesExpressPass: false,
-    earlyParkAdmission: false,
-    roomCount: 257,
-    latitude: 34.1586,
-    longitude: -118.3699,
-    collectorConfig: { adapter: "synxis", hotelId: null },
   },
 
   // ---- Universal Kids Resort, Frisco TX (opened 2026-07-01) ----

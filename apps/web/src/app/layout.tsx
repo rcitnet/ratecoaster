@@ -6,7 +6,7 @@ import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
 export const metadata: Metadata = {
   title: "RateCoaster — Universal hotel deals, tickets & live wait times",
   description:
-    "Track passholder and public hotel rates a full year ahead across Universal Orlando, Hollywood and Frisco. Plus dynamic ticket prices, Express Pass costs and live ride waits.",
+    "Track passholder and public hotel rates a full year ahead for Universal resorts in Orlando and Frisco, plus live ride waits including Universal Studios Hollywood.",
 };
 
 const NAV = [
@@ -99,7 +99,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   Rate<em>Coaster</em>
                 </div>
                 <p style={{ margin: 0 }}>
-                  Free hotel rate tracking for Universal Orlando, Hollywood and Frisco.
+                  Free hotel rate tracking for Universal resorts in Orlando and Frisco.
                 </p>
               </div>
               <div>

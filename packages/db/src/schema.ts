@@ -117,7 +117,7 @@ export const properties = pgTable(
     /**
      * Per-property collector configuration: which adapter to use and the
      * operator-specific identifiers it needs (hotel code, brand code, booking
-     * host). Kept as JSON so adding a Hollywood partner hotel is a seed change,
+     * host). Kept as JSON so adding another booking provider is a seed change,
      * not a migration.
      */
     collectorConfig: jsonb("collector_config").$type<Record<string, unknown>>(),

@@ -36,7 +36,7 @@ export function Paywall({
 
       <p>
         {proTier
-          ? "Cross-hotel comparisons, every room type and best-time-to-book modelling will arrive with the Pro plan."
+          ? "Cross-hotel comparisons and best-time-to-book modelling will arrive with the Pro plan."
           : `You're seeing the next ${gate.visibleDays} days. Create a free account and the full 365-day calendar unlocks instantly — including the quiet weeks next autumn when rooms are cheapest.`}
       </p>
 

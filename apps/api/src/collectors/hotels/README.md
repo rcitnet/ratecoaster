@@ -8,16 +8,16 @@
 > sufficient for one-night collection; and
 > the headline price is a **stay average, not a nightly rate**.
 > The generic JSON workflow below still applies to any operator that *does*
-> expose a JSON endpoint, which the Hollywood partner engines may.
+> expose a JSON endpoint.
 
 Universal Orlando is implemented directly through the `universal-ibe` adapter
 for both STANDARD and APH. Its eleven property IDs ship in seed data. The generic
 capture workflow below is only for other operators whose endpoints are not
 already represented by a dedicated adapter.
 
-This takes about ten minutes per operator. Four operators cover everything:
-`universal-ibe` (all 11 Orlando hotels), `universal-kids-commerce` (the Frisco
-hotel), `hilton`, `marriott`, and `synxis` (Hollywood partners).
+The two current hotel sources are `universal-ibe` (all 11 Orlando hotels) and
+`universal-kids-commerce` (the Frisco hotel). Hollywood lodging is intentionally
+out of scope because Universal Studios Hollywood has no Universal-operated hotel.
 
 The Frisco hotel uses a separate SAP Commerce site and property id `UNI012`.
 Its public guest API currently exposes the `RACK` Standard rate only—there is
