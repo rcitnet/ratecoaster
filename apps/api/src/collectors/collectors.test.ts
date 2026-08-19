@@ -36,6 +36,7 @@ import { normalizeName, slugify } from "./waits/providers.js";
 import type { EndpointConfig } from "./hotels/endpoint-config.js";
 import { parseCollectArgs } from "../jobs/collect-args.js";
 import {
+  eligibleTicketRows,
   recommendTicket,
   summarizeHotelOptions,
   type HotelQuoteRow,
@@ -122,6 +123,35 @@ describe("trip quote recommendations", () => {
     assert.equal(ticket?.ticketDays, 3);
     assert.equal(ticket?.uncoveredTripDays, 1);
     assert.equal(ticket?.subtotalCents, 104000);
+  });
+
+  test("limits Annual Passholder packages to the separately ticketed Epic Universe day", () => {
+    const rows: TicketQuoteRow[] = [
+      {
+        productSlug: "uor-1-day-epic-universe",
+        productName: "Epic Universe",
+        ticketDays: 1,
+        parkCount: 1,
+        guestCategory: "adult",
+        priceCents: 18000,
+        totalCents: 18000,
+      },
+      {
+        productSlug: "uor-3-day-park-to-park",
+        productName: "Three-day Park-to-Park",
+        ticketDays: 3,
+        parkCount: 3,
+        guestCategory: "adult",
+        priceCents: 35000,
+        totalCents: 35000,
+      },
+    ];
+
+    assert.deepEqual(
+      eligibleTicketRows(rows, "APH").map((row) => row.productSlug),
+      ["uor-1-day-epic-universe"]
+    );
+    assert.equal(eligibleTicketRows(rows, "STANDARD").length, 2);
   });
 });
 

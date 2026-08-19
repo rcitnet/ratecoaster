@@ -32,7 +32,10 @@ function numberParam(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
 }
 
-function durationCopy(ticket: NonNullable<TripQuote["ticket"]>): string {
+function durationCopy(ticket: NonNullable<TripQuote["ticket"]>, rateCode: TripQuote["rateCode"]): string {
+  if (rateCode === "APH") {
+    return "One Epic Universe admission day; eligible admission at the other parks is assumed to be covered by your Annual Pass";
+  }
   if (ticket.exactDurationMatch) return "Matches your trip length";
   return `${ticket.ticketDays}-day ticket is the closest tracked fit; ${ticket.uncoveredTripDays} trip day${ticket.uncoveredTripDays === 1 ? " is" : "s are"} not covered`;
 }
@@ -189,11 +192,13 @@ export default async function TripPlannerPage({
             </article>
 
             <article className="card">
-              <span className="badge badge-purple">Recommended tickets</span>
+              <span className="badge badge-purple">
+                {quote.rateCode === "APH" ? "Epic Universe add-on" : "Recommended tickets"}
+              </span>
               {quote.ticket ? (
                 <>
                   <h3>{quote.ticket.productName}</h3>
-                  <p className="muted">{durationCopy(quote.ticket)}</p>
+                  <p className="muted">{durationCopy(quote.ticket, quote.rateCode)}</p>
                   <div className="trip-price-line">
                     <strong>{centsToDisplay(quote.ticket.subtotalCents)}</strong><span>party ticket subtotal</span>
                   </div>

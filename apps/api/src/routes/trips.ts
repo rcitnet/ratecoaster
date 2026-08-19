@@ -12,6 +12,7 @@ import {
   TripQuote,
   TripQuoteQuery,
   type TripHotelOption,
+  type TripRateCode,
   type TripTicketRecommendation,
 } from "@ratecoaster/shared";
 import { addDays, daysBetween, todayInTimezone } from "../collectors/framework/dates.js";
@@ -87,6 +88,18 @@ export interface TicketQuoteRow {
   guestCategory: "adult" | "child" | "senior";
   priceCents: number;
   totalCents: number | null;
+}
+
+export const APH_EPIC_TICKET_SLUG = "uor-1-day-epic-universe";
+
+/** Passholders only need the separately ticketed Epic Universe admission. */
+export function eligibleTicketRows(
+  rows: TicketQuoteRow[],
+  rateCode: TripRateCode
+): TicketQuoteRow[] {
+  return rateCode === "APH"
+    ? rows.filter((row) => row.productSlug === APH_EPIC_TICKET_SLUG)
+    : rows;
 }
 
 /** Choose the closest duration, then the broadest park coverage at the best price. */
@@ -256,7 +269,7 @@ tripsRouter.get("/quote", async (c) => {
     .filter((row): row is typeof row & { ticketDays: number } => row.ticketDays !== null)
     .map((row) => ({ ...row, ticketDays: row.ticketDays }));
   const ticket = recommendTicket(
-    normalizedTicketRows,
+    eligibleTicketRows(normalizedTicketRows, query.rateCode),
     tripDays,
     query.adults,
     query.children,
@@ -280,7 +293,9 @@ tripsRouter.get("/quote", async (c) => {
         hotel && ticket ? hotel.subtotalCents + ticket.subtotalCents : null,
       assumptions: [
         "Hotel estimates use one room type for the entire stay and the tracked two-adult occupancy, multiplied by the number of rooms.",
-        "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
+        query.rateCode === "APH"
+          ? "Annual Passholder estimates add only one day of Epic Universe admission; eligible admission at the other parks is assumed to be covered by the Annual Pass."
+          : "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
         "Taxes and fees are included when the source supplies a total. Always confirm availability and the final price before booking.",
       ],
     })
