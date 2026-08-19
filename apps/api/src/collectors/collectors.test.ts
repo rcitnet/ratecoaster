@@ -24,6 +24,10 @@ import {
   buildKidsHotelSearchUrl,
   parseKidsHotelResponse,
 } from "./hotels/adapters/universal-kids-commerce.js";
+import {
+  buildUniversalOrlandoCalendarUrl,
+  parseUniversalOrlandoTicketCalendar,
+} from "./tickets/universal-orlando-commerce.js";
 import { selectRotatingBatch, selectRotatingDates } from "./hotels/schedule.js";
 import { normalizeDate } from "./tickets/index.js";
 import { parseCsv, csvToObjects } from "./framework/csv.js";
@@ -285,6 +289,62 @@ describe("Universal Kids Resort commerce API", () => {
 
   test("rejects an unexpected response instead of treating it as sold out", () => {
     assert.throws(() => parseKidsHotelResponse({ products: [] }), /bookingRooms/);
+  });
+});
+
+describe("Universal Orlando ticket commerce API", () => {
+  test("builds the first-party ticket calendar endpoint", () => {
+    assert.equal(
+      buildUniversalOrlandoCalendarUrl(),
+      "https://comm-api.universaldestinationsandexperiences.com/occ/v2/uor_b2c/products/fetchCalendarDatesWithPriceAndInventory?lang=en&curr=USD"
+    );
+  });
+
+  test("parses per-day and exact total prices for adult and child variants", () => {
+    assert.deepEqual(
+      parseUniversalOrlandoTicketCalendar({
+        eventAvailability: [
+          {
+            partNumber: "185120221006",
+            calendarDates: [
+              {
+                date: "2026-08-18",
+                forceSoldOut: false,
+                pricing: [{ amount: 166, fullVariantPrice: 330.99, currency: "USD" }],
+              },
+              {
+                date: "2026-08-19",
+                forceSoldOut: true,
+                pricing: [{ amount: 166, fullVariantPrice: 331.99, currency: "USD" }],
+              },
+            ],
+          },
+        ],
+      }),
+      [
+        {
+          partNumber: "185120221006",
+          validDate: "2026-08-18",
+          priceCents: 16600,
+          totalCents: 33099,
+          available: true,
+        },
+        {
+          partNumber: "185120221006",
+          validDate: "2026-08-19",
+          priceCents: 16600,
+          totalCents: 33199,
+          available: false,
+        },
+      ]
+    );
+  });
+
+  test("rejects an unexpected response instead of treating it as no inventory", () => {
+    assert.throws(
+      () => parseUniversalOrlandoTicketCalendar({ products: [] }),
+      /eventAvailability/
+    );
   });
 });
 

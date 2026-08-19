@@ -276,7 +276,9 @@ demoApp.get("/v1/rates/:slug/history", (c) => {
 demoApp.get("/v1/tickets/products", (c) => {
   const destination = c.req.query("destination");
   return c.json(
-    TICKET_PRODUCTS.filter((t) => !destination || t.destination === destination).map((t, i) => ({
+    TICKET_PRODUCTS.filter(
+      (t) => t.kind !== "express-pass" && (!destination || t.destination === destination)
+    ).map((t, i) => ({
       id: `demo-t-${i}`,
       destination: t.destination,
       slug: t.slug,
@@ -304,9 +306,13 @@ demoApp.get("/v1/tickets/calendar", (c) => {
     const weekend = dow === 5 || dow === 6 ? 1.18 : 1.0;
     const month = Number(validDate.slice(5, 7));
     const seasonal = month === 12 || month === 7 ? 1.15 : month === 9 ? 0.88 : 1.0;
+    const totalCents = Math.round(
+      (base * weekend * seasonal * (0.95 + seed(productSlug!, validDate) * 0.12)) / 100
+    ) * 100;
     days.push({
       validDate,
-      priceCents: Math.round((base * weekend * seasonal * (0.95 + seed(productSlug!, validDate) * 0.12)) / 100) * 100,
+      priceCents: Math.round(totalCents / (product.days ?? 1)),
+      totalCents,
       available: true,
     });
   }

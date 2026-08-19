@@ -88,7 +88,14 @@ async function main() {
       })
       .onConflictDoUpdate({
         target: ticketProducts.slug,
-        set: { name: t.name, kind: t.kind, days: t.days, parkCount: t.parkCount },
+        set: {
+          name: t.name,
+          kind: t.kind,
+          days: t.days,
+          parkCount: t.parkCount,
+          collectorConfig: t.collectorConfig,
+          active: true,
+        },
       });
   }
   console.log(`seeded ${TICKET_PRODUCTS.length} ticket products`);

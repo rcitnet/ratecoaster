@@ -17,12 +17,13 @@ Being precise about this matters more than a feature list.
 | Feature | State |
 |---|---|
 | Live ride wait times | **Working.** Free public APIs, no auth, no scraping. Verified against live Epic Universe and Hollywood responses. |
-| Rate/ticket/Express collectors | **Complete but unconfigured.** Every piece — scheduling, rate limiting, parsing, storage, change detection — is built and tested. Each source needs one endpoint capture from your browser (~10 min each). |
+| Hotel and Orlando ticket collectors | **Working once their public guest credentials are configured.** Scheduling, rate limiting, parsing, storage, and change detection are built and tested. |
+| Express and other ticket collectors | **Not configured yet.** Their source seams exist, but no verified first-party endpoint is wired in. |
 | Database schema, API, web UI | **Working.** Typechecked, tested, builds clean. |
 | Mobile app | Not built. The API and shared types are shaped so it slots in. |
 
-The collectors ship with no third-party endpoint URLs. That is deliberate — see
-[Legal and ethical posture](#legal-and-ethical-posture).
+Collectors use verified first-party endpoints and identify themselves through a
+configurable user agent. See [Legal and ethical posture](#legal-and-ethical-posture).
 
 ## Architecture
 
@@ -68,7 +69,7 @@ cp .env.example .env
 docker compose up -d db
 npm install
 npm run db:push        # create tables
-npm run db:seed        # 16 properties, 6 parks, 8 ticket products
+npm run db:seed        # 12 active properties, 6 parks, 10 ticket products
 
 # Wait times need no configuration — this works immediately:
 npm run -w @ratecoaster/api collect -- --only wait-times
@@ -81,7 +82,10 @@ the health of every collector.
 
 ## Bringing the pricing collectors online
 
-Full walkthrough: [`apps/api/src/collectors/hotels/README.md`](apps/api/src/collectors/hotels/README.md).
+Walkthroughs:
+
+- Hotels: [`apps/api/src/collectors/hotels/README.md`](apps/api/src/collectors/hotels/README.md)
+- Orlando tickets: [`apps/api/src/collectors/tickets/README.md`](apps/api/src/collectors/tickets/README.md)
 
 ```bash
 # 1. Capture the booking request from your browser (DevTools → Network → Copy as HAR)

@@ -1,12 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
-import { parseMoneyToCents, type RateSource } from "@ratecoaster/shared";
-import {
-  expressPassPrices,
-  parks,
-  ticketPriceCurrent,
-  ticketPriceObservations,
-  ticketProducts,
-} from "@ratecoaster/db/schema";
+import { parseMoneyToCents } from "@ratecoaster/shared";
+import { expressPassPrices, parks, ticketProducts } from "@ratecoaster/db/schema";
 import { fetchJson } from "../framework/http.js";
 import { dateRange, todayInTimezone } from "../framework/dates.js";
 import {
@@ -16,6 +10,12 @@ import {
 } from "../hotels/endpoint-config.js";
 import { resolveEndpointConfig } from "../../lib/settings.js";
 import type { Collector, CollectorContext } from "../framework/types.js";
+import { persistTicketPrice } from "./persist.js";
+import {
+  collectUniversalOrlandoTickets,
+  hasUniversalOrlandoTicketConfig,
+  universalOrlandoTicketCredentialsConfigured,
+} from "./universal-orlando-commerce.js";
 
 const TIMEZONES: Record<string, string> = {
   "universal-orlando": "America/New_York",
@@ -52,6 +52,10 @@ export function createTicketPriceCollector(options: { lookaheadDays?: number } =
 
       for (const p of rows) {
         const cfg = (p.collectorConfig ?? {}) as Record<string, unknown>;
+        if (hasUniversalOrlandoTicketConfig(p)) {
+          if (universalOrlandoTicketCredentialsConfigured()) return { ready: true };
+          continue;
+        }
         if (typeof cfg.adapter === "string" && cfg.productCode) {
           if (await resolveEndpointConfig(cfg.adapter)) return { ready: true };
         }
@@ -59,7 +63,7 @@ export function createTicketPriceCollector(options: { lookaheadDays?: number } =
       return {
         ready: false,
         reason:
-          "no ticket product has both a product code and an endpoint config — see apps/api/src/collectors/hotels/README.md",
+          "no ticket source is ready — configure Universal Orlando commerce credentials or an endpoint config",
       };
     },
 
@@ -70,7 +74,23 @@ export function createTicketPriceCollector(options: { lookaheadDays?: number } =
         .from(ticketProducts)
         .where(and(eq(ticketProducts.active, true), sql`${ticketProducts.kind} <> 'express-pass'`));
 
+      const universalOrlandoProducts = products.filter(hasUniversalOrlandoTicketConfig);
+      if (universalOrlandoProducts.length > 0) {
+        if (universalOrlandoTicketCredentialsConfigured()) {
+          try {
+            await collectUniversalOrlandoTickets(ctx, universalOrlandoProducts, lookaheadDays);
+          } catch (error) {
+            stats.errorCount++;
+            logger.warn(`Universal Orlando tickets: ${String(error)}`);
+          }
+        } else {
+          stats.notes["universal-orlando.skipped"] =
+            "UNIVERSAL_ORLANDO_COMMERCE_CLIENT_SECRET is not configured";
+        }
+      }
+
       for (const product of products) {
+        if (hasUniversalOrlandoTicketConfig(product)) continue;
         const cfg = (product.collectorConfig ?? {}) as Record<string, unknown>;
         const adapterName = typeof cfg.adapter === "string" ? cfg.adapter : null;
         const productCode = cfg.productCode ? String(cfg.productCode) : null;
@@ -255,96 +275,6 @@ export function createExpressPassCollector(options: { lookaheadDays?: number } =
       }
     },
   };
-}
-
-async function persistTicketPrice(
-  ctx: CollectorContext,
-  reading: {
-    productId: string;
-    validDate: string;
-    guestCategory: "adult" | "child";
-    priceCents: number;
-    totalCents: number | null;
-    available: boolean;
-    /** Defaults to observed until a ticket affiliate feed (e.g. Undercover Tourist) is wired in. */
-    source?: RateSource;
-    isEstimated?: boolean;
-    merchant?: string | null;
-  }
-) {
-  const { db, stats } = ctx;
-
-  const source = reading.source ?? "observed";
-  const isEstimated = reading.isEstimated ?? false;
-  const merchant = reading.merchant ?? null;
-
-  const existing = await db
-    .select({ priceCents: ticketPriceCurrent.priceCents, source: ticketPriceCurrent.source })
-    .from(ticketPriceCurrent)
-    .where(
-      and(
-        eq(ticketPriceCurrent.productId, reading.productId),
-        eq(ticketPriceCurrent.validDate, reading.validDate),
-        eq(ticketPriceCurrent.guestCategory, reading.guestCategory)
-      )
-    )
-    .limit(1);
-
-  const prev = existing[0];
-  const changed = !prev || prev.priceCents !== reading.priceCents || prev.source !== source;
-
-  // Same write-on-change rule as hotel rates: a year of dates re-read twice a
-  // day is ~700 identical rows daily per product otherwise, none of which say
-  // anything a chart could use.
-  if (changed) {
-    await db.insert(ticketPriceObservations).values({
-      productId: reading.productId,
-      validDate: reading.validDate,
-      guestCategory: reading.guestCategory,
-      priceCents: reading.priceCents,
-      totalCents: reading.totalCents,
-      available: reading.available,
-      source,
-      isEstimated,
-      merchant,
-    });
-    stats.writtenCount++;
-  }
-
-  await db
-    .insert(ticketPriceCurrent)
-    .values({
-      productId: reading.productId,
-      validDate: reading.validDate,
-      guestCategory: reading.guestCategory,
-      priceCents: reading.priceCents,
-      totalCents: reading.totalCents,
-      previousCents: prev?.priceCents ?? null,
-      available: reading.available,
-      source,
-      isEstimated,
-      merchant,
-      observedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [
-        ticketPriceCurrent.productId,
-        ticketPriceCurrent.validDate,
-        ticketPriceCurrent.guestCategory,
-      ],
-      set: {
-        priceCents: reading.priceCents,
-        totalCents: reading.totalCents,
-        available: reading.available,
-        source,
-        isEstimated,
-        merchant,
-        previousCents: changed
-          ? (prev?.priceCents ?? null)
-          : sql`${ticketPriceCurrent.previousCents}`,
-        observedAt: new Date(),
-      },
-    });
 }
 
 /** Accepts `2026-12-24`, `12/24/2026`, or an ISO timestamp; returns `YYYY-MM-DD`. */
