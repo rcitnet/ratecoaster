@@ -46,7 +46,7 @@ export type Entitlements = z.infer<typeof Entitlements>;
 export const ENTITLEMENTS: Record<Tier, Entitlements> = {
   anonymous: {
     tier: "anonymous",
-    lookaheadDays: 30,
+    lookaheadDays: 45,
     priceHistory: false,
     alerts: false,
     maxWatches: 0,

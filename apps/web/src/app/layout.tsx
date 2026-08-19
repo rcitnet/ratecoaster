@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { getMe } from "@/lib/api";
 import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
+import { MobileMenu } from "@/components/MobileMenu";
 
 export const metadata: Metadata = {
   title: "RateCoaster — Universal hotel deals, tickets & live wait times",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 
 const NAV = [
   { href: "/", label: "Deals" },
+  { href: "/plan", label: "Trip planner" },
   { href: "/hotels", label: "Hotels" },
   { href: "/tickets", label: "Tickets" },
   { href: "/express-pass", label: "Express Pass" },
@@ -77,38 +79,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               )}
             </div>
 
-            <details className="mobile-menu">
-              <summary aria-label="Open site navigation">
-                <span aria-hidden="true">☰</span>
-                Menu
-              </summary>
-              <nav className="mobile-nav" aria-label="Mobile navigation">
-                {NAV.map((item) => (
-                  <a key={item.href} href={item.href}>
-                    {item.label}
-                    <span aria-hidden="true">›</span>
-                  </a>
-                ))}
-                <div className="mobile-nav-account">
-                  {signedIn ? (
-                    <>
-                      {isAdmin ? (
-                        <a href="/admin" className="btn btn-primary">
-                          Admin dashboard
-                        </a>
-                      ) : null}
-                      <a href="/account" className="btn btn-ghost">
-                        Account
-                      </a>
-                    </>
-                  ) : (
-                    <a href="/join" className="btn btn-primary">
-                      Sign up free
-                    </a>
-                  )}
-                </div>
-              </nav>
-            </details>
+            <MobileMenu items={NAV} signedIn={signedIn} isAdmin={isAdmin} />
           </div>
         </header>
 
@@ -140,6 +111,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div>
                 <strong style={{ color: "#fff" }}>Plan</strong>
                 <p style={{ margin: "8px 0 0", lineHeight: 2 }}>
+                  <a href="/plan">Trip planner</a>
+                  <br />
                   <a href="/hotels">Hotel rates</a>
                   <br />
                   <a href="/tickets">Ticket prices</a>

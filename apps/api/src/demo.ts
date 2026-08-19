@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import { ENTITLEMENTS, type Tier } from "@ratecoaster/shared";
+import { ENTITLEMENTS, TripQuote, TripQuoteQuery, type Tier } from "@ratecoaster/shared";
 import { PARKS, PROPERTIES, TICKET_PRODUCTS } from "@ratecoaster/db/src/seed-data.js";
 import { gateDateWindow, tierOf } from "./lib/entitlements.js";
 import { fetchThemeParksWiki } from "./collectors/waits/providers.js";
@@ -9,7 +9,8 @@ import {
   QUEUE_TIMES_ATTRIBUTION,
   THEMEPARKS_WIKI_ATTRIBUTION,
 } from "./collectors/waits/providers.js";
-import { addDays, dayOfWeek, todayInTimezone } from "./collectors/framework/dates.js";
+import { addDays, daysBetween, dayOfWeek, todayInTimezone } from "./collectors/framework/dates.js";
+import { recommendTicket, type TicketQuoteRow } from "./routes/trips.js";
 
 /**
  * DEMO MODE — no database required.
@@ -110,7 +111,7 @@ demoApp.get("/v1/auth/me", (c) => {
 
 /**
  * In demo mode the magic link is skipped entirely — signing in is instant, so
- * the 30-day wall and what lies past it can both be seen in one sitting.
+ * the 45-day wall and what lies past it can both be seen in one sitting.
  */
 demoApp.post("/v1/auth/magic-link", async (c) => {
   const body = await c.req.json().catch(() => ({}) as { email?: string });
@@ -222,9 +223,11 @@ demoApp.get("/v1/rates", (c) => {
 
 demoApp.get("/v1/deals", (c) => {
   const today = todayInTimezone("America/New_York");
+  const gate = gateDateWindow(tierOf(c), today, undefined);
+  const span = Math.min(gate.info.visibleDays, 120);
   const deals = PROPERTIES.filter((p) => p.destination === "universal-orlando").map((p) => {
     let best = { date: today, cents: Number.MAX_SAFE_INTEGER };
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < span; i++) {
       const d = addDays(today, i);
       const cents = sampleRate(p.slug, p.tier, d, "APH");
       if (cents < best.cents) best = { date: d, cents };
@@ -330,6 +333,142 @@ demoApp.get("/v1/tickets/calendar", (c) => {
       band: d.priceCents <= lowCut ? "low" : d.priceCents >= highCut ? "high" : "mid",
       isWindowLow: d.priceCents === min,
     }))
+  );
+});
+
+demoApp.get("/v1/trips/quote", (c) => {
+  const parsed = TripQuoteQuery.safeParse(c.req.query());
+  if (!parsed.success) {
+    return c.json(
+      { error: { code: "invalid_query", message: "Enter valid trip dates and party details." } },
+      400
+    );
+  }
+  const query = parsed.data;
+  const today = todayInTimezone("America/New_York");
+  const nights = daysBetween(query.checkIn, query.checkOut);
+  if (query.checkIn < today || nights < 1 || nights > 30) {
+    return c.json(
+      { error: { code: "invalid_query", message: "Choose a future trip between 1 and 30 nights." } },
+      400
+    );
+  }
+
+  const tier = tierOf(c);
+  const gate = gateDateWindow(tier, today, undefined);
+  const visibleThrough = gate.info.visibleThrough ?? today;
+  if (addDays(query.checkOut, -1) > visibleThrough) {
+    if (tier !== "anonymous") {
+      return c.json(
+        {
+          error: {
+            code: "date_unavailable",
+            message: `Collected pricing currently runs through ${visibleThrough}.`,
+          },
+        },
+        400
+      );
+    }
+    return c.json(
+      {
+        error: {
+          code: "upgrade_required",
+          message: `Create a free account to plan trips after ${visibleThrough}.`,
+          details: {
+            requiredTier: "free",
+            visibleThrough,
+            visibleDays: gate.info.visibleDays,
+            withheldDays: gate.info.withheldDays,
+          },
+        },
+      },
+      402
+    );
+  }
+
+  const hotels = PROPERTIES.filter((property) => property.destination === "universal-orlando")
+    .map((property) => {
+      let nightlySum = 0;
+      let totalSum = 0;
+      for (let i = 0; i < nights; i++) {
+        const nightly = sampleRate(property.slug, property.tier, addDays(query.checkIn, i), query.rateCode);
+        nightlySum += nightly;
+        totalSum += Math.round(nightly * 1.19);
+      }
+      return {
+        propertySlug: property.slug,
+        propertyName: property.name,
+        tier: property.tier,
+        roomTypeName: "Standard Room",
+        includesExpressPass: property.includesExpressPass,
+        nights,
+        rooms: query.rooms,
+        averageNightlyCents: Math.round(nightlySum / nights),
+        subtotalCents: totalSum * query.rooms,
+      };
+    })
+    .sort((a, b) => a.subtotalCents - b.subtotalCents);
+
+  const tripDays = nights + 1;
+  const ticketRows: TicketQuoteRow[] = [];
+  for (const product of TICKET_PRODUCTS.filter(
+    (candidate) =>
+      candidate.destination === "universal-orlando" &&
+      candidate.kind !== "express-pass" &&
+      candidate.days !== null
+  )) {
+    const base = 18900 + product.days! * 9500;
+    const adultTotal = Math.round(
+      (base * (0.95 + seed(product.slug, query.checkIn) * 0.12)) / 100
+    ) * 100;
+    ticketRows.push({
+      productSlug: product.slug,
+      productName: product.name,
+      ticketDays: product.days!,
+      parkCount: product.parkCount,
+      guestCategory: "adult",
+      priceCents: Math.round(adultTotal / product.days!),
+      totalCents: adultTotal,
+    });
+    ticketRows.push({
+      productSlug: product.slug,
+      productName: product.name,
+      ticketDays: product.days!,
+      parkCount: product.parkCount,
+      guestCategory: "child",
+      priceCents: Math.round((adultTotal * 0.95) / product.days!),
+      totalCents: Math.round(adultTotal * 0.95),
+    });
+  }
+  const ticket = recommendTicket(
+    ticketRows,
+    tripDays,
+    query.adults,
+    query.children,
+    query.checkIn
+  );
+  const hotel = hotels[0] ?? null;
+
+  return c.json(
+    TripQuote.parse({
+      checkIn: query.checkIn,
+      checkOut: query.checkOut,
+      nights,
+      tripDays,
+      rooms: query.rooms,
+      adults: query.adults,
+      children: query.children,
+      rateCode: query.rateCode,
+      hotel,
+      hotelAlternatives: hotels.slice(1, 7),
+      ticket,
+      combinedTotalCents: hotel && ticket ? hotel.subtotalCents + ticket.subtotalCents : null,
+      assumptions: [
+        "Hotel estimates use one room type for the entire stay and the tracked two-adult occupancy, multiplied by the number of rooms.",
+        "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
+        "Demo prices are sample data. Always confirm availability and the final price before booking.",
+      ],
+    })
   );
 });
 

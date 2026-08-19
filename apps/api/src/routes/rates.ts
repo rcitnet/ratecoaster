@@ -287,7 +287,7 @@ export const dealsRouter = new Hono().get("/", async (c) => {
   const destination = c.req.query("destination");
   const limit = Math.min(Number(c.req.query("limit") ?? 40), 200);
   const from = todayInTimezone("America/New_York");
-  const to = addDays(from, 120);
+  const to = gateDateWindow(tierOf(c), from, undefined).to;
 
   const filters = [
     eq(properties.active, true),

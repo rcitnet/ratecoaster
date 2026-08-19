@@ -82,14 +82,14 @@ export default async function DealsPage() {
           option on the page.
         </p>
         <div className="hero-actions">
-          <a href="#hotel-deals" className="btn btn-primary btn-lg">
-            See today&apos;s best deals
+          <a href="/plan" className="btn btn-primary btn-lg">
+            Price my trip
+          </a>
+          <a href="#hotel-deals" className="btn btn-ghost btn-lg" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
+            Today&apos;s best deals
           </a>
           <a href="/waits" className="btn btn-ghost btn-lg" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
             Live wait times
-          </a>
-          <a href="/tickets" className="btn btn-ghost btn-lg" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
-            Ticket prices
           </a>
         </div>
 
