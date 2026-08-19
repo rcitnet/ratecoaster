@@ -10,7 +10,7 @@ import {
   THEMEPARKS_WIKI_ATTRIBUTION,
 } from "./collectors/waits/providers.js";
 import { addDays, daysBetween, dayOfWeek, todayInTimezone } from "./collectors/framework/dates.js";
-import { recommendTicket, type TicketQuoteRow } from "./routes/trips.js";
+import { eligibleTicketRows, recommendTicket, type TicketQuoteRow } from "./routes/trips.js";
 
 /**
  * DEMO MODE — no database required.
@@ -441,7 +441,7 @@ demoApp.get("/v1/trips/quote", (c) => {
     });
   }
   const ticket = recommendTicket(
-    ticketRows,
+    eligibleTicketRows(ticketRows, query.rateCode),
     tripDays,
     query.adults,
     query.children,
@@ -465,7 +465,9 @@ demoApp.get("/v1/trips/quote", (c) => {
       combinedTotalCents: hotel && ticket ? hotel.subtotalCents + ticket.subtotalCents : null,
       assumptions: [
         "Hotel estimates use one room type for the entire stay and the tracked two-adult occupancy, multiplied by the number of rooms.",
-        "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
+        query.rateCode === "APH"
+          ? "Annual Passholder estimates add only one day of Epic Universe admission; eligible admission at the other parks is assumed to be covered by the Annual Pass."
+          : "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
         "Demo prices are sample data. Always confirm availability and the final price before booking.",
       ],
     })
