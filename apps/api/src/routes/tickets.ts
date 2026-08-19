@@ -6,6 +6,7 @@ import {
   ticketPriceCurrent,
   ticketProducts,
 } from "@ratecoaster/db/schema";
+import { GuestCategory } from "@ratecoaster/shared";
 import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
 import { gateDateWindow, tierOf } from "../lib/entitlements.js";
 
@@ -19,8 +20,12 @@ ticketsRouter.get("/products", async (c) => {
     .from(ticketProducts)
     .where(
       destination
-        ? and(eq(ticketProducts.active, true), eq(ticketProducts.destination, destination as "universal-orlando"))
-        : eq(ticketProducts.active, true)
+        ? and(
+            eq(ticketProducts.active, true),
+            eq(ticketProducts.destination, destination as "universal-orlando"),
+            sql`${ticketProducts.kind} <> 'express-pass'`
+          )
+        : and(eq(ticketProducts.active, true), sql`${ticketProducts.kind} <> 'express-pass'`)
     )
     .orderBy(asc(ticketProducts.days), asc(ticketProducts.name));
 
@@ -58,7 +63,11 @@ ticketsRouter.get("/products", async (c) => {
 ticketsRouter.get("/calendar", async (c) => {
   const db = getDb();
   const productSlug = c.req.query("productSlug");
-  const guestCategory = (c.req.query("guestCategory") ?? "adult") as "adult";
+  const parsedGuestCategory = GuestCategory.safeParse(c.req.query("guestCategory") ?? "adult");
+  if (!parsedGuestCategory.success) {
+    return c.json({ error: { code: "invalid_query", message: "bad guest category" } }, 400);
+  }
+  const guestCategory = parsedGuestCategory.data;
   const gate = gateDateWindow(tierOf(c), c.req.query("from"), c.req.query("to") ?? undefined);
   const from = gate.from;
   const to = gate.to;
@@ -70,7 +79,7 @@ ticketsRouter.get("/calendar", async (c) => {
   const [product] = await db
     .select()
     .from(ticketProducts)
-    .where(eq(ticketProducts.slug, productSlug))
+    .where(and(eq(ticketProducts.slug, productSlug), eq(ticketProducts.active, true)))
     .limit(1);
 
   if (!product) {
@@ -81,6 +90,7 @@ ticketsRouter.get("/calendar", async (c) => {
     .select({
       validDate: ticketPriceCurrent.validDate,
       priceCents: ticketPriceCurrent.priceCents,
+      totalCents: ticketPriceCurrent.totalCents,
       available: ticketPriceCurrent.available,
     })
     .from(ticketPriceCurrent)
@@ -94,7 +104,8 @@ ticketsRouter.get("/calendar", async (c) => {
     )
     .orderBy(asc(ticketPriceCurrent.validDate));
 
-  const prices = rows.map((r) => r.priceCents).sort((a, b) => a - b);
+  const comparablePrice = (row: (typeof rows)[number]) => row.totalCents ?? row.priceCents;
+  const prices = rows.filter((row) => row.available).map(comparablePrice).sort((a, b) => a - b);
   const lowCut = prices[Math.floor(prices.length / 3)] ?? 0;
   const highCut = prices[Math.floor((prices.length * 2) / 3)] ?? 0;
   const windowLow = prices[0] ?? null;
@@ -103,9 +114,16 @@ ticketsRouter.get("/calendar", async (c) => {
     rows.map((r) => ({
       validDate: r.validDate,
       priceCents: r.priceCents,
+      totalCents: r.totalCents,
       available: r.available,
-      band: r.priceCents <= lowCut ? "low" : r.priceCents >= highCut ? "high" : "mid",
-      isWindowLow: windowLow !== null && r.priceCents === windowLow,
+      band: !r.available
+        ? null
+        : comparablePrice(r) <= lowCut
+          ? "low"
+          : comparablePrice(r) >= highCut
+            ? "high"
+            : "mid",
+      isWindowLow: r.available && windowLow !== null && comparablePrice(r) === windowLow,
     }))
   );
 });

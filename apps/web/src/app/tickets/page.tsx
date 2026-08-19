@@ -1,4 +1,4 @@
-import { centsToDisplay } from "@ratecoaster/shared";
+import { centsToDisplay, GuestCategory } from "@ratecoaster/shared";
 import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, getMe, safe } from "@/lib/api";
 import { Paywall } from "@/components/Paywall";
 import { BookButton } from "@/components/BookButton";
@@ -8,10 +8,11 @@ export const revalidate = 300;
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ product?: string; destination?: string }>;
+  searchParams: Promise<{ product?: string; destination?: string; guest?: string }>;
 }) {
   const params = await searchParams;
   const destination = params.destination ?? "universal-orlando";
+  const guestCategory = GuestCategory.catch("adult").parse(params.guest);
   const client = await getClient();
   const [products, me] = await Promise.all([
     safe(client.listTicketProducts(destination), []),
@@ -20,13 +21,23 @@ export default async function TicketsPage({
   const selected = params.product ?? products[0]?.slug;
   const selectedProduct = products.find((p) => p.slug === selected);
   const calendar = selected
-    ? await safe(client.ticketCalendar({ productSlug: selected, guestCategory: "adult" }), [])
+    ? await safe(client.ticketCalendar({ productSlug: selected, guestCategory }), [])
     : [];
 
-  const priced = calendar.filter((d) => d.priceCents !== null);
-  const cheapest = [...priced].sort((a, b) => a.priceCents! - b.priceCents!)[0];
-  const dearest = [...priced].sort((a, b) => b.priceCents! - a.priceCents!)[0];
-  const swing = cheapest && dearest ? dearest.priceCents! - cheapest.priceCents! : 0;
+  const calendarDays = calendar.map((day) => ({
+    ...day,
+    displayCents:
+      (selectedProduct?.days ?? 1) > 1
+        ? (day.totalCents ?? day.priceCents)
+        : day.priceCents,
+  }));
+  const priced = calendarDays.filter(
+    (day): day is typeof day & { displayCents: number } =>
+      day.available && day.displayCents !== null
+  );
+  const cheapest = [...priced].sort((a, b) => a.displayCents - b.displayCents)[0];
+  const dearest = [...priced].sort((a, b) => b.displayCents - a.displayCents)[0];
+  const swing = cheapest && dearest ? dearest.displayCents - cheapest.displayCents : 0;
 
   return (
     <main className="section">
@@ -38,9 +49,22 @@ export default async function TicketsPage({
 
       <div className="chips">
         {products.map((p) => (
-          <a key={p.slug} href={`/tickets?destination=${destination}&product=${p.slug}`}
+          <a key={p.slug} href={`/tickets?destination=${destination}&product=${p.slug}&guest=${guestCategory}`}
              className={`chip ${selected === p.slug ? "on" : ""}`}>
             {p.name}
+          </a>
+        ))}
+      </div>
+
+      <div className="chips" style={{ marginTop: 0 }} aria-label="Guest age">
+        {(["adult", "child"] as const).map((category) => (
+          <a
+            key={category}
+            href={`/tickets?destination=${destination}&product=${selected ?? ""}&guest=${category}`}
+            className={`chip ${guestCategory === category ? "on" : ""}`}
+            aria-pressed={guestCategory === category}
+          >
+            {category === "adult" ? "Adult" : "Child"}
           </a>
         ))}
       </div>
@@ -65,14 +89,14 @@ export default async function TicketsPage({
               <div className="card" style={{ background: "var(--teal-tint)", borderColor: "transparent" }}>
                 <div className="tiny" style={{ fontWeight: 700, color: "#077368" }}>CHEAPEST DAY</div>
                 <div className="cal-price" style={{ fontSize: 32, color: "#077368" }}>
-                  {centsToDisplay(cheapest.priceCents)}
+                  {centsToDisplay(cheapest.displayCents)}
                 </div>
                 <div className="tiny muted">{formatLongDate(cheapest.validDate)}</div>
               </div>
               <div className="card" style={{ background: "var(--coral-tint)", borderColor: "transparent" }}>
                 <div className="tiny" style={{ fontWeight: 700, color: "#b03514" }}>PEAK DAY</div>
                 <div className="cal-price" style={{ fontSize: 32, color: "#b03514" }}>
-                  {centsToDisplay(dearest?.priceCents)}
+                  {centsToDisplay(dearest?.displayCents)}
                 </div>
                 <div className="tiny muted">{dearest ? formatLongDate(dearest.validDate) : ""}</div>
               </div>
@@ -89,12 +113,17 @@ export default async function TicketsPage({
           ) : null}
 
           <div className="cal">
-            {calendar.map((day) => (
+            {calendarDays.map((day) => (
               <div key={day.validDate}
                    className={`cal-day ${day.band === "low" ? "cal-low" : day.band === "high" ? "cal-high" : ""} ${day.isWindowLow ? "cal-best" : ""}`}>
                 <div className="cal-dow">{dayOfWeekLabel(day.validDate)}</div>
                 <div className="tiny muted">{dayNumber(day.validDate)}</div>
-                <div className="cal-price">{centsToDisplay(day.priceCents)}</div>
+                <div className="cal-price">
+                  {day.available ? centsToDisplay(day.displayCents) : "Sold out"}
+                </div>
+                {day.available && (selectedProduct?.days ?? 1) > 1 ? (
+                  <div className="tiny muted">{centsToDisplay(day.priceCents)} / day</div>
+                ) : null}
                 {day.isWindowLow ? (
                   <span className="badge badge-hot" style={{ marginTop: 6 }}>Best</span>
                 ) : null}

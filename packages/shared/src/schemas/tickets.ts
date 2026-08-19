@@ -94,7 +94,10 @@ export type ExpressPassPrice = z.infer<typeof ExpressPassPrice>;
 /** One cell in the dynamic pricing calendar the UI renders. */
 export const PriceCalendarDay = z.object({
   validDate: IsoDate,
+  /** Storefront's displayed per-day amount. */
   priceCents: Cents.nullable(),
+  /** Exact full-ticket amount; differs from priceCents for multi-day products. */
+  totalCents: Cents.nullable().default(null),
   available: z.boolean(),
   /** "low" | "mid" | "high" bucket, computed against the visible window. */
   band: z.enum(["low", "mid", "high"]).nullable(),
