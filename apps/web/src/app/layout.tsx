@@ -46,7 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </span>
               Rate<em>Coaster</em>
             </a>
-            <nav className="nav">
+            <nav className="nav" aria-label="Primary navigation">
               {NAV.map((item) => (
                 <a key={item.href} href={item.href}>
                   {item.label}
@@ -54,26 +54,61 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               ))}
             </nav>
             <span className="spacer" />
-            {signedIn ? (
-              <>
-                {isAdmin ? (
-                  <a href="/admin" className="badge badge-hot" style={{ textDecoration: "none" }}>
-                    Admin
+            <div className="desktop-actions">
+              {signedIn ? (
+                <>
+                  {isAdmin ? (
+                    <a href="/admin" className="badge badge-hot" style={{ textDecoration: "none" }}>
+                      Admin
+                    </a>
+                  ) : (
+                    <span className="badge badge-blue">
+                      {me.entitlements.tier === "pro" ? "Pro" : "Free account"}
+                    </span>
+                  )}
+                  <a href="/account" className="btn btn-ghost btn-sm">
+                    Account
                   </a>
-                ) : (
-                  <span className="badge badge-blue">
-                    {me.entitlements.tier === "pro" ? "Pro" : "Free account"}
-                  </span>
-                )}
-                <a href="/account" className="btn btn-ghost btn-sm">
-                  Account
+                </>
+              ) : (
+                <a href="/join" className="btn btn-primary btn-sm">
+                  Sign up free
                 </a>
-              </>
-            ) : (
-              <a href="/join" className="btn btn-primary btn-sm">
-                Sign up free
-              </a>
-            )}
+              )}
+            </div>
+
+            <details className="mobile-menu">
+              <summary aria-label="Open site navigation">
+                <span aria-hidden="true">☰</span>
+                Menu
+              </summary>
+              <nav className="mobile-nav" aria-label="Mobile navigation">
+                {NAV.map((item) => (
+                  <a key={item.href} href={item.href}>
+                    {item.label}
+                    <span aria-hidden="true">›</span>
+                  </a>
+                ))}
+                <div className="mobile-nav-account">
+                  {signedIn ? (
+                    <>
+                      {isAdmin ? (
+                        <a href="/admin" className="btn btn-primary">
+                          Admin dashboard
+                        </a>
+                      ) : null}
+                      <a href="/account" className="btn btn-ghost">
+                        Account
+                      </a>
+                    </>
+                  ) : (
+                    <a href="/join" className="btn btn-primary">
+                      Sign up free
+                    </a>
+                  )}
+                </div>
+              </nav>
+            </details>
           </div>
         </header>
 

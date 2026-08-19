@@ -298,7 +298,7 @@ export const dealsRouter = new Hono().get("/", async (c) => {
   ];
 
   const rows = await db
-    .select({
+    .selectDistinctOn([rateCurrent.propertyId], {
       propertyId: rateCurrent.propertyId,
       slug: properties.slug,
       name: properties.name,
@@ -317,17 +317,16 @@ export const dealsRouter = new Hono().get("/", async (c) => {
     .from(rateCurrent)
     .innerJoin(properties, eq(properties.id, rateCurrent.propertyId))
     .where(and(...filters, destination ? eq(properties.destination, destination as "universal-orlando") : sql`true`))
-    .orderBy(asc(rateCurrent.nightlyCents))
-    .limit(limit * 5);
+    // Pick one cheapest candidate for every hotel before applying the public
+    // response limit. Limiting the raw price rows first let inexpensive Value
+    // inventory fill the entire candidate window and starved higher tiers.
+    .orderBy(
+      asc(rateCurrent.propertyId),
+      asc(rateCurrent.nightlyCents),
+      asc(rateCurrent.stayDate)
+    );
 
-  const seen = new Set<string>();
   const deals = rows
-    .filter((r) => {
-      // One deal per property so the board is not eleven rows of Endless Summer.
-      if (seen.has(r.propertyId)) return false;
-      seen.add(r.propertyId);
-      return true;
-    })
     .map((r) => {
       const low = r.historicalLowCents ?? r.nightlyCents;
       // 0 = at its all-time low, 100 = far above it.

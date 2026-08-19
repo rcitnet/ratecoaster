@@ -141,6 +141,65 @@ p { margin: 0 0 1rem; }
 .nav a:hover { background: var(--line-soft); color: var(--ink); }
 .nav a.active { background: var(--ink); color: #fff; }
 .spacer { flex: 1; }
+.desktop-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Native details/summary keeps mobile navigation keyboard-accessible and
+   functional before JavaScript loads. */
+.mobile-menu { display: none; position: relative; }
+.mobile-menu summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.mobile-menu summary::-webkit-details-marker { display: none; }
+.mobile-menu[open] summary { border-color: var(--blue); color: var(--blue); }
+.mobile-nav {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+}
+.mobile-nav > a {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.mobile-nav > a:hover,
+.mobile-nav > a:focus-visible { background: var(--blue-tint); color: var(--blue-dark); }
+.mobile-nav > a span { font-size: 24px; line-height: 1; color: var(--ink-mute); }
+.mobile-nav-account {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.mobile-nav-account .btn { width: 100%; }
 
 /* ---------- buttons ---------- */
 
@@ -516,7 +575,10 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 
 @media (max-width: 700px) {
   .hero { padding: 40px 24px; border-radius: var(--r-md); }
-  .nav { display: none; }
+  .masthead-inner { padding: 10px 16px; gap: 12px; }
+  .brand { font-size: 20px; }
+  .nav, .desktop-actions { display: none; }
+  .mobile-menu { display: block; }
   .section { padding: 36px 0; }
 }
 
