@@ -9,7 +9,7 @@ import type { CollectorContext } from "../framework/types.js";
 export interface TicketPriceReading {
   productId: string;
   validDate: string;
-  guestCategory: "adult" | "child";
+  guestCategory: "adult" | "child" | "all-ages";
   /** The storefront's displayed per-day price. */
   priceCents: number;
   /** Exact full-ticket price, especially important for multi-day products. */

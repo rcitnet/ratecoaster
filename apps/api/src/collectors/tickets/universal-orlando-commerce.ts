@@ -107,12 +107,20 @@ export function parseUniversalOrlandoTicketCalendar(payload: unknown): CalendarR
         continue;
       }
 
+      const inventory = Array.isArray(date?.inventoryEvents) ? date.inventoryEvents : [];
+      const inventoryAvailable =
+        inventory.length === 0 ||
+        inventory.some((event) => {
+          const item = objectOf(event);
+          return item?.isAvailable !== false && item?.forceSoldOut !== true;
+        });
       readings.push({
         partNumber,
         validDate,
         priceCents,
         totalCents,
-        available: date?.forceSoldOut !== true,
+        available:
+          date?.canBeVisited !== false && date?.forceSoldOut !== true && inventoryAvailable,
       });
     }
   }

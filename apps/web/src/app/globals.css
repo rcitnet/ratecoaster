@@ -414,8 +414,8 @@ p { margin: 0 0 1rem; }
 .locked-preview::after {
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 160px;
+  left: 0; right: 14px; bottom: 14px;
+  height: 140px;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 88%);
   pointer-events: none;
 }
@@ -426,8 +426,19 @@ p { margin: 0 0 1rem; }
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   overflow: auto;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-color: var(--blue) var(--line-soft);
   background: var(--paper);
 }
+.table-wrap::-webkit-scrollbar { width: 13px; height: 13px; }
+.table-wrap::-webkit-scrollbar-track { background: var(--line-soft); }
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--blue);
+  border: 3px solid var(--line-soft);
+  border-radius: var(--r-pill);
+}
+.pricing-scroll { max-height: 620px; overscroll-behavior: contain; }
+.pricing-scroll table { min-width: 820px; }
 table { width: 100%; border-collapse: collapse; font-size: 15px; }
 th {
   text-align: left;
@@ -568,6 +579,27 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 }
 .field:focus { outline: none; border-color: var(--blue); }
 
+/* ---------- Express Pass filters ---------- */
+
+.pricing-filter-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(170px, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin: 26px 0 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--cream);
+}
+.pricing-filter-form label { display: grid; gap: 5px; color: var(--ink-soft); font-size: 13px; font-weight: 700; }
+.pricing-filter-form .field { border-radius: var(--r-sm); padding: 10px 12px; }
+.express-product-chips { max-height: 210px; overflow-y: auto; padding: 2px 4px 8px 2px; scrollbar-gutter: stable; }
+.express-product-chips .chip { align-items: flex-start; border-radius: var(--r-sm); line-height: 1.25; }
+.express-product-chips .chip > span { font-size: 11px; opacity: 0.75; }
+.express-selection { margin: 28px 0 10px; }
+.express-selection h2 { margin-top: 10px; }
+
 /* ---------- trip planner ---------- */
 
 .trip-hero {
@@ -628,6 +660,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 
 @media (max-width: 900px) {
   .trip-hero { grid-template-columns: 1fr; }
+  .pricing-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 700px) {
@@ -642,6 +675,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .trip-form .btn, .trip-form > p { grid-column: auto; }
   .trip-total-card { align-items: flex-start; flex-direction: column; padding: 24px; }
   .trip-grand-total { text-align: left; }
+  .pricing-filter-form { grid-template-columns: 1fr; }
 }
 
 /* Affiliate Book button + FTC disclosure.

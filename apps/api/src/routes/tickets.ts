@@ -1,14 +1,10 @@
 import { Hono } from "hono";
-import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
-import {
-  expressPassPrices,
-  ticketPriceCurrent,
-  ticketProducts,
-} from "@ratecoaster/db/schema";
-import { GuestCategory } from "@ratecoaster/shared";
-import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
+import { ticketPriceCurrent, ticketProducts } from "@ratecoaster/db/schema";
+import { ExpressPassType, GuestCategory } from "@ratecoaster/shared";
 import { gateDateWindow, tierOf } from "../lib/entitlements.js";
+import { universalExpressConfigOf } from "../collectors/tickets/universal-orlando-express.js";
 
 export const ticketsRouter = new Hono();
 
@@ -128,53 +124,120 @@ ticketsRouter.get("/calendar", async (c) => {
   );
 });
 
-/** GET /v1/express-pass — latest Express price per date and tier. */
-export const expressRouter = new Hono().get("/", async (c) => {
+/** Product-specific Express catalogue. One row per actual storefront offering. */
+export const expressRouter = new Hono().get("/products", async (c) => {
   const db = getDb();
   const destination = (c.req.query("destination") ?? "universal-orlando") as "universal-orlando";
-  const tier = c.req.query("tier");
+  const rows = await db
+    .select()
+    .from(ticketProducts)
+    .where(
+      and(
+        eq(ticketProducts.destination, destination),
+        eq(ticketProducts.kind, "express-pass"),
+        eq(ticketProducts.active, true)
+      )
+    )
+    .orderBy(asc(ticketProducts.days), asc(ticketProducts.name));
+
+  return c.json(
+    rows.flatMap((product) => {
+      const config = universalExpressConfigOf(product);
+      if (!config || !product.days || !product.parkCount) return [];
+      return [{
+        id: product.id,
+        destination: product.destination,
+        slug: product.slug,
+        name: product.name,
+        days: product.days,
+        parkCount: product.parkCount,
+        parkSlugs: config.parkSlugs,
+        passType: config.passType,
+      }];
+    })
+  );
+}).get("/", async (c) => {
+  const db = getDb();
+  const destination = (c.req.query("destination") ?? "universal-orlando") as "universal-orlando";
+  const parsedPassType = ExpressPassType.safeParse(c.req.query("passType"));
+  const passType = parsedPassType.success ? parsedPassType.data : undefined;
+  const requestedDays = Number(c.req.query("days"));
+  const days = Number.isInteger(requestedDays) && requestedDays >= 1 && requestedDays <= 5
+    ? requestedDays
+    : undefined;
+  const productSlug = c.req.query("productSlug");
+  const parkSlug = c.req.query("parkSlug");
   const gate = gateDateWindow(tierOf(c), c.req.query("from"), c.req.query("to") ?? undefined);
   const from = gate.from;
   const to = gate.to;
 
-  // Express is append-only with no `current` table — it re-prices intraday and
-  // every sighting is interesting — so the latest value per date is selected here.
-  const rows = await db
-    .select({
-      destination: expressPassPrices.destination,
-      validDate: expressPassPrices.validDate,
-      tier: expressPassPrices.tier,
-      priceCents: expressPassPrices.priceCents,
-      available: expressPassPrices.available,
-      observedAt: expressPassPrices.observedAt,
-    })
-    .from(expressPassPrices)
+  const productRows = await db
+    .select()
+    .from(ticketProducts)
     .where(
       and(
-        eq(expressPassPrices.destination, destination),
-        gte(expressPassPrices.validDate, from),
-        lte(expressPassPrices.validDate, to),
-        tier ? eq(expressPassPrices.tier, tier as "standard") : sql`true`
+        eq(ticketProducts.destination, destination),
+        eq(ticketProducts.kind, "express-pass"),
+        eq(ticketProducts.active, true)
+      )
+    );
+  const products = productRows.flatMap((product) => {
+    const config = universalExpressConfigOf(product);
+    if (!config || !product.days || !product.parkCount) return [];
+    if (productSlug && product.slug !== productSlug) return [];
+    if (passType && config.passType !== passType) return [];
+    if (days && product.days !== days) return [];
+    if (parkSlug && !config.parkSlugs.includes(parkSlug)) return [];
+    return [{ product, config }];
+  });
+  if (products.length === 0) return c.json([]);
+
+  const metadata = new Map(products.map(({ product, config }) => [product.id, { product, config }]));
+  const rows = await db
+    .select({
+      productId: ticketPriceCurrent.productId,
+      validDate: ticketPriceCurrent.validDate,
+      priceCents: ticketPriceCurrent.priceCents,
+      totalCents: ticketPriceCurrent.totalCents,
+      available: ticketPriceCurrent.available,
+      source: ticketPriceCurrent.source,
+      isEstimated: ticketPriceCurrent.isEstimated,
+      merchant: ticketPriceCurrent.merchant,
+      observedAt: ticketPriceCurrent.observedAt,
+    })
+    .from(ticketPriceCurrent)
+    .where(
+      and(
+        inArray(ticketPriceCurrent.productId, [...metadata.keys()]),
+        eq(ticketPriceCurrent.guestCategory, "all-ages"),
+        gte(ticketPriceCurrent.validDate, from),
+        lte(ticketPriceCurrent.validDate, to)
       )
     )
-    .orderBy(asc(expressPassPrices.validDate), desc(expressPassPrices.observedAt));
-
-  const latest = new Map<string, (typeof rows)[number]>();
-  for (const row of rows) {
-    const key = `${row.validDate}|${row.tier}`;
-    if (!latest.has(key)) latest.set(key, row);
-  }
+    .orderBy(asc(ticketPriceCurrent.validDate));
 
   return c.json(
-    [...latest.values()].map((r) => ({
-      destination: r.destination,
-      parkSlug: null,
-      validDate: r.validDate,
-      tier: r.tier,
-      priceCents: r.priceCents,
-      currency: "USD",
-      available: r.available,
-      observedAt: r.observedAt.toISOString(),
-    }))
+    rows.flatMap((row) => {
+      const target = metadata.get(row.productId);
+      if (!target || !row.validDate) return [];
+      return [{
+        productSlug: target.product.slug,
+        productName: target.product.name,
+        destination: target.product.destination,
+        days: target.product.days!,
+        parkCount: target.product.parkCount!,
+        parkSlugs: target.config.parkSlugs,
+        passType: target.config.passType,
+        validDate: row.validDate,
+        priceCents: row.priceCents,
+        totalCents: row.totalCents ?? row.priceCents,
+        currency: "USD",
+        available: row.available,
+        source: row.source,
+        isEstimated: row.isEstimated,
+        merchant: row.merchant,
+        observedAt: row.observedAt.toISOString(),
+      }];
+    })
   );
 });

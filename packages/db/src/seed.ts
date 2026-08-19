@@ -1,7 +1,13 @@
 import { inArray } from "drizzle-orm";
 import { closeDb, getDb } from "./index.js";
 import { parks, properties, ticketProducts } from "./schema.js";
-import { PARKS, PROPERTIES, RETIRED_PROPERTY_SLUGS, TICKET_PRODUCTS } from "./seed-data.js";
+import {
+  PARKS,
+  PROPERTIES,
+  RETIRED_PROPERTY_SLUGS,
+  RETIRED_TICKET_PRODUCT_SLUGS,
+  TICKET_PRODUCTS,
+} from "./seed-data.js";
 
 /**
  * Idempotent seed. Safe to re-run: reference rows are upserted on their slug so
@@ -99,6 +105,12 @@ async function main() {
       });
   }
   console.log(`seeded ${TICKET_PRODUCTS.length} ticket products`);
+
+  await db
+    .update(ticketProducts)
+    .set({ active: false })
+    .where(inArray(ticketProducts.slug, [...RETIRED_TICKET_PRODUCT_SLUGS]));
+  console.log(`retired ${RETIRED_TICKET_PRODUCT_SLUGS.size} ticket products`);
 
   await closeDb();
 }

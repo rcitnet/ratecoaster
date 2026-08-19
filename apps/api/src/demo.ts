@@ -474,27 +474,84 @@ demoApp.get("/v1/trips/quote", (c) => {
   );
 });
 
+function demoExpressProducts(destination = "universal-orlando") {
+  return TICKET_PRODUCTS.filter(
+    (product) => product.kind === "express-pass" && product.destination === destination
+  ).flatMap((product, index) => {
+    const config = product.collectorConfig;
+    const parkSlugs = Array.isArray(config.parkSlugs)
+      ? config.parkSlugs.filter((value): value is string => typeof value === "string")
+      : [];
+    const passType = config.passType;
+    if (
+      !product.days ||
+      !product.parkCount ||
+      parkSlugs.length === 0 ||
+      (passType !== "standard" && passType !== "unlimited" && passType !== "plus")
+    ) return [];
+    return [{
+      id: `demo-express-${index}`,
+      destination: product.destination,
+      slug: product.slug,
+      name: product.name,
+      days: product.days,
+      parkCount: product.parkCount,
+      parkSlugs,
+      passType,
+    }];
+  });
+}
+
+demoApp.get("/v1/express-pass/products", (c) =>
+  c.json(demoExpressProducts(c.req.query("destination") ?? "universal-orlando"))
+);
+
 demoApp.get("/v1/express-pass", (c) => {
   const destination = c.req.query("destination") ?? "universal-orlando";
+  const productSlug = c.req.query("productSlug");
+  const parkSlug = c.req.query("parkSlug");
+  const passType = c.req.query("passType");
+  const days = Number(c.req.query("days"));
+  const products = demoExpressProducts(destination).filter(
+    (product) =>
+      (!productSlug || product.slug === productSlug) &&
+      (!parkSlug || product.parkSlugs.includes(parkSlug)) &&
+      (!passType || product.passType === passType) &&
+      (!Number.isInteger(days) || days < 1 || product.days === days)
+  );
   const today = todayInTimezone("America/New_York");
   const gate = gateDateWindow(tierOf(c), c.req.query("from"), c.req.query("to"));
   const out = [];
-  for (let i = 0; i < Math.min(gate.info.visibleDays, 60); i++) {
-    const validDate = addDays(today, i);
-    const dow = dayOfWeek(validDate);
-    // Express is the most volatile price on property — the demo reflects that.
-    const weekend = dow === 5 || dow === 6 ? 1.75 : dow === 0 ? 1.35 : 1.0;
-    const base = 9900 * weekend * (0.85 + seed(destination, validDate) * 0.5);
-    out.push({
-      destination,
-      parkSlug: null,
-      validDate,
-      tier: "standard" as const,
-      priceCents: Math.round(base / 100) * 100,
-      currency: "USD",
-      available: true,
-      observedAt: new Date(Date.now() - 1000 * 60 * 52).toISOString(),
-    });
+  for (const product of products) {
+    for (let i = 0; i < gate.info.visibleDays; i++) {
+      const validDate = addDays(today, i);
+      const dow = dayOfWeek(validDate);
+      // Express is the most volatile price on property — the demo reflects that.
+      const weekend = dow === 5 || dow === 6 ? 1.75 : dow === 0 ? 1.35 : 1.0;
+      const typeMultiplier = product.passType === "unlimited" ? 1.45 : product.passType === "plus" ? 1.25 : 1;
+      const parkMultiplier = 0.8 + product.parkCount * 0.25;
+      const perDay = Math.round(
+        (9900 * weekend * typeMultiplier * parkMultiplier * (0.85 + seed(product.slug, validDate) * 0.5)) / 100
+      ) * 100;
+      out.push({
+        productSlug: product.slug,
+        productName: product.name,
+        destination,
+        days: product.days,
+        parkCount: product.parkCount,
+        parkSlugs: product.parkSlugs,
+        passType: product.passType,
+        validDate,
+        priceCents: perDay,
+        totalCents: perDay * product.days - 1,
+        currency: "USD",
+        available: seed(product.slug, validDate, "availability") > 0.03,
+        source: "observed" as const,
+        isEstimated: false,
+        merchant: null,
+        observedAt: new Date(Date.now() - 1000 * 60 * 52).toISOString(),
+      });
+    }
   }
   return c.json(out);
 });

@@ -266,7 +266,12 @@ tripsRouter.get("/quote", async (c) => {
     );
 
   const normalizedTicketRows: TicketQuoteRow[] = ticketRows
-    .filter((row): row is typeof row & { ticketDays: number } => row.ticketDays !== null)
+    .filter(
+      (row): row is typeof row & {
+        ticketDays: number;
+        guestCategory: "adult" | "child" | "senior";
+      } => row.ticketDays !== null && row.guestCategory !== "all-ages"
+    )
     .map((row) => ({ ...row, ticketDays: row.ticketDays }));
   const ticket = recommendTicket(
     eligibleTicketRows(normalizedTicketRows, query.rateCode),

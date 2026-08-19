@@ -1,7 +1,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { ENTITLEMENTS, parseMoneyToCents, centsToDisplay, RateQuery } from "@ratecoaster/shared";
-import { PROPERTIES, RETIRED_PROPERTY_SLUGS } from "@ratecoaster/db/src/seed-data.js";
+import {
+  PROPERTIES,
+  RETIRED_PROPERTY_SLUGS,
+  RETIRED_TICKET_PRODUCT_SLUGS,
+  TICKET_PRODUCTS,
+} from "@ratecoaster/db/src/seed-data.js";
 import { addDays, dateRange, daysBetween, prioritizeDates, todayInTimezone } from "./framework/dates.js";
 import { extractPath, extractOne, renderTemplate } from "./hotels/endpoint-config.js";
 import { parseOffers, checkRateCode } from "./hotels/index.js";
@@ -28,6 +33,11 @@ import {
   buildUniversalOrlandoCalendarUrl,
   parseUniversalOrlandoTicketCalendar,
 } from "./tickets/universal-orlando-commerce.js";
+import {
+  buildUniversalOrlandoExpressCatalogUrl,
+  parseUniversalOrlandoExpressCatalog,
+  universalExpressConfigOf,
+} from "./tickets/universal-orlando-express.js";
 import { selectRotatingBatch, selectRotatingDates } from "./hotels/schedule.js";
 import { normalizeDate } from "./tickets/index.js";
 import { parseCsv, csvToObjects } from "./framework/csv.js";
@@ -464,6 +474,79 @@ describe("Universal Orlando ticket commerce API", () => {
       () => parseUniversalOrlandoTicketCalendar({ products: [] }),
       /eventAvailability/
     );
+  });
+});
+
+describe("Universal Orlando Express commerce API", () => {
+  const expressProducts = TICKET_PRODUCTS.filter(
+    (product) => product.kind === "express-pass" && product.destination === "universal-orlando"
+  );
+
+  test("tracks all 14 current store products across every Orlando park", () => {
+    const configs = expressProducts.map((product) => universalExpressConfigOf({
+      collectorConfig: product.collectorConfig,
+    }));
+    assert.equal(expressProducts.length, 14);
+    assert.equal(configs.every((config) => config !== null), true);
+    assert.equal(new Set(configs.map((config) => config!.partNumber)).size, 14);
+    assert.deepEqual(
+      new Set(configs.flatMap((config) => config!.parkSlugs)),
+      new Set([
+        "universal-studios-florida",
+        "islands-of-adventure",
+        "epic-universe",
+        "volcano-bay",
+      ])
+    );
+    assert.deepEqual(
+      new Set(configs.map((config) => config!.passType)),
+      new Set(["standard", "unlimited", "plus"])
+    );
+    assert.equal(expressProducts.some((product) => RETIRED_TICKET_PRODUCT_SLUGS.has(product.slug)), false);
+  });
+
+  test("builds the public first-party Express catalog endpoint", () => {
+    const url = new URL(buildUniversalOrlandoExpressCatalogUrl());
+    assert.equal(url.hostname, "comm-api.universaldestinationsandexperiences.com");
+    assert.equal(url.pathname, "/occ/v2/uor_b2c/products/search");
+    assert.match(url.searchParams.get("query") ?? "", /uo_ice_default_pb_express/);
+    assert.equal(url.searchParams.get("pageSize"), "100");
+  });
+
+  test("extracts stable product and part numbers from the catalog", () => {
+    assert.deepEqual(
+      parseUniversalOrlandoExpressCatalog({
+        products: [
+          {
+            code: "UEUE_UE_1PARK_1DAY_UEXP_ICE",
+            name: "Universal Epic Universe Express Pass",
+            variantOptions: [{ code: "170150210003", name: "Universal Epic Universe Express Pass" }],
+          },
+          {
+            code: "UE_VB_1PARK_1DAY_UEXP_ICE",
+            name: "Universal Volcano Bay Express Pass",
+            variantOptions: [{ code: "150140001735" }],
+          },
+        ],
+      }),
+      [
+        {
+          productCode: "UEUE_UE_1PARK_1DAY_UEXP_ICE",
+          partNumber: "170150210003",
+          name: "Universal Epic Universe Express Pass",
+        },
+        {
+          productCode: "UE_VB_1PARK_1DAY_UEXP_ICE",
+          partNumber: "150140001735",
+          name: "Universal Volcano Bay Express Pass",
+        },
+      ]
+    );
+  });
+
+  test("rejects incomplete collector configuration", () => {
+    assert.equal(universalExpressConfigOf({ collectorConfig: { adapter: "universal-orlando-express" } }), null);
+    assert.equal(universalExpressConfigOf({ collectorConfig: null }), null);
   });
 });
 

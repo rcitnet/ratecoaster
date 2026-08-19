@@ -89,7 +89,7 @@ export const ticketKindEnum = pgEnum("ticket_kind", [
   "add-on",
 ]);
 
-export const guestCategoryEnum = pgEnum("guest_category", ["adult", "child", "senior"]);
+export const guestCategoryEnum = pgEnum("guest_category", ["adult", "child", "senior", "all-ages"]);
 export const expressTierEnum = pgEnum("express_tier", ["standard", "unlimited"]);
 export const alertChannelEnum = pgEnum("alert_channel", ["email", "web-push", "expo-push"]);
 export const platformEnum = pgEnum("platform", ["ios", "android", "web"]);

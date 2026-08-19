@@ -19,7 +19,7 @@ export const TicketProductKind = z.enum([
 ]);
 export type TicketProductKind = z.infer<typeof TicketProductKind>;
 
-export const GuestCategory = z.enum(["adult", "child", "senior"]);
+export const GuestCategory = z.enum(["adult", "child", "senior", "all-ages"]);
 export type GuestCategory = z.infer<typeof GuestCategory>;
 
 export const TicketProduct = z.object({
@@ -71,16 +71,34 @@ export type TicketPriceObservation = z.infer<typeof TicketPriceObservation>;
  * shop it as a calendar ("which day is Express cheapest?") rather than as a
  * product.
  */
-export const ExpressPassTier = z.enum(["standard", "unlimited"]);
-export type ExpressPassTier = z.infer<typeof ExpressPassTier>;
+export const ExpressPassType = z.enum(["standard", "unlimited", "plus"]);
+export type ExpressPassType = z.infer<typeof ExpressPassType>;
+
+export const ExpressPassProduct = z.object({
+  id: z.string(),
+  destination: DestinationSlug,
+  slug: z.string(),
+  name: z.string(),
+  days: z.number().int().positive(),
+  parkCount: z.number().int().positive(),
+  parkSlugs: z.array(z.string()).min(1),
+  passType: ExpressPassType,
+});
+export type ExpressPassProduct = z.infer<typeof ExpressPassProduct>;
 
 export const ExpressPassPrice = z.object({
+  productSlug: z.string(),
+  productName: z.string(),
   destination: DestinationSlug,
-  /** Park slug where the pass is valid, or null for resort-wide passes. */
-  parkSlug: z.string().nullable(),
+  days: z.number().int().positive(),
+  parkCount: z.number().int().positive(),
+  parkSlugs: z.array(z.string()).min(1),
+  passType: ExpressPassType,
   validDate: IsoDate,
-  tier: ExpressPassTier,
+  /** Storefront's displayed per-day amount. */
   priceCents: Cents,
+  /** Exact whole-pass price. For one-day products this is still the authoritative $x.99 amount. */
+  totalCents: Cents,
   currency: Currency,
   available: z.boolean(),
   source: RateSource,
@@ -123,7 +141,10 @@ export type TicketQuery = z.infer<typeof TicketQuery>;
 
 export const ExpressPassQuery = z.object({
   destination: DestinationSlug.default("universal-orlando"),
-  tier: ExpressPassTier.optional(),
+  productSlug: z.string().optional(),
+  parkSlug: z.string().optional(),
+  passType: ExpressPassType.optional(),
+  days: z.coerce.number().int().min(1).max(5).optional(),
   from: IsoDate.optional(),
   to: IsoDate.optional(),
 });
