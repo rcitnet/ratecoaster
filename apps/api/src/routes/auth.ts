@@ -1,16 +1,26 @@
 import { Hono } from "hono";
-import { getCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { ENTITLEMENTS, RequestMagicLink, type Tier } from "@ratecoaster/shared";
 import {
   SESSION_COOKIE,
   clearSessionCookie,
   consumeMagicLink,
   createMagicLink,
+  createSession,
   destroySession,
+  resolveOAuthUser,
   setSessionCookie,
 } from "../lib/auth.js";
 import { tierOf } from "../lib/entitlements.js";
 import { emailConfigured, sendMagicLinkEmail } from "../lib/email.js";
+import {
+  buildGoogleAuthorizeUrl,
+  createGoogleOAuthState,
+  exchangeGoogleCode,
+  readGoogleOAuthState,
+  signGoogleOAuthState,
+  verifyGoogleIdToken,
+} from "../lib/google-oauth.js";
 
 export const authRouter = new Hono();
 
@@ -147,71 +157,102 @@ authRouter.post("/logout", async (c) => {
 });
 
 /* ------------------------------------------------------------------ *
- * OAuth — Google and Apple
+ * OAuth — Google
  * ------------------------------------------------------------------ */
 
-const OAUTH_CONFIG = {
-  google: {
-    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-    scope: "openid email profile",
-    clientId: () => process.env.GOOGLE_CLIENT_ID,
-  },
-  apple: {
-    authorizeUrl: "https://appleid.apple.com/auth/authorize",
-    scope: "name email",
-    clientId: () => process.env.APPLE_CLIENT_ID,
-  },
-} as const;
+const GOOGLE_STATE_COOKIE = "rc_google_oauth";
+const OAUTH_COOKIE_SECONDS = 10 * 60;
+
+function googleCredentials(): { clientId: string; clientSecret: string } | null {
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
+
+function googleRedirectUri(): string {
+  return `${PUBLIC_API_URL}/v1/auth/oauth/google/callback`;
+}
 
 /**
- * GET /v1/auth/oauth/:provider — kick off the flow.
- *
- * Returns 501 with an actionable message when credentials are absent, rather
- * than redirecting to a broken consent screen. Apple in particular is required
- * by App Store review once any third-party sign-in exists, so the mobile app
- * will need this configured before it can ship.
+ * GET /v1/auth/oauth/google — start a short-lived, signed OAuth + PKCE flow.
  */
 authRouter.get("/oauth/:provider", (c) => {
-  const provider = c.req.param("provider") as keyof typeof OAUTH_CONFIG;
-  const config = OAUTH_CONFIG[provider];
-  if (!config) {
+  const provider = c.req.param("provider");
+  if (provider !== "google") {
     return c.json({ error: { code: "unknown_provider", message: "Unsupported provider." } }, 404);
   }
 
-  const clientId = config.clientId();
-  if (!clientId) {
+  const credentials = googleCredentials();
+  if (!credentials) {
     return c.json(
       {
         error: {
           code: "oauth_not_configured",
-          message: `${provider} sign-in is not configured. Set ${provider.toUpperCase()}_CLIENT_ID and ${provider.toUpperCase()}_CLIENT_SECRET.`,
+          message: "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
         },
       },
       501
     );
   }
 
-  const state = crypto.randomUUID();
-  const url = new URL(config.authorizeUrl);
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", `${PUBLIC_API_URL}/v1/auth/oauth/${provider}/callback`);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", config.scope);
-  url.searchParams.set("state", state);
-  if (provider === "apple") url.searchParams.set("response_mode", "form_post");
+  const state = createGoogleOAuthState(safeRedirect(c.req.query("redirectTo")));
+  setCookie(c, GOOGLE_STATE_COOKIE, signGoogleOAuthState(state, credentials.clientSecret), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    path: "/",
+    maxAge: OAUTH_COOKIE_SECONDS,
+  });
 
-  return c.redirect(url.toString());
+  return c.redirect(buildGoogleAuthorizeUrl({
+    clientId: credentials.clientId,
+    redirectUri: googleRedirectUri(),
+    state,
+  }));
 });
 
-authRouter.get("/oauth/:provider/callback", (c) =>
-  c.json(
-    {
-      error: {
-        code: "oauth_not_configured",
-        message:
-          "Token exchange needs real client credentials. See README section 'Enabling Google and Apple sign-in'.",
-      },
-    },
-    501
-  )
-);
+/** Google redirects here after consent; failures disclose no token details. */
+authRouter.get("/oauth/google/callback", async (c) => {
+  const credentials = googleCredentials();
+  const cookie = getCookie(c, GOOGLE_STATE_COOKIE);
+  deleteCookie(c, GOOGLE_STATE_COOKIE, { path: "/" });
+  const state = credentials
+    ? readGoogleOAuthState(cookie, credentials.clientSecret)
+    : null;
+
+  const code = c.req.query("code");
+  const returnedState = c.req.query("state");
+  if (
+    !credentials || !state || !code || !returnedState ||
+    returnedState !== state.state || c.req.query("error")
+  ) {
+    return c.redirect(`${WEB_ORIGIN}/auth/error?reason=oauth`);
+  }
+
+  try {
+    const idToken = await exchangeGoogleCode({
+      code,
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret,
+      redirectUri: googleRedirectUri(),
+      verifier: state.verifier,
+    });
+    const identity = await verifyGoogleIdToken({
+      idToken,
+      clientId: credentials.clientId,
+      nonce: state.nonce,
+    });
+    const userId = await resolveOAuthUser({
+      provider: "google",
+      providerAccountId: identity.subject,
+      email: identity.email,
+      displayName: identity.displayName,
+    });
+    const sessionToken = await createSession(userId, c.req.header("user-agent"));
+    setSessionCookie(c, sessionToken);
+    return c.redirect(`${WEB_ORIGIN}${safeRedirect(state.redirectTo)}`);
+  } catch (error) {
+    console.error(`[auth] Google OAuth callback failed: ${String(error)}`);
+    return c.redirect(`${WEB_ORIGIN}/auth/error?reason=oauth`);
+  }
+});

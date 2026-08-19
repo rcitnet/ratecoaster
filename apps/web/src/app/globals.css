@@ -559,6 +559,16 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   color: rgba(255, 255, 255, 0.55);
 }
 
+/* ---------- legal pages ---------- */
+
+.legal-page { max-width: 860px; }
+.legal-page .lede { margin: 22px 0 34px; }
+.legal-page h2 { margin-top: 34px; font-size: 26px; }
+.legal-page h3 { margin-top: 22px; font-size: 18px; }
+.legal-page p, .legal-page li { line-height: 1.75; }
+.legal-page ul { padding-left: 24px; }
+.legal-page a { overflow-wrap: anywhere; }
+
 /* ---------- misc ---------- */
 
 .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }

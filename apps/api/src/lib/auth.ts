@@ -4,7 +4,7 @@ import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { Tier } from "@ratecoaster/shared";
 import { getDb } from "@ratecoaster/db";
-import { magicLinkTokens, sessions, users } from "@ratecoaster/db/schema";
+import { magicLinkTokens, oauthAccounts, sessions, users } from "@ratecoaster/db/schema";
 
 export const SESSION_COOKIE = "rc_session";
 const SESSION_DAYS = 60;
@@ -102,6 +102,90 @@ export async function upsertUserByEmail(email: string): Promise<string> {
     .returning({ id: users.id });
 
   return user!.id;
+}
+
+/**
+ * Resolve a verified provider identity to one RateCoaster user.
+ *
+ * Existing provider links win even if a user later changes their Google email.
+ * A new link may join an existing verified-email account, which lets an admin or
+ * magic-link user add Google without creating a duplicate account.
+ */
+export async function resolveOAuthUser(args: {
+  provider: "google";
+  providerAccountId: string;
+  email: string;
+  displayName: string | null;
+}): Promise<string> {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const existing = await tx
+      .select({ userId: oauthAccounts.userId })
+      .from(oauthAccounts)
+      .where(
+        and(
+          eq(oauthAccounts.provider, args.provider),
+          eq(oauthAccounts.providerAccountId, args.providerAccountId)
+        )
+      )
+      .limit(1);
+    if (existing[0]) {
+      await tx
+        .update(users)
+        .set({
+          lastSeenAt: new Date(),
+          displayName: sql`coalesce(${users.displayName}, ${args.displayName})`,
+        })
+        .where(eq(users.id, existing[0].userId));
+      return existing[0].userId;
+    }
+
+    const normalizedEmail = args.email.trim().toLowerCase();
+    const [user] = await tx
+      .insert(users)
+      .values({
+        email: normalizedEmail,
+        displayName: args.displayName,
+        tier: "free",
+        emailVerifiedAt: new Date(),
+        lastSeenAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: {
+          emailVerifiedAt: new Date(),
+          lastSeenAt: new Date(),
+          displayName: sql`coalesce(${users.displayName}, ${args.displayName})`,
+        },
+      })
+      .returning({ id: users.id });
+    if (!user) throw new Error("Could not resolve OAuth user");
+
+    const linked = await tx
+      .insert(oauthAccounts)
+      .values({
+        userId: user.id,
+        provider: args.provider,
+        providerAccountId: args.providerAccountId,
+      })
+      .onConflictDoNothing()
+      .returning({ userId: oauthAccounts.userId });
+    if (linked[0]) return linked[0].userId;
+
+    // A concurrent callback linked the provider first. Use that canonical link.
+    const raced = await tx
+      .select({ userId: oauthAccounts.userId })
+      .from(oauthAccounts)
+      .where(
+        and(
+          eq(oauthAccounts.provider, args.provider),
+          eq(oauthAccounts.providerAccountId, args.providerAccountId)
+        )
+      )
+      .limit(1);
+    if (!raced[0]) throw new Error("Could not link OAuth identity");
+    return raced[0].userId;
+  });
 }
 
 /* ------------------------------------------------------------------ *

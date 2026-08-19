@@ -224,6 +224,11 @@ CORS_ORIGINS=https://${DOMAIN},https://www.${DOMAIN}
 RESEND_API_KEY=
 EMAIL_FROM="RateCoaster <hello@${DOMAIN}>"
 
+# Optional Google sign-in. Register this exact redirect URI:
+# https://${DOMAIN}/api/v1/auth/oauth/google/callback
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 COLLECTOR_MAX_RPM=12
 COLLECTOR_USER_AGENT="RateCoasterBot/1.0 (+https://${DOMAIN}/bot; hello@${DOMAIN})"
 COLLECTOR_DRY_RUN=1
