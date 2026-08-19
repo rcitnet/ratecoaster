@@ -10,6 +10,7 @@ import {
 } from "./schemas/hotels.js";
 import {
   ExpressPassPrice,
+  ExpressPassProduct,
   PriceCalendarDay,
   TicketProduct,
   type ExpressPassQuery,
@@ -148,6 +149,12 @@ export class RateCoasterClient {
   expressPassCalendar(query: Partial<ExpressPassQuery>) {
     return this.request("/v1/express-pass", z.array(ExpressPassPrice), {
       query: query as Record<string, unknown>,
+    });
+  }
+
+  listExpressPassProducts(destination = "universal-orlando") {
+    return this.request("/v1/express-pass/products", z.array(ExpressPassProduct), {
+      query: { destination },
     });
   }
 

@@ -210,7 +210,13 @@ export default async function PropertyPage({
 
       <h2 style={{ marginTop: 34 }}>Upcoming nights</h2>
       {selectedRoomType ? <p className="tiny muted">Showing {selectedRoomType.name}.</p> : null}
-      <div className={`table-wrap ${gate.gated ? "locked-preview" : ""}`} style={{ marginTop: 14 }}>
+      <div
+        className={`table-wrap pricing-scroll ${gate.gated ? "locked-preview" : ""}`}
+        style={{ marginTop: 14 }}
+        tabIndex={0}
+        role="region"
+        aria-label="Upcoming hotel nights; scroll horizontally and vertically to see all rates"
+      >
         <table>
           <thead>
             <tr>

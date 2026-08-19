@@ -128,7 +128,12 @@ export default async function HotelsPage({
         </div>
       ) : (
         <div className={gate.gated ? "locked-preview" : ""}>
-          <div className="table-wrap" style={{ maxHeight: 620 }}>
+          <div
+            className="table-wrap pricing-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Hotel prices by date; scroll horizontally and vertically to see all rates"
+          >
             <table>
               <thead>
                 <tr>

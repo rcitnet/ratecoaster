@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { parseMoneyToCents } from "@ratecoaster/shared";
-import { expressPassPrices, parks, ticketProducts } from "@ratecoaster/db/schema";
+import { ticketProducts } from "@ratecoaster/db/schema";
 import { fetchJson } from "../framework/http.js";
 import { dateRange, todayInTimezone } from "../framework/dates.js";
 import {
@@ -16,6 +16,10 @@ import {
   hasUniversalOrlandoTicketConfig,
   universalOrlandoTicketCredentialsConfigured,
 } from "./universal-orlando-commerce.js";
+import {
+  collectUniversalOrlandoExpress,
+  hasUniversalOrlandoExpressConfig,
+} from "./universal-orlando-express.js";
 
 const TIMEZONES: Record<string, string> = {
   "universal-orlando": "America/New_York",
@@ -180,7 +184,7 @@ export function createTicketPriceCollector(options: { lookaheadDays?: number } =
  * times a slow Tuesday — so it is polled more often than admission tickets.
  */
 export function createExpressPassCollector(options: { lookaheadDays?: number } = {}): Collector {
-  const lookaheadDays = options.lookaheadDays ?? 180;
+  const lookaheadDays = options.lookaheadDays ?? 365;
 
   return {
     name: "express-pass",
@@ -193,13 +197,9 @@ export function createExpressPassCollector(options: { lookaheadDays?: number } =
         .from(ticketProducts)
         .where(and(eq(ticketProducts.active, true), eq(ticketProducts.kind, "express-pass")));
 
-      for (const p of rows) {
-        const cfg = (p.collectorConfig ?? {}) as Record<string, unknown>;
-        if (typeof cfg.adapter === "string" && cfg.productCode) {
-          if (await resolveEndpointConfig(cfg.adapter)) return { ready: true };
-        }
-      }
-      return { ready: false, reason: "no Express Pass endpoint config captured yet" };
+      return rows.some(hasUniversalOrlandoExpressConfig)
+        ? { ready: true }
+        : { ready: false, reason: "no Universal Orlando Express products are configured" };
     },
 
     async run(ctx: CollectorContext) {
@@ -209,69 +209,17 @@ export function createExpressPassCollector(options: { lookaheadDays?: number } =
         .from(ticketProducts)
         .where(and(eq(ticketProducts.active, true), eq(ticketProducts.kind, "express-pass")));
 
-      const parkRows = await db.select().from(parks);
+      const universalProducts = products.filter(hasUniversalOrlandoExpressConfig);
+      if (universalProducts.length === 0) {
+        stats.notes["universal-orlando-express.skipped"] = "no configured products";
+        return;
+      }
 
-      for (const product of products) {
-        const cfg = (product.collectorConfig ?? {}) as Record<string, unknown>;
-        const adapterName = typeof cfg.adapter === "string" ? cfg.adapter : null;
-        const productCode = cfg.productCode ? String(cfg.productCode) : null;
-        if (!adapterName || !productCode) continue;
-
-        const endpoint = await resolveEndpointConfig(adapterName);
-        if (!endpoint) continue;
-
-        const timezone = TIMEZONES[product.destination] ?? "America/New_York";
-        const today = todayInTimezone(timezone);
-        const window = dateRange(today, lookaheadDays);
-
-        const park = parkRows.find((p) => p.destination === product.destination) ?? null;
-
-        try {
-          stats.requestCount++;
-          const url = renderTemplate(endpoint.request.urlTemplate, {
-            productCode,
-            from: window[0]!,
-            to: window[window.length - 1]!,
-            currency: "USD",
-          });
-
-          const json = await fetchJson(url, {
-            method: endpoint.request.method,
-            headers: endpoint.request.headers,
-            rpm: endpoint.request.rpm,
-          });
-          if (json === null) continue;
-
-          for (const entry of extractPath(json, endpoint.response.roomsPath)) {
-            const validDate = normalizeDate(extractOne(entry, endpoint.response.fields.roomCode));
-            const priceCents = parseMoneyToCents(
-              extractOne(entry, endpoint.response.fields.nightly) as string | number
-            );
-            if (!validDate || priceCents === null || priceCents <= 0) continue;
-
-            // Express tier is inferred from the product name because storefronts
-            // rarely expose it as a field. "Unlimited" is the meaningful
-            // distinction — it is usually close to double the standard price.
-            const tier = /unlimited/i.test(product.name) ? "unlimited" : "standard";
-
-            stats.parsedCount++;
-            await db.insert(expressPassPrices).values({
-              destination: product.destination,
-              parkId: park?.id ?? null,
-              validDate,
-              tier,
-              priceCents,
-              available: true,
-              // First-party storefront read; no reseller feed exists for Express.
-              source: "observed",
-              isEstimated: false,
-            });
-            stats.writtenCount++;
-          }
-        } catch (err) {
-          stats.errorCount++;
-          logger.warn(`${product.slug}: ${String(err)}`);
-        }
+      try {
+        await collectUniversalOrlandoExpress(ctx, universalProducts, lookaheadDays);
+      } catch (err) {
+        stats.errorCount++;
+        logger.warn(`Universal Orlando Express: ${String(err)}`);
       }
     },
   };
