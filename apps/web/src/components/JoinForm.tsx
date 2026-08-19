@@ -100,11 +100,11 @@ export function JoinForm({ next = "/" }: { next?: string }) {
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
-        <a className="btn btn-ghost" href={`${API}/v1/auth/oauth/google`}>
+        <a
+          className="btn btn-ghost"
+          href={`${API}/v1/auth/oauth/google?redirectTo=${encodeURIComponent(next)}`}
+        >
           Continue with Google
-        </a>
-        <a className="btn btn-ghost" href={`${API}/v1/auth/oauth/apple`}>
-          Continue with Apple
         </a>
       </div>
 

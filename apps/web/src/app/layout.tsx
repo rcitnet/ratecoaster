@@ -123,9 +123,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </p>
               </div>
               <div>
-                <strong style={{ color: "#fff" }}>Account</strong>
+                <strong style={{ color: "#fff" }}>Account &amp; legal</strong>
                 <p style={{ margin: "8px 0 0", lineHeight: 2 }}>
                   <a href="/join">Create a free account</a>
+                  <br />
+                  <a href="/privacy">Privacy policy</a>
+                  <br />
+                  <a href="/terms">Terms of service</a>
+                  <br />
+                  <a href="mailto:rcitnet@gmail.com">Contact</a>
                 </p>
               </div>
             </div>

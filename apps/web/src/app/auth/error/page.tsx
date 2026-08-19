@@ -10,10 +10,12 @@ export default async function AuthErrorPage({
       <p className="lede" style={{ margin: "14px auto 26px" }}>
         {reason === "missing"
           ? "The link was incomplete. Try requesting a new one."
+          : reason === "oauth"
+            ? "Google sign-in could not be completed. Please try again or use email sign-in."
           : "Sign-in links expire after 15 minutes and can only be used once — some email apps open links automatically, which uses them up."}
       </p>
       <a href="/join" className="btn btn-primary btn-lg">
-        Send a new link
+        Try signing in again
       </a>
     </main>
   );
