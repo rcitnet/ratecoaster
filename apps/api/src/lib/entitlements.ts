@@ -46,7 +46,7 @@ export function gateDateWindow(
 
   // The ceiling is measured from today, not from the requested start date.
   // Otherwise `?from=2027-06-01&to=2027-07-01` would hand an anonymous caller a
-  // 30-day window a year out — which is exactly the thing being sold.
+  // 45-day window a year out — which is exactly the thing being sold.
   const maxVisible = addDays(today, entitlements.lookaheadDays - 1);
   const to = requested > maxVisible ? maxVisible : requested;
 

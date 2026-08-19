@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseMoneyToCents, centsToDisplay, RateQuery } from "@ratecoaster/shared";
+import { ENTITLEMENTS, parseMoneyToCents, centsToDisplay, RateQuery } from "@ratecoaster/shared";
 import { PROPERTIES, RETIRED_PROPERTY_SLUGS } from "@ratecoaster/db/src/seed-data.js";
 import { addDays, dateRange, daysBetween, prioritizeDates, todayInTimezone } from "./framework/dates.js";
 import { extractPath, extractOne, renderTemplate } from "./hotels/endpoint-config.js";
@@ -35,6 +35,95 @@ import { mapFeedRecords, isPlaceholderFeedUrl, type TicketFeedConfig } from "./t
 import { normalizeName, slugify } from "./waits/providers.js";
 import type { EndpointConfig } from "./hotels/endpoint-config.js";
 import { parseCollectArgs } from "../jobs/collect-args.js";
+import {
+  recommendTicket,
+  summarizeHotelOptions,
+  type HotelQuoteRow,
+  type TicketQuoteRow,
+} from "../routes/trips.js";
+
+describe("public pricing window", () => {
+  test("shows anonymous visitors exactly 45 days", () => {
+    assert.equal(ENTITLEMENTS.anonymous.lookaheadDays, 45);
+  });
+});
+
+describe("trip quote recommendations", () => {
+  const hotelRow = (
+    propertyId: string,
+    propertySlug: string,
+    roomTypeId: string,
+    stayDate: string,
+    nightlyCents: number
+  ): HotelQuoteRow => ({
+    propertyId,
+    propertySlug,
+    propertyName: propertySlug,
+    tier: "value",
+    includesExpressPass: false,
+    roomTypeId,
+    roomTypeName: roomTypeId,
+    stayDate,
+    nightlyCents,
+    totalCents: nightlyCents + 2000,
+  });
+
+  test("requires one room type to cover every hotel night", () => {
+    const options = summarizeHotelOptions(
+      [
+        hotelRow("a", "complete-hotel", "standard", "2026-09-10", 10000),
+        hotelRow("a", "complete-hotel", "standard", "2026-09-11", 12000),
+        hotelRow("a", "complete-hotel", "suite", "2026-09-10", 9000),
+        hotelRow("b", "partial-hotel", "standard", "2026-09-10", 8000),
+      ],
+      2,
+      2
+    );
+
+    assert.equal(options.length, 1);
+    assert.equal(options[0]!.propertySlug, "complete-hotel");
+    assert.equal(options[0]!.roomTypeName, "standard");
+    assert.equal(options[0]!.averageNightlyCents, 11000);
+    assert.equal(options[0]!.subtotalCents, 52000);
+  });
+
+  test("matches ticket duration, favors park coverage, and prices the whole party", () => {
+    const row = (
+      slug: string,
+      days: number,
+      parks: number,
+      guestCategory: "adult" | "child",
+      totalCents: number
+    ): TicketQuoteRow => ({
+      productSlug: slug,
+      productName: slug,
+      ticketDays: days,
+      parkCount: parks,
+      guestCategory,
+      priceCents: totalCents,
+      totalCents,
+    });
+    const ticket = recommendTicket(
+      [
+        row("two-day", 2, 2, "adult", 25000),
+        row("two-day", 2, 2, "child", 22000),
+        row("three-day-single", 3, 1, "adult", 30000),
+        row("three-day-single", 3, 1, "child", 27000),
+        row("three-day-park-to-park", 3, 3, "adult", 36000),
+        row("three-day-park-to-park", 3, 3, "child", 32000),
+      ],
+      4,
+      2,
+      1,
+      "2026-09-10"
+    );
+
+    assert.equal(ticket?.productSlug, "three-day-park-to-park");
+    assert.equal(ticket?.ticketDays, 3);
+    assert.equal(ticket?.uncoveredTripDays, 1);
+    assert.equal(ticket?.subtotalCents, 104000);
+  });
+});
 
 describe("hotel catalogue", () => {
   test("excludes Hollywood-area hotels from the public collection set", () => {

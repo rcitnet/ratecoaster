@@ -18,6 +18,7 @@ import {
 import { LiveWaitsResponse, WaitRollupPoint, type WaitQuery } from "./schemas/waits.js";
 import { CreateWatch, Watch } from "./schemas/alerts.js";
 import { Entitlements, GateInfo, SessionUser } from "./schemas/auth.js";
+import { TripQuote, type TripQuoteQuery } from "./schemas/trips.js";
 
 export class RateCoasterApiError extends Error {
   constructor(
@@ -163,6 +164,14 @@ export class RateCoasterClient {
       `/v1/waits/${encodeURIComponent(attractionSlug)}/typical`,
       z.array(WaitRollupPoint)
     );
+  }
+
+  // ---- Trip planning ----
+
+  tripQuote(query: TripQuoteQuery) {
+    return this.request("/v1/trips/quote", TripQuote, {
+      query: query as unknown as Record<string, unknown>,
+    });
   }
 
   // ---- Auth ----

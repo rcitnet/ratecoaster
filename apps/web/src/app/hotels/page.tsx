@@ -62,9 +62,8 @@ export default async function HotelsPage({
   }));
   const [properties, rates] = await Promise.all([
     safe(client.listProperties(destination), []),
-    // 500 is the ceiling RateQuery allows; anything higher is rejected outright
-    // as invalid_query. The grid renders 28 date columns, so 500 rows covers
-    // ~31 dates even at 16 properties — comfortably more than is displayed.
+    // 500 is the ceiling RateQuery allows; one row per hotel/date is enough for
+    // the complete 45-day anonymous window across the Orlando catalogue.
     safe(client.listRates({ destination, rateCode, adults, limit: 500 }), {
       items: [], attribution: [], gate: EMPTY_GATE,
     } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }),
@@ -134,7 +133,7 @@ export default async function HotelsPage({
               <thead>
                 <tr>
                   <th className="sticky-col" style={{ background: "var(--cream)", zIndex: 2 }}>Hotel</th>
-                  {dates.slice(0, 28).map((date) => (
+                  {dates.slice(0, 45).map((date) => (
                     <th key={date} className="num">
                       <div style={{ fontSize: 11, opacity: 0.75 }}>{dayOfWeekLabel(date)}</div>
                       {dayNumber(date)}
@@ -158,7 +157,7 @@ export default async function HotelsPage({
                           ) : null}
                         </div>
                       </td>
-                      {dates.slice(0, 28).map((date) => {
+                      {dates.slice(0, 45).map((date) => {
                         const cell = row.get(date);
                         if (!cell) return <td key={date} className="num muted">—</td>;
                         const isBest = best !== null && cell.nightlyCents === best;

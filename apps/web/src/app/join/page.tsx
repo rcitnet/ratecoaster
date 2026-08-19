@@ -21,7 +21,7 @@ export default async function JoinPage({
             Unlock the whole year.
           </h1>
           <p className="lede" style={{ marginTop: 14 }}>
-            Anyone can see the next 30 days. A free account opens all 365 — including the quiet
+            Anyone can see the next 45 days. A free account opens all 365 — including the quiet
             autumn weeks when rooms are at their cheapest and nobody else is looking.
           </p>
 
