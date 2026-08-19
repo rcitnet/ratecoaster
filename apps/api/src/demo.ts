@@ -245,6 +245,9 @@ demoApp.get("/v1/deals", (c) => {
       savingsPercent: null,
       percentileOfHistory: Math.min(100, ((best.cents - low) / low) * 100),
       includesExpressPass: p.includesExpressPass,
+      source: "observed" as const,
+      isEstimated: false,
+      merchant: null,
     };
   });
   deals.sort((a, b) => (a.percentileOfHistory ?? 999) - (b.percentileOfHistory ?? 999));
