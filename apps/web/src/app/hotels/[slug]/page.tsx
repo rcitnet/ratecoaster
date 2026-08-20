@@ -5,9 +5,9 @@ import {
   type RateCode as RateCodeValue,
 } from "@ratecoaster/shared";
 import {
-  getClient, EMPTY_GATE, formatLongDate, formatStayDate, getMe, relativeTime, safe, TIER_LABELS,
+  getClient, EMPTY_GATE, formatLongDate, formatStayDate, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
-import { Paywall, PaywallInline } from "@/components/Paywall";
+import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 60;
 
@@ -55,8 +55,7 @@ export default async function PropertyPage({
   const { slug } = await params;
   const search = await searchParams;
   const client = await getClient();
-  const [me, properties, filterOptions] = await Promise.all([
-    getMe(),
+  const [properties, filterOptions] = await Promise.all([
     safe(client.listProperties(), []),
     safe(client.rateFilterOptions({ propertySlug: slug }), { rateCodes: [], roomTypes: [] }),
   ]);
@@ -97,18 +96,14 @@ export default async function PropertyPage({
       items: [], attribution: [], gate: EMPTY_GATE,
     } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }
   );
-  const gate = (rates as { gate?: typeof EMPTY_GATE }).gate ?? EMPTY_GATE;
   const selectedDate = search.stayDate ?? rates.items[0]?.stayDate;
 
-  // Price history is a free-account feature; the API returns 402 for anonymous
-  // callers, so an empty array here means "locked", not "no data".
-  const history = selectedDate && me.entitlements.priceHistory
+  const history = selectedDate
     ? await safe(client.rateHistory(slug, selectedDate, rateCode, roomTypeId), [])
     : [];
 
   const cheapest = [...rates.items].sort((a, b) => a.nightlyCents - b.nightlyCents)[0];
   const roomTypeParam = roomTypeId ? `&roomTypeId=${encodeURIComponent(roomTypeId)}` : "";
-  const here = `/hotels/${slug}?rateCode=${rateCode}${roomTypeParam}`;
 
   return (
     <main className="section">
@@ -179,8 +174,7 @@ export default async function PropertyPage({
         </div>
       ) : null}
 
-      {me.entitlements.priceHistory ? (
-        history.length >= 2 ? (
+      {history.length >= 2 ? (
           <section className="card" style={{ marginBottom: 28 }}>
             <h3>Price history — {selectedDate ? formatStayDate(selectedDate) : ""}</h3>
             <p className="tiny muted" style={{ marginBottom: 8 }}>
@@ -193,25 +187,17 @@ export default async function PropertyPage({
             Not enough history for this date yet. A chart appears once the price has moved a
             couple of times.
           </div>
-        )
-      ) : (
-        <div className="notice" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ flex: 1, minWidth: 240 }}>
-            <b>See how this rate has moved.</b> Price history is free with an account — it&apos;s how
-            you tell a genuine low from the new normal.
-          </span>
-          <a href={`/join?next=${encodeURIComponent(here)}`} className="btn btn-blue btn-sm">
-            Unlock free
-          </a>
-        </div>
       )}
 
-      {gate.gated ? <PaywallInline gate={gate} returnTo={here} /> : null}
+      <AdSlot
+        placement="hotel-before-calendar"
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOTEL_DETAIL}
+      />
 
       <h2 style={{ marginTop: 34 }}>Upcoming nights</h2>
       {selectedRoomType ? <p className="tiny muted">Showing {selectedRoomType.name}.</p> : null}
       <div
-        className={`table-wrap pricing-scroll ${gate.gated ? "locked-preview" : ""}`}
+        className="table-wrap pricing-scroll"
         style={{ marginTop: 14 }}
         tabIndex={0}
         role="region"
@@ -230,7 +216,7 @@ export default async function PropertyPage({
             </tr>
           </thead>
           <tbody>
-            {rates.items.slice(0, 60).map((rate) => (
+            {rates.items.map((rate) => (
               <tr key={rate.stayDate}>
                 <td>
                   <a href={`/hotels/${slug}?stayDate=${rate.stayDate}&rateCode=${rateCode}${roomTypeParam}`}>
@@ -257,7 +243,6 @@ export default async function PropertyPage({
         </table>
       </div>
 
-      <Paywall gate={gate} what="nights at this hotel" returnTo={here} />
     </main>
   );
 }

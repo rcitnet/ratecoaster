@@ -1,4 +1,5 @@
 import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
+import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 60;
 
@@ -173,6 +174,11 @@ export default async function WaitsPage({
           Last updated {relativeTime(data.fetchedAt)}.
         </p>
       ) : null}
+
+      <AdSlot
+        placement="waits-after-boards"
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_WAITS}
+      />
     </main>
   );
 }

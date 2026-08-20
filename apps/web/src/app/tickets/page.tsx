@@ -1,6 +1,6 @@
 import { centsToDisplay, GuestCategory } from "@ratecoaster/shared";
-import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, getMe, safe } from "@/lib/api";
-import { Paywall } from "@/components/Paywall";
+import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, safe } from "@/lib/api";
+import { AdSlot } from "@/components/AdSlot";
 import { BookButton } from "@/components/BookButton";
 
 export const revalidate = 300;
@@ -14,10 +14,7 @@ export default async function TicketsPage({
   const destination = params.destination ?? "universal-orlando";
   const guestCategory = GuestCategory.catch("adult").parse(params.guest);
   const client = await getClient();
-  const [products, me] = await Promise.all([
-    safe(client.listTicketProducts(destination), []),
-    getMe(),
-  ]);
+  const products = await safe(client.listTicketProducts(destination), []);
   const selected = params.product ?? products[0]?.slug;
   const selectedProduct = products.find((p) => p.slug === selected);
   const calendar = selected
@@ -133,18 +130,10 @@ export default async function TicketsPage({
         </>
       )}
 
-      {me.entitlements.lookaheadDays < 365 ? (
-        <Paywall
-          gate={{
-            gated: true, tier: "anonymous", requiredTier: "free",
-            visibleDays: me.entitlements.lookaheadDays,
-            withheldDays: 365 - me.entitlements.lookaheadDays,
-            visibleThrough: null, reason: null,
-          }}
-          what="ticket prices"
-          returnTo="/tickets"
-        />
-      ) : null}
+      <AdSlot
+        placement="tickets-after-calendar"
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_TICKETS}
+      />
     </main>
   );
 }

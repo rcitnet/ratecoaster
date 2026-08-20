@@ -377,49 +377,6 @@ p { margin: 0 0 1rem; }
   border-radius: var(--r-pill);
 }
 
-/* ---------- paywall ---------- */
-
-/* Deliberately generous rather than nagging: it shows what is waiting and how
-   much it costs (nothing), instead of scolding for not being signed in. */
-.paywall {
-  position: relative;
-  border-radius: var(--r-lg);
-  padding: 40px 34px;
-  text-align: center;
-  background:
-    radial-gradient(700px 300px at 50% -40%, rgba(230, 33, 140, 0.22), transparent 70%),
-    linear-gradient(160deg, #241a5e 0%, #171040 100%);
-  color: #fff;
-  overflow: hidden;
-}
-.paywall h2 { color: #fff; }
-.paywall p { color: rgba(255, 255, 255, 0.82); max-width: 52ch; margin: 10px auto 0; }
-.paywall-actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
-.paywall-perks {
-  display: flex;
-  gap: 22px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-}
-.paywall-perk { display: flex; align-items: center; gap: 8px; }
-.paywall-perk b { color: #fff; font-weight: 600; }
-
-/* Faded preview rows sitting just above the wall — shows there IS more. */
-.locked-preview { position: relative; }
-.locked-preview::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 14px; bottom: 14px;
-  height: 140px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff 88%);
-  pointer-events: none;
-}
-
 /* ---------- tables ---------- */
 
 .table-wrap {
@@ -439,6 +396,29 @@ p { margin: 0 0 1rem; }
 }
 .pricing-scroll { max-height: 620px; overscroll-behavior: contain; }
 .pricing-scroll table { min-width: 820px; }
+
+/* Ads are intentionally separated from controls and price cells. The minimum
+   height is reserved before the network responds, preventing layout shifts. */
+.ad-placement {
+  width: 100%;
+  min-height: 120px;
+  margin: 30px auto;
+  padding: 10px 14px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--cream);
+  overflow: hidden;
+}
+.ad-label {
+  margin-bottom: 8px;
+  color: var(--ink-mute);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.adsbygoogle { min-height: 84px; }
 table { width: 100%; border-collapse: collapse; font-size: 15px; }
 th {
   text-align: left;

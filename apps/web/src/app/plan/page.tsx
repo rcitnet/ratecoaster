@@ -1,11 +1,9 @@
 import {
   centsToDisplay,
-  RateCoasterApiError,
   TripQuoteQuery,
-  type GateInfo,
   type TripQuote,
 } from "@ratecoaster/shared";
-import { Paywall } from "@/components/Paywall";
+import { AdSlot } from "@/components/AdSlot";
 import { formatLongDate, getClient, TIER_LABELS } from "@/lib/api";
 
 export const revalidate = 0;
@@ -74,37 +72,14 @@ export default async function TripPlannerPage({
   const parsed = TripQuoteQuery.safeParse(values);
   let quote: TripQuote | null = null;
   let error: string | null = parsed.success ? null : "Check the dates and party details, then try again.";
-  let gate: GateInfo | null = null;
 
   if (submitted && parsed.success) {
     try {
       quote = await (await getClient()).tripQuote(parsed.data);
     } catch (err) {
-      if (err instanceof RateCoasterApiError && err.code === "upgrade_required") {
-        const details = (err.details ?? {}) as Record<string, unknown>;
-        gate = {
-          gated: true,
-          tier: "anonymous",
-          requiredTier: "free",
-          visibleDays: typeof details.visibleDays === "number" ? details.visibleDays : 45,
-          withheldDays: typeof details.withheldDays === "number" ? details.withheldDays : 320,
-          visibleThrough: typeof details.visibleThrough === "string" ? details.visibleThrough : null,
-          reason: err.message,
-        };
-      } else {
-        error = err instanceof Error ? err.message : "We could not build this trip estimate yet.";
-      }
+      error = err instanceof Error ? err.message : "We could not build this trip estimate yet.";
     }
   }
-
-  const returnTo = `/plan?${new URLSearchParams({
-    checkIn: values.checkIn,
-    checkOut: values.checkOut,
-    rooms: String(values.rooms),
-    adults: String(values.adults),
-    children: String(values.children),
-    rateCode: values.rateCode,
-  }).toString()}`;
 
   return (
     <main className="section">
@@ -147,12 +122,11 @@ export default async function TripPlannerPage({
             </select>
           </label>
           <button type="submit" className="btn btn-primary btn-lg">Find my best trip price</button>
-          <p className="tiny muted">Public pricing is available 45 days ahead. A free account unlocks the full year.</p>
+          <p className="tiny muted">The complete collected year is free to explore. Sign in only when you want to save a trip or receive alerts.</p>
         </form>
       </div>
 
       {error ? <div className="notice notice-warn"><b>We need one change:</b> {error}</div> : null}
-      {gate ? <Paywall gate={gate} what="trip pricing" returnTo={returnTo} /> : null}
 
       {quote ? (
         <section className="trip-results" aria-live="polite">
@@ -232,6 +206,11 @@ export default async function TripPlannerPage({
             <b>How this estimate works</b>
             <ul>{quote.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul>
           </div>
+
+          <AdSlot
+            placement="planner-after-results"
+            slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_PLANNER}
+          />
         </section>
       ) : null}
     </main>

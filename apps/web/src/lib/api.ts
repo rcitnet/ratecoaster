@@ -4,12 +4,8 @@ import { ENTITLEMENTS, RateCoasterClient, type Entitlements, type GateInfo } fro
 const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8787";
 
 /**
- * Server-side API client that forwards the caller's session cookie.
- *
- * This is the piece that makes server-rendered pages respect the paywall. Next
- * fetches run on the server with no browser cookie jar, so without explicitly
- * passing the cookie through, every page would render as anonymous — and a
- * signed-in user would still see the anonymous 45-day wall.
+ * Server-side API client that forwards the caller's session cookie so saved
+ * and administrative features receive the correct account context.
  */
 export async function getClient(): Promise<RateCoasterClient> {
   const cookieHeader = (await cookies()).toString();

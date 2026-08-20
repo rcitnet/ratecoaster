@@ -54,8 +54,10 @@ import {
 } from "../routes/trips.js";
 
 describe("public pricing window", () => {
-  test("shows anonymous visitors exactly 45 days", () => {
-    assert.equal(ENTITLEMENTS.anonymous.lookaheadDays, 45);
+  test("shows anonymous visitors the complete collected year", () => {
+    assert.equal(ENTITLEMENTS.anonymous.lookaheadDays, 365);
+    assert.equal(ENTITLEMENTS.anonymous.priceHistory, true);
+    assert.equal(ENTITLEMENTS.anonymous.advancedInsights, true);
   });
 });
 

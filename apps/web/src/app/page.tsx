@@ -2,14 +2,13 @@ import { centsToDisplay } from "@ratecoaster/shared";
 import {
   formatLongDate,
   getClient,
-  getMe,
   PARK_COLORS,
   relativeTime,
   safe,
   TIER_COLORS,
   TIER_LABELS,
 } from "@/lib/api";
-import { Paywall } from "@/components/Paywall";
+import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 60;
 
@@ -17,9 +16,8 @@ const HOME_TIERS = ["premier", "preferred", "prime-value", "value"] as const;
 
 export default async function DealsPage() {
   const client = await getClient();
-  const [deals, me, properties, waits, ticketProducts] = await Promise.all([
+  const [deals, properties, waits, ticketProducts] = await Promise.all([
     safe(client.listDeals({ destination: "universal-orlando", limit: 40 }), []),
-    getMe(),
     safe(client.listProperties(), []),
     safe(client.liveWaits({ destination: "universal-orlando" }), {
       parks: [],
@@ -112,6 +110,11 @@ export default async function DealsPage() {
           </div>
         </div>
       </section>
+
+      <AdSlot
+        placement="home-after-park-pulse"
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME}
+      />
 
       <section className="section" style={{ paddingBottom: 12 }}>
         <div
@@ -318,24 +321,6 @@ export default async function DealsPage() {
           </a>
         </div>
       </section>
-
-      {/* The wall only appears for signed-out visitors, and only below content
-          they can already use — never in place of it. */}
-      {me.entitlements.lookaheadDays < 365 ? (
-        <Paywall
-          gate={{
-            gated: true,
-            tier: "anonymous",
-            requiredTier: "free",
-            visibleDays: me.entitlements.lookaheadDays,
-            withheldDays: 365 - me.entitlements.lookaheadDays,
-            visibleThrough: null,
-            reason: null,
-          }}
-          what="hotel rates"
-          returnTo="/"
-        />
-      ) : null}
 
       <section className="section">
         <h2>Why families use this</h2>

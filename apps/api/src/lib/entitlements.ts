@@ -3,13 +3,11 @@ import { ENTITLEMENTS, type Entitlements, type GateInfo, type Tier } from "@rate
 import { addDays, daysBetween, todayInTimezone } from "../collectors/framework/dates.js";
 
 /**
- * Server-side gating.
+ * Server-side visibility limits.
  *
- * The single most important property here: the API never sends data the caller
- * is not entitled to. It would be far easier to return all 365 days and let the
- * front end hide the rest — and it would be worthless, because the paywall
- * would be visible to anyone who opens the network tab. A gate that lives in
- * the client is not a gate.
+ * Public planning data is free for the full collected year. The same boundary
+ * remains here so the collector horizon is enforced consistently and a future
+ * data-retention change only needs one implementation.
  *
  * Everything below therefore trims the *query*, not the rendered output.
  */
@@ -45,8 +43,6 @@ export function gateDateWindow(
   const requested = requestedTo && requestedTo < horizon ? requestedTo : horizon;
 
   // The ceiling is measured from today, not from the requested start date.
-  // Otherwise `?from=2027-06-01&to=2027-07-01` would hand an anonymous caller a
-  // 45-day window a year out — which is exactly the thing being sold.
   const maxVisible = addDays(today, entitlements.lookaheadDays - 1);
   const to = requested > maxVisible ? maxVisible : requested;
 
@@ -65,14 +61,14 @@ export function gateDateWindow(
     info: {
       gated,
       tier,
-      requiredTier: gated ? (tier === "anonymous" ? "free" : "pro") : null,
+      requiredTier: gated ? "free" : null,
       visibleDays: Math.max(0, daysBetween(from, to) + 1),
       withheldDays,
       visibleThrough: maxVisible,
       reason: gated
         ? tier === "anonymous"
-          ? `Free accounts see all 365 days. You're seeing the next ${entitlements.lookaheadDays}.`
-          : "Upgrade for deeper history and cross-hotel insights."
+          ? `Pricing is currently available ${entitlements.lookaheadDays} days ahead.`
+          : "Pricing is currently unavailable for that date."
         : null,
     },
   };
@@ -90,7 +86,7 @@ export function requireFeature(
   const reason =
     requiredTier === "free"
       ? "Create a free account to unlock this."
-      : "This is part of the upcoming Pro plan.";
+      : "This feature is not available for this account.";
   return { allowed: false, requiredTier, reason };
 }
 

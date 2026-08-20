@@ -18,17 +18,17 @@ export default async function JoinPage({
             Free account
           </span>
           <h1 style={{ fontSize: "clamp(30px, 4vw, 44px)" }}>
-            Unlock the whole year.
+            Save the trip you&apos;re planning.
           </h1>
           <p className="lede" style={{ marginTop: 14 }}>
-            Anyone can see the next 45 days. A free account opens all 365 — including the quiet
-            autumn weeks when rooms are at their cheapest and nobody else is looking.
+            Every RateCoaster price calendar is free for everyone. An account remembers your trips
+            and lets us tell you when the dates you care about get cheaper.
           </p>
 
           <div className="grid" style={{ gap: 12, marginTop: 26 }}>
             {[
-              ["365-day rate calendar", "Every hotel, passholder and public rates side by side."],
-              ["Price history", "See whether today is a genuine low or just the new normal."],
+              ["Saved trip plans", "Keep your dates, party size, hotel rate, and ticket fit together."],
+              ["Your watchlist", "Come back to the same hotels and dates without rebuilding the search."],
               ["Rate-drop alerts", "We email you the moment your dates get cheaper."],
               ["Watch 5 trips at once", "Compare options before you commit."],
             ].map(([title, body]) => (

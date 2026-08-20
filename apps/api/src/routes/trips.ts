@@ -178,31 +178,14 @@ tripsRouter.get("/quote", async (c) => {
   const visibleThrough = gate.info.visibleThrough ?? today;
   const lastHotelNight = addDays(query.checkOut, -1);
   if (lastHotelNight > visibleThrough) {
-    if (tier !== "anonymous") {
-      return c.json(
-        {
-          error: {
-            code: "date_unavailable",
-            message: `Collected pricing currently runs through ${visibleThrough}.`,
-          },
-        },
-        400
-      );
-    }
     return c.json(
       {
         error: {
-          code: "upgrade_required",
-          message: `Create a free account to plan trips after ${visibleThrough}.`,
-          details: {
-            requiredTier: "free",
-            visibleThrough,
-            visibleDays: gate.info.visibleDays,
-            withheldDays: gate.info.withheldDays,
-          },
+          code: "date_unavailable",
+          message: `Collected pricing currently runs through ${visibleThrough}.`,
         },
       },
-      402
+      400
     );
   }
 

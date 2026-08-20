@@ -73,6 +73,14 @@ export default function TermsPage() {
         those services are between you and the applicable third party.
       </p>
 
+      <h2>Advertising</h2>
+      <p>
+        RateCoaster may display third-party advertising to help keep the service free. Ads are
+        labeled and are not recommendations or endorsements. Advertisers do not control the prices,
+        comparisons, deal rankings, wait times, or planning results shown by RateCoaster. Your
+        interaction with an advertisement is between you and the advertiser.
+      </p>
+
       <h2>Intellectual property</h2>
       <p>
         RateCoaster&apos;s original software, design, branding, and written content are protected by applicable

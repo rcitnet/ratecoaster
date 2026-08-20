@@ -43,14 +43,35 @@ export default function PrivacyPage() {
         When you use the site, our servers may receive standard technical information such as your IP
         address, browser type, device type, requested pages, timestamps, referring page, and security
         or error logs. We also use an essential session cookie to keep signed-in users authenticated.
-        RateCoaster does not currently use advertising cookies.
+      </p>
+
+      <h3 id="advertising">Advertising and cookies</h3>
+      <p>
+        RateCoaster may use Google AdSense to display clearly labeled advertising on public content
+        pages. When advertising is enabled, Google and its advertising partners may use cookies,
+        device identifiers, IP addresses, page activity, and similar technologies to deliver,
+        measure, limit, and report ads. Depending on your location and choices, ads may be
+        personalized or non-personalized.
+      </p>
+      <p>
+        Where required, RateCoaster will present a consent or privacy-choice message before using
+        advertising technologies. You can use that message to manage consent, opt out of certain
+        targeted advertising, or exercise applicable state privacy choices. Browser controls can
+        also delete or block cookies, although doing so may affect some site features.
+      </p>
+      <p>
+        Learn more about how Google uses information from sites that use its services at{" "}
+        <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer noopener">
+          Google&apos;s partner-sites privacy page
+        </a>.
       </p>
 
       <h2>How we use information</h2>
       <ul>
-        <li>Provide accounts, saved trips, extended pricing calendars, and requested alerts.</li>
+        <li>Provide accounts, saved trips, watchlists, and requested alerts.</li>
         <li>Authenticate users and protect accounts from fraud, abuse, and unauthorized access.</li>
         <li>Operate, troubleshoot, secure, and improve RateCoaster.</li>
+        <li>Fund the free service through advertising and measure advertising performance.</li>
         <li>Send transactional messages, such as sign-in links and alerts you requested.</li>
         <li>Comply with legal obligations and enforce our terms.</li>
       </ul>
@@ -59,7 +80,8 @@ export default function PrivacyPage() {
       <p>
         We do not sell or rent personal information or Google user data. We may share the minimum
         information necessary with service providers that help us host the site, operate the database,
-        deliver email, monitor reliability, or provide authentication. These providers may process
+        deliver email, monitor reliability, provide authentication, or serve and measure advertising.
+        These providers may process
         information only to perform services for RateCoaster and under appropriate confidentiality and
         security obligations.
       </p>
