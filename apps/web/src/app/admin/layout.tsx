@@ -4,7 +4,7 @@ import { isAdmin } from "@/lib/admin";
 const TABS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/collectors", label: "Collectors" },
-  { href: "/admin/endpoints", label: "Price sources" },
+  { href: "/admin/sources", label: "Sources" },
   { href: "/admin/hotels", label: "Hotels" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/status", label: "Data freshness" },

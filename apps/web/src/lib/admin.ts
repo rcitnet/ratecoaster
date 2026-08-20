@@ -24,14 +24,13 @@ export interface AdminCollector {
   } | null;
 }
 
-export interface AdminEndpoint {
+export interface AdminSource {
+  id: string;
   name: string;
+  host: string;
+  coverage: string;
   configured: boolean;
-  notes: string | null;
-  lastTestedAt: string | null;
-  lastTestOk: boolean | null;
-  lastTestMessage: string | null;
-  updatedAt: string | null;
+  configuration: string;
 }
 
 export interface AdminProperty {
@@ -85,7 +84,7 @@ export const getOverview = () =>
   });
 
 export const getCollectors = () => apiFetch<AdminCollector[]>("/v1/admin/collectors", []);
-export const getEndpoints = () => apiFetch<AdminEndpoint[]>("/v1/admin/endpoints", []);
+export const getSources = () => apiFetch<AdminSource[]>("/v1/admin/sources", []);
 export const getProperties = () => apiFetch<AdminProperty[]>("/v1/admin/properties", []);
 export const getUsers = () => apiFetch<AdminUser[]>("/v1/admin/users", []);
 export const getAudit = () =>

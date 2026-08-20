@@ -12,21 +12,11 @@ import {
   waitCurrent,
 } from "@ratecoaster/db/schema";
 import { Tier } from "@ratecoaster/shared";
-import { audit, redactConfig } from "../lib/admin.js";
-import {
-  getAllCollectorSettings,
-  listEndpointConfigs,
-  loadEndpointConfigFromDb,
-  recordEndpointTest,
-  resolveEndpointConfig,
-  saveEndpointConfig,
-  setCollectorSetting,
-} from "../lib/settings.js";
+import { audit } from "../lib/admin.js";
+import { getAllCollectorSettings, setCollectorSetting } from "../lib/settings.js";
 import { COLLECTORS } from "../jobs/registry.js";
 import { runCollector } from "../collectors/framework/runner.js";
-import { queryOffers } from "../collectors/hotels/index.js";
-import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
-import { guessConfigFromHar } from "../collectors/hotels/har-guess.js";
+import { universalOrlandoTicketCredentialsConfigured } from "../collectors/tickets/universal-orlando-commerce.js";
 
 export const adminRouter = new Hono();
 
@@ -180,160 +170,78 @@ adminRouter.post("/collectors/:name/run", async (c) => {
 });
 
 /* ------------------------------------------------------------------ *
- * Endpoint configs
+ * Active first-party price sources (read-only)
  * ------------------------------------------------------------------ */
 
-adminRouter.get("/endpoints", async (c) => {
-  const stored = await listEndpointConfigs();
-
-  // Which adapters does the seed data actually reference? Surfacing this stops
-  // you configuring an adapter name that nothing will ever look up.
+adminRouter.get("/sources", async (c) => {
   const db = getDb();
-  const props = await db.select({ cfg: properties.collectorConfig }).from(properties);
-  const tix = await db.select({ cfg: ticketProducts.collectorConfig }).from(ticketProducts);
+  const [activeProperties, activeTickets] = await Promise.all([
+    db
+      .select({ cfg: properties.collectorConfig })
+      .from(properties)
+      .where(eq(properties.active, true)),
+    db
+      .select({ cfg: ticketProducts.collectorConfig })
+      .from(ticketProducts)
+      .where(eq(ticketProducts.active, true)),
+  ]);
 
-  const needed = new Set<string>();
-  for (const row of [...props, ...tix]) {
-    const adapter = (row.cfg as Record<string, unknown> | null)?.adapter;
-    if (typeof adapter === "string") needed.add(adapter);
-  }
+  const propertyCount = (adapter: string) =>
+    activeProperties.filter(
+      ({ cfg }) => (cfg as Record<string, unknown> | null)?.adapter === adapter
+    ).length;
+  const productCount = (adapter: string) =>
+    activeTickets.filter(
+      ({ cfg }) => (cfg as Record<string, unknown> | null)?.adapter === adapter
+    ).length;
 
-  const byName = new Map(stored.map((s) => [s.name, s]));
-
-  return c.json(
-    [...needed].sort().map((name) => {
-      const s = byName.get(name);
-      return {
-        name,
-        configured: Boolean(s),
-        notes: s?.notes ?? null,
-        lastTestedAt: s?.lastTestedAt?.toISOString() ?? null,
-        lastTestOk: s?.lastTestOk ?? null,
-        lastTestMessage: s?.lastTestMessage ?? null,
-        updatedAt: s?.updatedAt?.toISOString() ?? null,
-      };
-    })
+  const orlandoHotels = propertyCount("universal-ibe");
+  const kidsHotels = propertyCount("universal-kids-commerce");
+  const orlandoTickets = productCount("universal-orlando-commerce");
+  const expressProducts = productCount("universal-orlando-express");
+  const commerceCredentials = universalOrlandoTicketCredentialsConfigured();
+  const kidsCredentials = Boolean(
+    process.env.UNIVERSAL_KIDS_COMMERCE_CLIENT_SECRET?.trim()
   );
-});
 
-adminRouter.get("/endpoints/:name", async (c) => {
-  const name = c.req.param("name");
-  const config = await loadEndpointConfigFromDb(name);
-  if (!config) return c.json({ error: { code: "not_found", message: "not configured" } }, 404);
-  return c.json({ name, config: redactConfig(config as unknown as Record<string, unknown>) });
-});
-
-/**
- * Takes a raw HAR and returns a suggested config, without saving anything.
- *
- * Separating "guess" from "save" is what makes this usable: you see what it
- * inferred and the sample row it inferred it from, and decide.
- */
-adminRouter.post("/endpoints/:name/guess", async (c) => {
-  const name = c.req.param("name");
-  const body = await c.req.text();
-
-  if (body.length > 40_000_000) {
-    return c.json({ error: { code: "too_large", message: "HAR is over 40MB" } }, 413);
-  }
-
-  try {
-    const result = guessConfigFromHar(body, name);
-    await audit(c, "endpoint.guess", name, { candidates: result.candidateCount });
-    return c.json(result);
-  } catch (err) {
-    return c.json(
-      { error: { code: "bad_har", message: err instanceof Error ? err.message : String(err) } },
-      400
-    );
-  }
-});
-
-adminRouter.put("/endpoints/:name", async (c) => {
-  const name = c.req.param("name");
-  const body = await c.req.json().catch(() => null);
-  if (!body) return c.json({ error: { code: "invalid", message: "expected JSON" } }, 400);
-
-  try {
-    const saved = await saveEndpointConfig(
-      name,
-      body.config ?? body,
-      c.get("user")?.userId,
-      body.notes
-    );
-    await audit(c, "endpoint.save", name, { roomsPath: saved.response.roomsPath });
-    return c.json({ ok: true });
-  } catch (err) {
-    return c.json(
-      { error: { code: "invalid_config", message: err instanceof Error ? err.message : String(err) } },
-      400
-    );
-  }
-});
-
-/**
- * Sends exactly ONE request through a config and reports what was parsed.
- *
- * Always sends, regardless of the collector's dry-run setting — that is the
- * point of a test. Nothing is written to the price tables.
- */
-adminRouter.post("/endpoints/:name/test", async (c) => {
-  const name = c.req.param("name");
-  const body = await c.req.json().catch(() => ({}));
-  const hotelCode = String(body.hotelCode ?? "");
-  const rateCode = String(body.rateCode ?? "APH");
-
-  const config = await resolveEndpointConfig(name);
-  if (!config) {
-    return c.json({ error: { code: "not_found", message: "not configured" } }, 404);
-  }
-
-  const checkIn = addDays(todayInTimezone("America/New_York"), 45);
-  const previous = process.env.COLLECTOR_DRY_RUN;
-  process.env.COLLECTOR_DRY_RUN = "0";
-
-  try {
-    const result = await queryOffers(config, {
-      hotelCode,
-      checkIn,
-      checkOut: addDays(checkIn, 1),
-      nights: 1,
-      adults: 2,
-      children: 0,
-      rateCode: rateCode === "STANDARD" ? "" : rateCode,
-      currency: "USD",
-    });
-
-    if (result === null) {
-      await recordEndpointTest(name, false, "request was skipped");
-      return c.json({ ok: false, message: "Request was skipped unexpectedly." });
-    }
-
-    const ok = result.offers.length > 0 && result.rateCodeApplied;
-    const message = !result.rateCodeApplied
-      ? `Parsed ${result.offers.length} offers, but the ${rateCode} rate code was NOT applied — these would be discarded.`
-      : result.offers.length === 0
-        ? "Connected, but parsed 0 offers. Check roomsPath."
-        : `Parsed ${result.offers.length} offers.`;
-
-    await recordEndpointTest(name, ok, message);
-    await audit(c, "endpoint.test", name, { ok, offers: result.offers.length });
-
-    return c.json({
-      ok,
-      message,
-      rateCodeApplied: result.rateCodeApplied,
-      checkIn,
-      offers: result.offers.slice(0, 25),
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await recordEndpointTest(name, false, message);
-    return c.json({ ok: false, message });
-  } finally {
-    if (previous === undefined) delete process.env.COLLECTOR_DRY_RUN;
-    else process.env.COLLECTOR_DRY_RUN = previous;
-  }
+  return c.json([
+    {
+      id: "universal-ibe",
+      name: "Universal Orlando hotels",
+      host: "reservations.universalorlando.com",
+      coverage: `${orlandoHotels} active hotels · Standard and Annual Passholder rates`,
+      configured: orlandoHotels > 0,
+      configuration: "Built in · hotel IDs stored with each active property",
+    },
+    {
+      id: "universal-kids-commerce",
+      name: "Universal Kids Resort Hotel",
+      host: "comm-api.universaldestinationsandexperiences.com",
+      coverage: `${kidsHotels} active hotel · Standard rates`,
+      configured: kidsHotels > 0 && kidsCredentials,
+      configuration: kidsCredentials
+        ? "Built in · commerce credentials configured"
+        : "Missing UNIVERSAL_KIDS_COMMERCE_CLIENT_SECRET",
+    },
+    {
+      id: "universal-orlando-commerce",
+      name: "Universal Orlando tickets",
+      host: "comm-api.universaldestinationsandexperiences.com",
+      coverage: `${orlandoTickets} active admission products · Adult and child prices`,
+      configured: orlandoTickets > 0 && commerceCredentials,
+      configuration: commerceCredentials
+        ? "Built in · commerce credentials configured"
+        : "Missing UNIVERSAL_ORLANDO_COMMERCE_CLIENT_SECRET",
+    },
+    {
+      id: "universal-orlando-express",
+      name: "Universal Orlando Express Pass",
+      host: "comm-api.universaldestinationsandexperiences.com",
+      coverage: `${expressProducts} active Express products · All Orlando parks`,
+      configured: expressProducts > 0,
+      configuration: "Built in · public product and calendar endpoints",
+    },
+  ]);
 });
 
 /* ------------------------------------------------------------------ *
