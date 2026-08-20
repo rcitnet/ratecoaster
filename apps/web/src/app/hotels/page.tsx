@@ -8,7 +8,7 @@ import {
 import {
   getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
-import { Paywall } from "@/components/Paywall";
+import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 60;
 
@@ -62,14 +62,12 @@ export default async function HotelsPage({
   }));
   const [properties, rates] = await Promise.all([
     safe(client.listProperties(destination), []),
-    // 500 is the ceiling RateQuery allows; one row per hotel/date is enough for
-    // the complete 45-day anonymous window across the Orlando catalogue.
-    safe(client.listRates({ destination, rateCode, adults, limit: 500 }), {
+    // One row per hotel/date across the complete public year.
+    safe(client.listRates({ destination, rateCode, adults, limit: 6000 }), {
       items: [], attribution: [], gate: EMPTY_GATE,
     } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }),
   ]);
 
-  const gate = (rates as { gate?: typeof EMPTY_GATE }).gate ?? EMPTY_GATE;
   const dates = [...new Set(rates.items.map((r) => r.stayDate))].sort();
   const byProperty = new Map<string, Map<string, (typeof rates.items)[number]>>();
   for (const rate of rates.items) {
@@ -81,7 +79,6 @@ export default async function HotelsPage({
     : properties;
   const lastObserved = rates.items.map((r) => r.observedAt).sort().at(-1);
   const availabilityParam = availableOnly ? "&available=1" : "";
-  const here = `/hotels?destination=${destination}&rateCode=${rateCode}&adults=${adults}${availabilityParam}`;
 
   return (
     <main className="section">
@@ -127,7 +124,7 @@ export default async function HotelsPage({
           available for every park.
         </div>
       ) : (
-        <div className={gate.gated ? "locked-preview" : ""}>
+        <div>
           <div
             className="table-wrap pricing-scroll"
             tabIndex={0}
@@ -138,7 +135,7 @@ export default async function HotelsPage({
               <thead>
                 <tr>
                   <th className="sticky-col" style={{ background: "var(--cream)", zIndex: 2 }}>Hotel</th>
-                  {dates.slice(0, 45).map((date) => (
+                  {dates.map((date) => (
                     <th key={date} className="num">
                       <div style={{ fontSize: 11, opacity: 0.75 }}>{dayOfWeekLabel(date)}</div>
                       {dayNumber(date)}
@@ -162,7 +159,7 @@ export default async function HotelsPage({
                           ) : null}
                         </div>
                       </td>
-                      {dates.slice(0, 45).map((date) => {
+                      {dates.map((date) => {
                         const cell = row.get(date);
                         if (!cell) return <td key={date} className="num muted">—</td>;
                         const isBest = best !== null && cell.nightlyCents === best;
@@ -192,7 +189,10 @@ export default async function HotelsPage({
         </div>
       )}
 
-      <Paywall gate={gate} what="hotel rates" returnTo={here} />
+      <AdSlot
+        placement="hotels-after-comparison"
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOTELS}
+      />
 
       <h2 style={{ marginTop: 48 }}>Every hotel we track</h2>
       <div className="grid grid-3" style={{ marginTop: 18 }}>

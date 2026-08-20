@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getMe } from "@/lib/api";
-import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
 import { MobileMenu } from "@/components/MobileMenu";
+import { AdSenseScript } from "@/components/AdSenseScript";
 
 export const metadata: Metadata = {
   title: "RateCoaster — Universal hotel deals, tickets & live wait times",
@@ -17,6 +17,7 @@ const NAV = [
   { href: "/tickets", label: "Tickets" },
   { href: "/express-pass", label: "Express Pass" },
   { href: "/waits", label: "Wait times" },
+  { href: "/guides", label: "Guides" },
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        <AdSenseScript />
         <header className="masthead">
           <div className="masthead-inner">
             <a href="/" className="brand">
@@ -65,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     </a>
                   ) : (
                     <span className="badge badge-blue">
-                      {me.entitlements.tier === "pro" ? "Pro" : "Free account"}
+                      Free account
                     </span>
                   )}
                   <a href="/account" className="btn btn-ghost btn-sm">
@@ -120,6 +122,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <a href="/express-pass">Express Pass</a>
                   <br />
                   <a href="/waits">Live wait times</a>
+                  <br />
+                  <a href="/guides">Planning guides</a>
                 </p>
               </div>
               <div>
@@ -155,7 +159,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 Not affiliated with, endorsed by or sponsored by Universal Destinations &amp;
                 Experiences, NBCUniversal, or Loews Hotels.
               </p>
-              <AffiliateDisclosure variant="footer" />
+              <p style={{ margin: "0 0 6px" }}>
+                RateCoaster is free to use and may be supported by clearly labeled advertising.
+                Advertising never changes which prices or deals we display.
+              </p>
               <p style={{ margin: 0 }}>
                 Prices change often and may differ at checkout. Always confirm on the official
                 site before booking.

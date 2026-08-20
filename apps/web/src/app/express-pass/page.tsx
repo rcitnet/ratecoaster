@@ -1,6 +1,6 @@
 import { centsToDisplay, ExpressPassType } from "@ratecoaster/shared";
-import { getClient, dayNumber, dayOfWeekLabel, getMe, safe } from "@/lib/api";
-import { Paywall } from "@/components/Paywall";
+import { getClient, dayNumber, dayOfWeekLabel, safe } from "@/lib/api";
+import { AdSlot } from "@/components/AdSlot";
 
 export const revalidate = 300;
 
@@ -38,10 +38,7 @@ export default async function ExpressPage({
   const park = params.park && PARK_LABELS[params.park] ? params.park : undefined;
 
   const client = await getClient();
-  const [products, me] = await Promise.all([
-    safe(client.listExpressPassProducts(destination), []),
-    getMe(),
-  ]);
+  const products = await safe(client.listExpressPassProducts(destination), []);
   const filteredProducts = products.filter(
     (product) =>
       (!park || product.parkSlugs.includes(park)) &&
@@ -64,13 +61,6 @@ export default async function ExpressPage({
   if (passType) filterParams.set("passType", passType);
   if (days) filterParams.set("days", String(days));
   const filterSuffix = filterParams.toString() ? `&${filterParams.toString()}` : "";
-  const here = `/express-pass?${new URLSearchParams({
-    ...(selected ? { product: selected.slug } : {}),
-    ...(park ? { park } : {}),
-    ...(passType ? { passType } : {}),
-    ...(days ? { days: String(days) } : {}),
-  }).toString()}`;
-
   return (
     <main className="section">
       <h1>Express Pass prices</h1>
@@ -196,18 +186,10 @@ export default async function ExpressPage({
         </>
       ) : null}
 
-      {me.entitlements.lookaheadDays < 365 ? (
-        <Paywall
-          gate={{
-            gated: true, tier: "anonymous", requiredTier: "free",
-            visibleDays: me.entitlements.lookaheadDays,
-            withheldDays: 365 - me.entitlements.lookaheadDays,
-            visibleThrough: null, reason: null,
-          }}
-          what="Express Pass prices"
-          returnTo={here}
-        />
-      ) : null}
+      <AdSlot
+        placement="express-after-calendar"
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_EXPRESS}
+      />
     </main>
   );
 }

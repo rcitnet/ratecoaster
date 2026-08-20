@@ -4,9 +4,9 @@ import { IsoInstant } from "./common.js";
 /**
  * Account tiers.
  *
- * Modelled as an ordered ladder from day one, even though `pro` sells nothing
- * yet. The alternative — a boolean `isRegistered` — would need unpicking from
- * every route the moment a paid tier appears, and paid tiers always appear.
+ * `pro` remains in the stored enum for backwards compatibility, but the
+ * product is free. Accounts add saved, personalized features rather than
+ * unlocking public pricing data.
  */
 export const Tier = z.enum(["anonymous", "free", "pro", "admin"]);
 export type Tier = z.infer<typeof Tier>;
@@ -46,23 +46,22 @@ export type Entitlements = z.infer<typeof Entitlements>;
 export const ENTITLEMENTS: Record<Tier, Entitlements> = {
   anonymous: {
     tier: "anonymous",
-    lookaheadDays: 45,
-    priceHistory: false,
+    lookaheadDays: 365,
+    priceHistory: true,
     alerts: false,
     maxWatches: 0,
     allRoomTypes: true,
-    advancedInsights: false,
+    advancedInsights: true,
     admin: false,
   },
   free: {
     tier: "free",
-    // The full year — the headline reason to make an account.
     lookaheadDays: 365,
     priceHistory: true,
     alerts: true,
     maxWatches: 5,
     allRoomTypes: true,
-    advancedInsights: false,
+    advancedInsights: true,
     admin: false,
   },
   pro: {

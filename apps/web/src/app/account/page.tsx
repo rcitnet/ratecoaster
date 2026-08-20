@@ -11,7 +11,7 @@ export default async function AccountPage() {
       <main className="section" style={{ textAlign: "center", maxWidth: 520, margin: "0 auto" }}>
         <h1 style={{ fontSize: 34 }}>You&apos;re not signed in</h1>
         <p className="lede" style={{ margin: "14px auto 24px" }}>
-          A free account unlocks the full 365-day calendar, price history and rate-drop alerts.
+          All pricing is public. A free account saves trips, watches dates, and delivers requested alerts.
         </p>
         <a href="/join" className="btn btn-primary btn-lg">Create a free account</a>
       </main>
@@ -24,8 +24,8 @@ export default async function AccountPage() {
     ["Price history", e.priceHistory ? "Included" : "Free account", e.priceHistory],
     ["Rate-drop alerts", e.alerts ? "Included" : "Free account", e.alerts],
     ["Watched trips", `${e.maxWatches}`, e.maxWatches > 0],
-    ["Every room type", e.allRoomTypes ? "Included" : "Pro", e.allRoomTypes],
-    ["Advanced insights", e.advancedInsights ? "Included" : "Pro", e.advancedInsights],
+    ["Every room type", "Free for everyone", true],
+    ["Advanced insights", "Free for everyone", true],
   ];
 
   return (
@@ -53,18 +53,13 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        <div className="paywall">
-          <div className="hero-kicker">Coming soon</div>
-          <h2>Pro</h2>
+        <div className="card" style={{ background: "var(--purple-tint)", borderColor: "transparent" }}>
+          <div className="hero-kicker">Always free</div>
+          <h2>No upgrade required</h2>
           <p>
-            Cross-hotel comparisons and best-time-to-book modelling built on the full price history
-            we&apos;re already collecting.
+            The full 365-day calendar, every room type, price history, and planning comparisons are
+            public. Accounts exist for saved trips and alerts—not to hide prices.
           </p>
-          <div className="paywall-actions">
-            <span className="btn btn-ghost" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff", cursor: "default" }}>
-              Not yet available
-            </span>
-          </div>
         </div>
       </div>
     </main>

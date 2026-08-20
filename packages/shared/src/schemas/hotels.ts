@@ -205,7 +205,8 @@ export const RateQuery = z.object({
   adults: z.coerce.number().int().min(1).max(8).default(2),
   children: z.coerce.number().int().min(0).max(8).default(0),
   nights: z.coerce.number().int().min(1).max(30).default(1),
-  limit: z.coerce.number().int().min(1).max(500).default(200),
+  // A full destination-by-date matrix is roughly 15 hotels × 365 days.
+  limit: z.coerce.number().int().min(1).max(6000).default(200),
   offset: z.coerce.number().int().min(0).default(0),
 });
 export type RateQuery = z.infer<typeof RateQuery>;

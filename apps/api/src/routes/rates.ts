@@ -222,8 +222,8 @@ ratesRouter.get("/:slug/history", async (c) => {
   }
   const { rateCode, roomTypeId } = parsedHistoryQuery.data;
 
-  // Price history is a free-account feature. 402 rather than 403 so the client
-  // can distinguish "you need to sign up" from "you are not allowed at all".
+  // Price history is public. Keeping the feature check here makes that policy
+  // explicit and preserves a safe boundary if retention rules ever change.
   const feature = requireFeature(tierOf(c), "priceHistory");
   if (!feature.allowed) {
     return c.json(

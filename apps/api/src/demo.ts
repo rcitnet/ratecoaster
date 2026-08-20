@@ -110,8 +110,8 @@ demoApp.get("/v1/auth/me", (c) => {
 });
 
 /**
- * In demo mode the magic link is skipped entirely — signing in is instant, so
- * the 45-day wall and what lies past it can both be seen in one sitting.
+ * In demo mode the magic link is skipped entirely so saved-account behavior
+ * can be tested without an email provider.
  */
 demoApp.post("/v1/auth/magic-link", async (c) => {
   const body = await c.req.json().catch(() => ({}) as { email?: string });
@@ -187,7 +187,8 @@ demoApp.get("/v1/rates", (c) => {
     (p) => (!propertySlug && p.destination === destination) || p.slug === propertySlug
   );
 
-  // Same gate the real route uses, so the paywall behaves identically here.
+  // Same public collection horizon as the real route, with a smaller generated
+  // sample so demo mode stays fast.
   const gate = gateDateWindow(tierOf(c), c.req.query("from"), c.req.query("to"));
   const span = Math.min(gate.info.visibleDays, propertySlug ? 90 : 60);
 
@@ -210,6 +211,9 @@ demoApp.get("/v1/rates", (c) => {
         totalCents: Math.round(nightly * 1.19),
         roomTypeName: roomType.name,
         available: seed(p.slug, stayDate, "avail") > 0.08,
+        source: "observed" as const,
+        isEstimated: false,
+        merchant: null,
         observedAt: new Date(Date.now() - 1000 * 60 * 37).toISOString(),
         standardNightlyCents: rateCode === "STANDARD" ? null : standard,
         savingsCents: rateCode === "STANDARD" ? null : standard - nightly,
@@ -358,31 +362,14 @@ demoApp.get("/v1/trips/quote", (c) => {
   const gate = gateDateWindow(tier, today, undefined);
   const visibleThrough = gate.info.visibleThrough ?? today;
   if (addDays(query.checkOut, -1) > visibleThrough) {
-    if (tier !== "anonymous") {
-      return c.json(
-        {
-          error: {
-            code: "date_unavailable",
-            message: `Collected pricing currently runs through ${visibleThrough}.`,
-          },
-        },
-        400
-      );
-    }
     return c.json(
       {
         error: {
-          code: "upgrade_required",
-          message: `Create a free account to plan trips after ${visibleThrough}.`,
-          details: {
-            requiredTier: "free",
-            visibleThrough,
-            visibleDays: gate.info.visibleDays,
-            withheldDays: gate.info.withheldDays,
-          },
+          code: "date_unavailable",
+          message: `Collected pricing currently runs through ${visibleThrough}.`,
         },
       },
-      402
+      400
     );
   }
 
