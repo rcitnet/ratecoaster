@@ -11,9 +11,9 @@ export default async function AdminCollectors() {
     <>
       <div className="notice">
         <b>Dry run means nothing is sent.</b> A collector in dry run logs the requests it would
-        make and stops there. Only switch it off once a test request on its price source has
-        returned sensible values — that&apos;s the difference between collecting data and
-        collecting nonsense at speed.
+        make and stops there. Only switch it off when the collector reports that its built-in
+        source is configured — that&apos;s the difference between collecting data and collecting
+        nonsense at speed.
       </div>
 
       <div className="grid" style={{ gap: 14, marginTop: 20 }}>
