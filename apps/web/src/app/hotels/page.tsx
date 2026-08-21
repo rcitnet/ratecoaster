@@ -9,6 +9,7 @@ import {
   getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
+import { CompareButton } from "@/components/CompareButton";
 
 export const revalidate = 60;
 
@@ -216,6 +217,29 @@ export default async function HotelsPage({
           </a>
         ))}
       </div>
+
+      {/*
+        Off-site hotels, after the on-site list.
+        Placed last on purpose: the on-site properties are what this site is for,
+        and a family reading the rate grid should reach our data before an
+        outbound link. Below the list it answers "what if none of these work?"
+        rather than competing with the thing they came for.
+      */}
+      {/*
+        Orlando only. Our merchant covers Orlando and Los Angeles; it has no
+        Frisco inventory, and a "compare prices" button that lands on a page
+        with nothing relevant on it is worse than no button.
+      */}
+      {destination === "universal-orlando" ? (
+        <div style={{ marginTop: 32 }}>
+          <h2 style={{ fontSize: 20 }}>Staying off-site?</h2>
+          <p className="muted" style={{ fontSize: 15, marginTop: 6 }}>
+            We track the on-site hotels because that&apos;s where Express Pass and early
+            entry live. For everything else in the area, this is where we&apos;d look.
+          </p>
+          <CompareButton linkKey="hotels-orlando" />
+        </div>
+      ) : null}
     </main>
   );
 }

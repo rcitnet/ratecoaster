@@ -9,6 +9,7 @@ import {
   safe,
 } from "@/lib/api";
 import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
+import { CompareButton } from "@/components/CompareButton";
 
 export const revalidate = 300;
 
@@ -173,6 +174,12 @@ export default async function PlannerPage({
               ))}
             </ul>
           ) : null}
+          {/* Also here, not only in the priced breakdown below. Until the
+              collectors fill in, that breakdown never renders — so the CTA
+              would be invisible on the exact page a planning family lands on. */}
+          <div style={{ marginTop: 14 }}>
+            <CompareButton linkKey="tickets-orlando" />
+          </div>
         </div>
       ) : (
         <>
@@ -263,6 +270,9 @@ export default async function PlannerPage({
                       <td>Tickets</td>
                       <td className="muted">
                         {summary.parkDays}-day admission for {partySize}
+                        {/* Beside the line item, not stranded at the bottom of
+                            the page — this is the row they are pricing. */}
+                        <CompareButton linkKey="tickets-orlando" />
                       </td>
                       <td className="num">{centsToDisplay(best.components.ticketsCents)}</td>
                     </tr>
