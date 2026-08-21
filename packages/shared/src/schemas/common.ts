@@ -29,6 +29,20 @@ export const Currency = z.enum(["USD"]);
 export type Currency = z.infer<typeof Currency>;
 
 /**
+ * A boolean carried in a query string.
+ *
+ * `z.coerce.boolean()` is the obvious-looking choice and it is wrong: it is
+ * `Boolean(value)`, and `Boolean("false")` is `true`. Written that way, a
+ * checkbox the user unticks arrives at the server as `?flag=false` and is read
+ * as enabled — a bug that never throws and never appears in a log.
+ */
+export const QueryBoolean = z
+  .union([z.boolean(), z.string()])
+  .transform((v) =>
+    typeof v === "boolean" ? v : ["1", "true", "yes", "on"].includes(v.trim().toLowerCase())
+  );
+
+/**
  * Provenance of a price. Mirrors the `rate_source` DB enum.
  *
  *   observed  — read directly from a booking/storefront engine.

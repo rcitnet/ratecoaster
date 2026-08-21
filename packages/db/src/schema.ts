@@ -70,6 +70,88 @@ export const attractionStatusEnum = pgEnum("attraction_status", [
   "unknown",
 ]);
 
+export const flightSourceEnum = pgEnum("flight_source", ["travelpayouts", "manual"]);
+
+/**
+ * Cached round-trip fares, keyed by origin.
+ *
+ * The extra dimension versus hotel rates is `origin`, and it is what stops this
+ * table from being precomputable for everyone: 365 dates x N trip lengths x
+ * *every US airport* is not a table, it is a denial-of-service against
+ * ourselves. So the collector fills a fixed list of high-traffic origins, and
+ * anything else can be fetched on demand and cached into the same table.
+ *
+ * `priceCents` is per passenger. Party-size multiplication happens exactly once,
+ * in trip-cost.ts.
+ */
+export const flightQuoteObservations = pgTable(
+  "flight_quote_observations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    origin: text("origin").notNull(),
+    destination: text("destination").notNull(),
+    departDate: date("depart_date").notNull(),
+    tripLengthDays: smallint("trip_length_days").notNull(),
+    priceCents: integer("price_cents").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    airline: text("airline"),
+    transfers: smallint("transfers"),
+    source: flightSourceEnum("source").notNull().default("travelpayouts"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("flight_obs_series_idx").on(
+      t.origin,
+      t.destination,
+      t.departDate,
+      t.tripLengthDays,
+      t.observedAt
+    ),
+    index("flight_obs_recent_idx").on(t.observedAt),
+  ]
+);
+
+export const flightQuoteCurrent = pgTable(
+  "flight_quote_current",
+  {
+    origin: text("origin").notNull(),
+    destination: text("destination").notNull(),
+    departDate: date("depart_date").notNull(),
+    tripLengthDays: smallint("trip_length_days").notNull(),
+    priceCents: integer("price_cents").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    airline: text("airline"),
+    transfers: smallint("transfers"),
+    /**
+     * When the upstream cache says the fare stops being meaningful.
+     *
+     * Hotel rates have no equivalent — a nightly rate is true until it changes.
+     * A cached fare is a snapshot of something that moved on, so this column is
+     * what lets the UI stop presenting a stale number as a current one.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    historicalLowCents: integer("historical_low_cents"),
+    previousCents: integer("previous_cents"),
+    source: flightSourceEnum("source").notNull().default("travelpayouts"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("flight_current_key_uq").on(
+      t.origin,
+      t.destination,
+      t.departDate,
+      t.tripLengthDays
+    ),
+    index("flight_current_lookup_idx").on(
+      t.origin,
+      t.destination,
+      t.tripLengthDays,
+      t.departDate
+    ),
+  ]
+);
+
 export const attractionKindEnum = pgEnum("attraction_kind", [
   "ride",
   "show",
@@ -373,9 +455,46 @@ export const ticketProducts = pgTable(
     parkCount: smallint("park_count"),
     externalId: text("external_id"),
     collectorConfig: jsonb("collector_config").$type<Record<string, unknown>>(),
+    /**
+     * Where to send a buyer for this product, as a plain merchant URL.
+     *
+     * Stored unwrapped on purpose: the affiliate network is applied at render
+     * time from `affiliateMerchant`. Storing pre-baked tracking links would weld
+     * the network into the data, so changing programmes — or running two for the
+     * same product — would become a migration rather than a config change.
+     */
+    affiliateUrl: text("affiliate_url"),
+    affiliateMerchant: text("affiliate_merchant"),
     active: boolean("active").notNull().default(true),
   },
   (t) => [uniqueIndex("ticket_products_slug_uq").on(t.slug)]
+);
+
+/**
+ * Outbound affiliate clicks, logged first-party.
+ *
+ * The network reports revenue per creative, and we deep-link everything through
+ * a single evergreen creative, so their reporting cannot tell us which of our
+ * pages earned the money. Counting clicks ourselves — and stamping a matching
+ * `sid` on the outbound link — is what turns "we made $40 this month" into
+ * "the Orlando 3-day park-to-park row made $40 this month".
+ *
+ * Deliberately thin: a slug, a timestamp, and a coarse referrer. No IP, no user
+ * agent string, no user id. A click log is not worth building a tracking
+ * profile for, and the less it holds the less there is to disclose or leak.
+ */
+export const outboundClicks = pgTable(
+  "outbound_clicks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** Matches the `sid` sent to the network, so the two can be reconciled. */
+    sid: text("sid").notNull(),
+    merchant: text("merchant").notNull(),
+    /** Which of our pages the click came from, path only. */
+    fromPath: text("from_path"),
+    clickedAt: timestamp("clicked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("outbound_clicks_sid_idx").on(t.sid, t.clickedAt)]
 );
 
 export const ticketPriceObservations = pgTable(

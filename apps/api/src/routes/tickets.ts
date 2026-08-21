@@ -37,10 +37,21 @@ ticketsRouter.get("/products", async (c) => {
         days: p.days,
         parkCount: p.parkCount,
         externalId: p.externalId,
-        // The affiliate deep link a feed collector writes back per product, plus
-        // which merchant it points at — powers the Book button and its FTC note.
-        bookingUrl: typeof cfg.bookingUrl === "string" ? cfg.bookingUrl : null,
-        bookingMerchant: typeof cfg.bookingMerchant === "string" ? cfg.bookingMerchant : null,
+        /*
+         * A first-party path, never the network URL.
+         *
+         * Everything outbound goes through /go so clicks are counted here, the
+         * link can change without a deploy, and the publisher ID stays out of
+         * the HTML. The column wins over the older collectorConfig value, which
+         * remains readable so existing seeded rows keep working.
+         */
+        bookingUrl:
+          p.affiliateMerchant ?? cfg.bookingMerchant
+            ? `/go/ticket/${encodeURIComponent(p.slug)}`
+            : null,
+        bookingMerchant:
+          p.affiliateMerchant ??
+          (typeof cfg.bookingMerchant === "string" ? cfg.bookingMerchant : null),
       };
     })
   );
