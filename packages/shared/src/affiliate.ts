@@ -145,6 +145,54 @@ export function buildMerchantLink(merchant: string, sid?: string): string {
   return normalized ? `${base}?sid=${normalized}` : base;
 }
 
+/**
+ * Named destinations, for CTAs that aren't tied to one tracked product.
+ *
+ * "Compare hotel prices" on the hotels index has no product row behind it, and
+ * inventing a fake one purely to hang a link on would be worse than a small
+ * registry. Keyed rather than free-text so a page can never invent a URL — the
+ * allowlist still applies, and a typo fails at build time instead of sending a
+ * visitor somewhere unintended.
+ */
+export interface NamedLink {
+  key: string;
+  merchant: string;
+  url: string;
+  /** Button copy. Describes the destination, never a discount we can't verify. */
+  label: string;
+}
+
+export const NAMED_LINKS: Record<string, NamedLink> = {
+  "tickets-orlando": {
+    key: "tickets-orlando",
+    merchant: UNDERCOVER_TOURIST.merchant,
+    url: "https://www.undercovertourist.com/orlando/universal-orlando-resort/",
+    label: "Compare Universal Orlando ticket prices",
+  },
+  "tickets-hollywood": {
+    key: "tickets-hollywood",
+    merchant: UNDERCOVER_TOURIST.merchant,
+    url: "https://www.undercovertourist.com/los-angeles/universal-studios-hollywood/",
+    label: "Compare Hollywood ticket prices",
+  },
+  "hotels-orlando": {
+    key: "hotels-orlando",
+    merchant: UNDERCOVER_TOURIST.merchant,
+    url: "https://www.undercovertourist.com/orlando/hotels/",
+    label: "Compare Orlando hotel prices",
+  },
+  "hotels-la": {
+    key: "hotels-la",
+    merchant: UNDERCOVER_TOURIST.merchant,
+    url: "https://www.undercovertourist.com/los-angeles/hotels/",
+    label: "Compare Los Angeles hotel prices",
+  },
+};
+
+export function namedLink(key: string): NamedLink | null {
+  return NAMED_LINKS[key] ?? null;
+}
+
 export function merchantLabelFor(merchant: string | null | undefined): string {
   if (!merchant) return "the official site";
   return NETWORKS[merchant]?.label ?? merchant;

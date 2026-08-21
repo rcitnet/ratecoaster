@@ -297,6 +297,15 @@ demoApp.get("/v1/tickets/products", (c) => {
       days: t.days,
       parkCount: t.parkCount,
       externalId: null,
+      /*
+       * Demo prices are invented; this link is real.
+       *
+       * Included so the Book placements can be seen and reviewed before any
+       * database exists — which is the only way to catch a CTA that silently
+       * renders nothing, since BookButton returns null on a missing URL.
+       */
+      bookingUrl: `/go/ticket/${t.slug}`,
+      bookingMerchant: "undercover-tourist",
     }))
   );
 });
