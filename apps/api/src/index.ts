@@ -10,6 +10,7 @@ import { expressRouter, ticketsRouter } from "./routes/tickets.js";
 import { waitsRouter } from "./routes/waits.js";
 import { flightsRouter } from "./routes/flights.js";
 import { plannerRouter } from "./routes/planner.js";
+import { outboundRouter } from "./routes/outbound.js";
 import { tripsRouter } from "./routes/trips.js";
 import { COLLECTORS } from "./jobs/registry.js";
 
@@ -128,6 +129,7 @@ app.route("/v1/waits", waitsRouter);
 app.route("/v1/trips", tripsRouter);
 app.route("/v1/flights", flightsRouter);
 app.route("/v1/planner", plannerRouter);
+app.route("/v1/outbound", outboundRouter);
 
 app.notFound((c) => c.json({ error: { code: "not_found", message: "no such route" } }, 404));
 

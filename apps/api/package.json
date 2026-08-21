@@ -15,7 +15,8 @@
     "smoke:waits": "tsx src/jobs/smoke-waits.ts",
     "admin:grant": "tsx src/jobs/grant-admin.ts",
     "login:link": "tsx src/jobs/login-link.ts",
-    "flights:probe": "tsx src/jobs/probe-flights.ts"
+    "flights:probe": "tsx src/jobs/probe-flights.ts",
+    "affiliate:seed": "tsx src/jobs/seed-affiliate-links.ts"
   },
   "dependencies": {
     "@ratecoaster/db": "*",

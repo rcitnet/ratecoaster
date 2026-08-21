@@ -455,9 +455,46 @@ export const ticketProducts = pgTable(
     parkCount: smallint("park_count"),
     externalId: text("external_id"),
     collectorConfig: jsonb("collector_config").$type<Record<string, unknown>>(),
+    /**
+     * Where to send a buyer for this product, as a plain merchant URL.
+     *
+     * Stored unwrapped on purpose: the affiliate network is applied at render
+     * time from `affiliateMerchant`. Storing pre-baked tracking links would weld
+     * the network into the data, so changing programmes — or running two for the
+     * same product — would become a migration rather than a config change.
+     */
+    affiliateUrl: text("affiliate_url"),
+    affiliateMerchant: text("affiliate_merchant"),
     active: boolean("active").notNull().default(true),
   },
   (t) => [uniqueIndex("ticket_products_slug_uq").on(t.slug)]
+);
+
+/**
+ * Outbound affiliate clicks, logged first-party.
+ *
+ * The network reports revenue per creative, and we deep-link everything through
+ * a single evergreen creative, so their reporting cannot tell us which of our
+ * pages earned the money. Counting clicks ourselves — and stamping a matching
+ * `sid` on the outbound link — is what turns "we made $40 this month" into
+ * "the Orlando 3-day park-to-park row made $40 this month".
+ *
+ * Deliberately thin: a slug, a timestamp, and a coarse referrer. No IP, no user
+ * agent string, no user id. A click log is not worth building a tracking
+ * profile for, and the less it holds the less there is to disclose or leak.
+ */
+export const outboundClicks = pgTable(
+  "outbound_clicks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** Matches the `sid` sent to the network, so the two can be reconciled. */
+    sid: text("sid").notNull(),
+    merchant: text("merchant").notNull(),
+    /** Which of our pages the click came from, path only. */
+    fromPath: text("from_path"),
+    clickedAt: timestamp("clicked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("outbound_clicks_sid_idx").on(t.sid, t.clickedAt)]
 );
 
 export const ticketPriceObservations = pgTable(
