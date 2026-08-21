@@ -120,7 +120,7 @@ p { margin: 0 0 1rem; }
   height: auto;
 }
 
-.nav { display: flex; gap: 4px; margin-left: 8px; flex-wrap: wrap; }
+.nav { display: flex; gap: 4px; margin-left: 8px; flex-wrap: nowrap; white-space: nowrap; }
 .nav a {
   padding: 7px 14px;
   border-radius: var(--r-pill);
@@ -649,6 +649,25 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 @media (max-width: 900px) {
   .trip-hero { grid-template-columns: 1fr; }
   .pricing-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 701px) and (max-width: 1180px) {
+  .masthead-inner {
+    padding-inline: clamp(12px, 2vw, 24px);
+    gap: clamp(8px, calc(2.5vw - 9.5px), 20px);
+  }
+  .brand-logo { width: clamp(160px, calc(48.6vw - 285px), 288px); }
+  .nav { gap: 0; margin-left: 0; }
+  .nav a {
+    padding-inline: clamp(1px, calc(2.71vw - 18px), 14px);
+    font-size: clamp(11px, calc(0.83vw + 5.2px), 15px);
+  }
+  .desktop-actions { gap: 4px; }
+  .desktop-actions .btn-sm {
+    padding-inline: clamp(7px, calc(1.67vw - 4.7px), 15px);
+    font-size: clamp(12px, calc(0.42vw + 9px), 14px);
+  }
+  .desktop-actions .badge { padding-inline: 7px; }
 }
 
 @media (max-width: 700px) {
