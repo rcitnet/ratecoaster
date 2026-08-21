@@ -17,6 +17,13 @@ import {
   type TicketQuery,
 } from "./schemas/tickets.js";
 import { LiveWaitsResponse, WaitRollupPoint, type WaitQuery } from "./schemas/waits.js";
+import {
+  FlightQuote,
+  Origin,
+  TripCostDay,
+  type FlightQuery,
+  type TripPlannerQuery,
+} from "./schemas/flights.js";
 import { CreateWatch, Watch } from "./schemas/alerts.js";
 import { Entitlements, GateInfo, SessionUser } from "./schemas/auth.js";
 import { TripQuote, type TripQuoteQuery } from "./schemas/trips.js";
@@ -156,6 +163,55 @@ export class RateCoasterClient {
     return this.request("/v1/express-pass/products", z.array(ExpressPassProduct), {
       query: { destination },
     });
+  }
+
+  // ---- Flights & planner ----
+
+  listOrigins() {
+    return this.request(
+      "/v1/flights/origins",
+      z.object({ origins: z.array(Origin), destinationAirports: z.record(z.string(), z.string()) })
+    );
+  }
+
+  listFlights(query: Partial<FlightQuery>) {
+    return this.request(
+      "/v1/flights",
+      z.object({
+        // The quote schema plus the two fields the route derives on the way out.
+        items: z.array(
+          FlightQuote.extend({
+            historicalLowCents: z.number().int().nullable(),
+            stale: z.boolean(),
+          })
+        ),
+        gate: GateInfo.optional(),
+        attribution: z.array(Attribution),
+      }),
+      { query: query as Record<string, unknown> }
+    );
+  }
+
+  tripCost(query: Partial<TripPlannerQuery>) {
+    return this.request(
+      "/v1/planner/trip-cost",
+      z.object({
+        days: z.array(TripCostDay),
+        summary: z.object({
+          pricedDays: z.number().int(),
+          totalDays: z.number().int(),
+          cheapestStartDate: z.string().nullable(),
+          cheapestTotalCents: z.number().int().nullable(),
+          medianTotalCents: z.number().int().nullable(),
+          maxSavingCents: z.number().int().nullable(),
+          parkDays: z.number().int(),
+          partySize: z.number().int(),
+        }),
+        notes: z.array(z.string()),
+        gate: GateInfo.optional(),
+      }),
+      { query: query as Record<string, unknown> }
+    );
   }
 
   // ---- Waits ----

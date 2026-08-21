@@ -8,6 +8,8 @@ import { collectorRuns } from "@ratecoaster/db/schema";
 import { dealsRouter, propertiesRouter, ratesRouter } from "./routes/rates.js";
 import { expressRouter, ticketsRouter } from "./routes/tickets.js";
 import { waitsRouter } from "./routes/waits.js";
+import { flightsRouter } from "./routes/flights.js";
+import { plannerRouter } from "./routes/planner.js";
 import { tripsRouter } from "./routes/trips.js";
 import { COLLECTORS } from "./jobs/registry.js";
 
@@ -124,6 +126,8 @@ app.route("/v1/tickets", ticketsRouter);
 app.route("/v1/express-pass", expressRouter);
 app.route("/v1/waits", waitsRouter);
 app.route("/v1/trips", tripsRouter);
+app.route("/v1/flights", flightsRouter);
+app.route("/v1/planner", plannerRouter);
 
 app.notFound((c) => c.json({ error: { code: "not_found", message: "no such route" } }, 404));
 

@@ -70,6 +70,88 @@ export const attractionStatusEnum = pgEnum("attraction_status", [
   "unknown",
 ]);
 
+export const flightSourceEnum = pgEnum("flight_source", ["travelpayouts", "manual"]);
+
+/**
+ * Cached round-trip fares, keyed by origin.
+ *
+ * The extra dimension versus hotel rates is `origin`, and it is what stops this
+ * table from being precomputable for everyone: 365 dates x N trip lengths x
+ * *every US airport* is not a table, it is a denial-of-service against
+ * ourselves. So the collector fills a fixed list of high-traffic origins, and
+ * anything else can be fetched on demand and cached into the same table.
+ *
+ * `priceCents` is per passenger. Party-size multiplication happens exactly once,
+ * in trip-cost.ts.
+ */
+export const flightQuoteObservations = pgTable(
+  "flight_quote_observations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    origin: text("origin").notNull(),
+    destination: text("destination").notNull(),
+    departDate: date("depart_date").notNull(),
+    tripLengthDays: smallint("trip_length_days").notNull(),
+    priceCents: integer("price_cents").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    airline: text("airline"),
+    transfers: smallint("transfers"),
+    source: flightSourceEnum("source").notNull().default("travelpayouts"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("flight_obs_series_idx").on(
+      t.origin,
+      t.destination,
+      t.departDate,
+      t.tripLengthDays,
+      t.observedAt
+    ),
+    index("flight_obs_recent_idx").on(t.observedAt),
+  ]
+);
+
+export const flightQuoteCurrent = pgTable(
+  "flight_quote_current",
+  {
+    origin: text("origin").notNull(),
+    destination: text("destination").notNull(),
+    departDate: date("depart_date").notNull(),
+    tripLengthDays: smallint("trip_length_days").notNull(),
+    priceCents: integer("price_cents").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    airline: text("airline"),
+    transfers: smallint("transfers"),
+    /**
+     * When the upstream cache says the fare stops being meaningful.
+     *
+     * Hotel rates have no equivalent — a nightly rate is true until it changes.
+     * A cached fare is a snapshot of something that moved on, so this column is
+     * what lets the UI stop presenting a stale number as a current one.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    historicalLowCents: integer("historical_low_cents"),
+    previousCents: integer("previous_cents"),
+    source: flightSourceEnum("source").notNull().default("travelpayouts"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("flight_current_key_uq").on(
+      t.origin,
+      t.destination,
+      t.departDate,
+      t.tripLengthDays
+    ),
+    index("flight_current_lookup_idx").on(
+      t.origin,
+      t.destination,
+      t.tripLengthDays,
+      t.departDate
+    ),
+  ]
+);
+
 export const attractionKindEnum = pgEnum("attraction_kind", [
   "ride",
   "show",

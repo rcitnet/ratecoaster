@@ -5,5 +5,6 @@ export * from "./schemas/waits.js";
 export * from "./schemas/alerts.js";
 export * from "./schemas/auth.js";
 export * from "./schemas/trips.js";
+export * from "./schemas/flights.js";
 export * from "./client.js";
 export * from "./money.js";
