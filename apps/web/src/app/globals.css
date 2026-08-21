@@ -116,7 +116,7 @@ p { margin: 0 0 1rem; }
 }
 .brand-logo {
   display: block;
-  width: 190px;
+  width: 230px;
   height: auto;
 }
 
@@ -527,7 +527,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   border-radius: 12px;
   background: #fff;
 }
-.footer .brand-logo { width: 200px; }
+.footer .brand-logo { width: 230px; }
 .footer-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px; }
 .footer-legal {
   margin-top: 28px;
@@ -654,7 +654,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 @media (max-width: 700px) {
   .hero { padding: 40px 24px; border-radius: var(--r-md); }
   .masthead-inner { padding: 10px 16px; gap: 12px; }
-  .brand-logo { width: 160px; }
+  .brand-logo { width: 180px; }
   .nav, .desktop-actions { display: none; }
   .mobile-menu { display: block; }
   .section { padding: 36px 0; }
