@@ -109,25 +109,16 @@ p { margin: 0 0 1rem; }
   gap: 20px;
 }
 .brand {
-  font-family: Fredoka, sans-serif;
-  font-weight: 600;
-  font-size: 23px;
-  letter-spacing: -0.02em;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
+  flex: 0 0 auto;
+  line-height: 0;
 }
-.brand-mark {
-  width: 32px; height: 32px;
-  border-radius: 10px;
-  background: var(--blue);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  transform: rotate(-6deg);
+.brand-logo {
+  display: block;
+  width: 190px;
+  height: auto;
 }
-.brand em { font-style: normal; color: var(--magenta); }
 
 .nav { display: flex; gap: 4px; margin-left: 8px; flex-wrap: wrap; }
 .nav a {
@@ -529,7 +520,14 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   font-size: 14px;
 }
 .footer a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
-.footer .brand { color: #fff; margin-bottom: 14px; }
+.footer .brand {
+  width: max-content;
+  margin-bottom: 14px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #fff;
+}
+.footer .brand-logo { width: 200px; }
 .footer-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px; }
 .footer-legal {
   margin-top: 28px;
@@ -656,7 +654,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 @media (max-width: 700px) {
   .hero { padding: 40px 24px; border-radius: var(--r-md); }
   .masthead-inner { padding: 10px 16px; gap: 12px; }
-  .brand { font-size: 20px; }
+  .brand-logo { width: 160px; }
   .nav, .desktop-actions { display: none; }
   .mobile-menu { display: block; }
   .section { padding: 36px 0; }

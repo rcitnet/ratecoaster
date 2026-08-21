@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import "./globals.css";
 import { getMe } from "@/lib/api";
 import { MobileMenu } from "@/components/MobileMenu";
@@ -44,11 +45,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AdSenseScript />
         <header className="masthead">
           <div className="masthead-inner">
-            <a href="/" className="brand">
-              <span className="brand-mark" aria-hidden="true">
-                🎢
-              </span>
-              Rate<em>Coaster</em>
+            <a href="/" className="brand" aria-label="RateCoaster home">
+              <Image
+                className="brand-logo"
+                src="/brand/ratecoaster-logo-5x1-150kb.png"
+                alt="RateCoaster"
+                width={1000}
+                height={200}
+                priority
+              />
             </a>
             <nav className="nav" aria-label="Primary navigation">
               {NAV.map((item) => (
@@ -100,12 +105,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="shell">
             <div className="footer-cols">
               <div>
-                <div className="brand">
-                  <span className="brand-mark" aria-hidden="true">
-                    🎢
-                  </span>
-                  Rate<em>Coaster</em>
-                </div>
+                <a href="/" className="brand footer-brand" aria-label="RateCoaster home">
+                  <Image
+                    className="brand-logo"
+                    src="/brand/ratecoaster-logo-5x1-150kb.png"
+                    alt="RateCoaster"
+                    width={1000}
+                    height={200}
+                  />
+                </a>
                 <p style={{ margin: 0 }}>
                   Free hotel rate tracking for Universal resorts in Orlando and Frisco.
                 </p>
