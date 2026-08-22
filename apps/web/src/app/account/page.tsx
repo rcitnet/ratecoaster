@@ -1,5 +1,6 @@
-﻿import { getMe } from "@/lib/api";
+﻿import { apiFetch, getMe } from "@/lib/api";
 import { LogoutButton } from "@/components/LogoutButton";
+import { WatchList, type WatchRow } from "@/components/WatchList";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -27,6 +28,10 @@ export default async function AccountPage() {
   }
 
   const e = me.entitlements;
+  // Empty array on failure rather than a crash: a dead watch list should cost
+  // the section, not the whole account page.
+  const watchRows = await apiFetch<WatchRow[]>("/v1/watches", []);
+
   const rows: Array<[string, string, boolean]> = [
     ["Rate calendar", `${e.lookaheadDays} days ahead`, true],
     ["Price history", e.priceHistory ? "Included" : "Free account", e.priceHistory],
@@ -66,10 +71,17 @@ export default async function AccountPage() {
           <h2>No upgrade required</h2>
           <p>
             The full 365-day calendar, every room type, price history, and planning comparisons are
-            public. Accounts exist for saved trips and alertsâ€”not to hide prices.
+            public. Accounts exist for saved trips and alerts — not to hide prices.
           </p>
         </div>
       </div>
+
+      <h2 style={{ marginTop: 36 }}>Trips you&apos;re watching</h2>
+      <p className="muted" style={{ fontSize: 15, marginTop: 6, marginBottom: 16 }}>
+        You can watch {e.maxWatches} at once. We email you when the total for those nights falls —
+        at most once a day per trip, and only on a real drop.
+      </p>
+      <WatchList watches={watchRows} />
     </main>
   );
 }

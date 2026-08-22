@@ -11,6 +11,7 @@ import { waitsRouter } from "./routes/waits.js";
 import { flightsRouter } from "./routes/flights.js";
 import { plannerRouter } from "./routes/planner.js";
 import { outboundRouter } from "./routes/outbound.js";
+import { watchesRouter } from "./routes/watches.js";
 import { tripsRouter } from "./routes/trips.js";
 import { COLLECTORS } from "./jobs/registry.js";
 
@@ -130,6 +131,7 @@ app.route("/v1/trips", tripsRouter);
 app.route("/v1/flights", flightsRouter);
 app.route("/v1/planner", plannerRouter);
 app.route("/v1/outbound", outboundRouter);
+app.route("/v1/watches", watchesRouter);
 
 app.notFound((c) => c.json({ error: { code: "not_found", message: "no such route" } }, 404));
 

@@ -277,10 +277,14 @@ export class RateCoasterClient {
     });
   }
 
-  registerPush(body: { channel: string; token: string; platform: string }) {
-    return this.request("/v1/push/register", z.object({ ok: z.boolean() }), {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  }
+  /*
+   * registerPush() lived here, calling /v1/push/register — a route that was
+   * never mounted. Removed rather than left as a method that compiles, looks
+   * implemented, and fails at runtime.
+   *
+   * The push tables and schemas remain; when the mobile app arrives, mount the
+   * route first and add the method back. claims.test.ts now fails the build if
+   * a client method points at a path the server does not serve, which is how
+   * this was found.
+   */
 }
