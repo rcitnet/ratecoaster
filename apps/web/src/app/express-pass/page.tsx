@@ -1,6 +1,7 @@
 import { centsToDisplay, ExpressPassType } from "@ratecoaster/shared";
-import { getClient, dayNumber, dayOfWeekLabel, safe } from "@/lib/api";
+import { getClient, dayNumber, dayOfWeekLabel, getMe, safe } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
+import { WatchDateButton } from "@/components/WatchDateButton";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -64,6 +65,11 @@ export default async function ExpressPage({
   const low = values[0] ?? null;
   const high = values.at(-1) ?? null;
   const median = values[Math.floor(values.length / 2)] ?? null;
+  // The date the cheapest price belongs to, so the watch form opens on the day
+  // they are already looking at rather than an arbitrary one a month out.
+  const cheapestDate =
+    [...availablePrices].sort((a, b) => a.totalCents - b.totalCents)[0]?.validDate ?? null;
+  const me = await getMe();
   const filterParams = new URLSearchParams();
   if (park) filterParams.set("park", park);
   if (passType) filterParams.set("passType", passType);
@@ -149,6 +155,20 @@ export default async function ExpressPage({
             <div className="card" style={{ background: "var(--teal-tint)", borderColor: "transparent" }}>
               <div className="tiny" style={{ fontWeight: 700, color: "#077368" }}>CHEAPEST PASS</div>
               <div className="cal-price" style={{ fontSize: 32, color: "#077368" }}>{centsToDisplay(low)}</div>
+              {/*
+                Express is the most volatile price Universal sells, swinging by
+                hundreds between dates — which makes it the single best thing on
+                the site to be told about rather than to keep checking.
+              */}
+              <WatchDateButton
+                kind="express"
+                productId={null}
+                productName="Express Pass"
+                destination={destination}
+                signedIn={Boolean(me.user)}
+                returnTo="/express-pass"
+                defaultDate={cheapestDate ?? undefined}
+              />
             </div>
             <div className="card">
               <div className="tiny" style={{ fontWeight: 700, color: "var(--ink-mute)" }}>TYPICAL PASS</div>

@@ -11,11 +11,29 @@ import { RateCode } from "./hotels.js";
 export const AlertChannel = z.enum(["email", "web-push", "expo-push"]);
 export type AlertChannel = z.infer<typeof AlertChannel>;
 
+/**
+ * What a watch is tracking.
+ *
+ * One row shape for all three rather than a table each: the interesting logic
+ * is the anti-spam rules, and three copies of those would be three chances to
+ * get the cooldown subtly different.
+ */
+export const WatchKind = z.enum(["hotel", "ticket", "express"]);
+export type WatchKind = z.infer<typeof WatchKind>;
+
 export const WatchTarget = z.object({
+  kind: WatchKind.default("hotel"),
   propertyId: z.string().nullable(),
+  /** Set for ticket watches. Null for hotels and Express Pass. */
+  ticketProductId: z.string().nullable().default(null),
   /** Watch a whole destination when propertyId is null. */
   destination: z.string().nullable(),
   rateCode: RateCode.default("APH"),
+  /**
+   * For a hotel this is check-in. For a ticket or Express Pass watch it is the
+   * park date, and `checkOut` is simply the day after — which keeps the stored
+   * range valid without a nullable column on a live table.
+   */
   checkIn: IsoDate,
   checkOut: IsoDate,
   adults: z.number().int().min(1).max(8).default(2),
