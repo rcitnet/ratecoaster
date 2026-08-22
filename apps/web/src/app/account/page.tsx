@@ -1,4 +1,4 @@
-﻿import { apiFetch, getMe } from "@/lib/api";
+import { apiFetch, getMe } from "@/lib/api";
 import { LogoutButton } from "@/components/LogoutButton";
 import { WatchList, type WatchRow } from "@/components/WatchList";
 import { pageMetadata } from "@/lib/seo";
