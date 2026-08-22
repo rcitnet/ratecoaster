@@ -79,7 +79,7 @@ export default async function DealsPage() {
     <main>
       <section className="hero">
         <div className="hero-kicker">
-          <span aria-hidden="true">âœ¦</span> Live waits · 365-day price calendars
+          <span aria-hidden="true">✦</span> Live waits · 365-day price calendars
         </div>
         <h1>Know when to go—and what it should cost.</h1>
         <p className="lede">
