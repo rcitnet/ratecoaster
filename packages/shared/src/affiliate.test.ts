@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   buildAffiliateLink,
   buildMerchantLink,
+  NAMED_LINKS,
   normalizeSid,
   UnsafeDestinationError,
 } from "./affiliate.js";
@@ -17,10 +18,14 @@ test("wraps a destination in the evergreen deep link", () => {
   });
 
   const parsed = new URL(url);
-  assert.equal(parsed.hostname, "www.anrdoezrs.net");
-  // Publisher 101861754, evergreen creative 15733832 — the only deep-link
-  // enabled creative in the CJ catalogue for this advertiser.
-  assert.equal(parsed.pathname, "/click-101861754-15733832");
+  assert.equal(parsed.hostname, "www.jdoqocy.com");
+  /*
+   * Publisher 101861754, creative 11556282 — these are copied from a link CJ's
+   * own Deep Link Generator produced and that was confirmed in a browser. The
+   * catalogue export's "deep-link enabled" creative (15733832) returns an error
+   * page, so this test is pinning verified reality, not documentation.
+   */
+  assert.equal(parsed.pathname, "/click-101861754-11556282");
   assert.equal(
     parsed.searchParams.get("url"),
     "https://www.undercovertourist.com/universal-orlando/3-day-park-to-park/"
@@ -88,11 +93,11 @@ test("rejects an unknown merchant rather than guessing", () => {
 test("builds a bare merchant link when there is no product destination", () => {
   assert.equal(
     buildMerchantLink(UT, "tickets_index"),
-    "https://www.anrdoezrs.net/click-101861754-15733832?sid=tickets_index"
+    "https://www.jdoqocy.com/click-101861754-11556282?sid=tickets_index"
   );
   assert.equal(
     buildMerchantLink(UT),
-    "https://www.anrdoezrs.net/click-101861754-15733832"
+    "https://www.jdoqocy.com/click-101861754-11556282"
   );
 });
 
@@ -103,6 +108,18 @@ test("normalizes sub-ids to what the network will accept", () => {
   assert.equal(normalizeSid("  spaced  out  "), "spaced_out");
   assert.equal(normalizeSid("!!!"), "");
   assert.equal(normalizeSid("a".repeat(100)).length, 64);
+});
+
+test("every named destination is a URL the allowlist accepts", () => {
+  // These are hand-verified pages on the merchant's site. If one is ever edited
+  // into a different host or a non-https URL, this fails here rather than
+  // silently rendering a button that goes nowhere.
+  for (const link of Object.values(NAMED_LINKS)) {
+    assert.doesNotThrow(
+      () => buildAffiliateLink({ merchant: link.merchant, destinationUrl: link.url }),
+      `${link.key} -> ${link.url}`
+    );
+  }
 });
 
 test("omits sid entirely when it normalizes to nothing", () => {

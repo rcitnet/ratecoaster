@@ -12,7 +12,7 @@ Nothing outbound is a raw network URL in the markup. Every click goes:
 ```
 Book button  →  /go/ticket/:slug   (our domain)
              →  GET /v1/outbound/ticket/:slug   (resolves + logs)
-             →  https://www.anrdoezrs.net/click-101861754-15733832?url=…&sid=…
+             →  https://www.jdoqocy.com/click-101861754-11556282?url=…&sid=…
              →  undercovertourist.com/…
 ```
 
@@ -33,7 +33,7 @@ Four reasons it's built this way:
 
 | Column | Example |
 |---|---|
-| `affiliate_url` | `https://www.undercovertourist.com/orlando/universal-orlando-resort/3-day-park-to-park/` |
+| `affiliate_url` | `https://www.undercovertourist.com/orlando/universal-orlando-resort/` |
 | `affiliate_merchant` | `undercover-tourist` |
 
 **A plain merchant URL, not a tracking link.** The network wrapper is applied at
@@ -41,6 +41,23 @@ render time from the merchant key. Storing pre-baked tracking links would weld
 Commission Junction into the data — switching programmes, or running two
 merchants for the same product, would become a migration instead of a config
 change.
+
+## ⚠️ Where the link ID comes from
+
+**Take it from CJ's Deep Link Generator in the dashboard. Never from a catalogue
+export.**
+
+This was learned the hard way. The CSV export lists creative **15733832**,
+described in its own row as *"deep-link enabled, so publishers can customize it
+to navigate to a different page"*, with a three-month EPC of **$144.40** — an
+order of magnitude above anything else in the file. Every signal said use it.
+
+Links built on it return an error page. So do the plain creatives in that export.
+The ID that actually works is **11556282**, on host `www.jdoqocy.com`, and the
+only place it appears is a link generated live by CJ.
+
+If links stop working, regenerate one from the dashboard and compare it against
+`UNDERCOVER_TOURIST` in `packages/shared/src/affiliate.ts`. It is four values.
 
 ## ⚠️ Verify deep linking first
 
@@ -73,19 +90,20 @@ Then `npm run db:push` for the new columns and the `outbound_clicks` table.
 
 ## Why the "Save $53 on…" links aren't used
 
-The CJ catalogue has ~140 creatives for this advertiser. We use exactly one:
-**15733832**, the Evergreen link. Two reasons:
-
-**It's the only deep-linkable one.** Its own description says so. Ordinary
-creatives ignore `url=`.
+The CJ catalogue has ~140 creatives for this advertiser. We use exactly one —
+**11556282**, from the Deep Link Generator — and none from the export.
 
 **The specific promo creatives are stale and earn less.** Nearly all were last
 updated in April 2023, so their dollar claims are three years old. And the EPC
 data says the generic links earn several times more anyway:
 
+**Caveat on the table below: these EPC figures come from the same stale export,
+and the top row is a link that does not work.** Treat it as a hint about which
+*kinds* of link earn, not as live data.
+
 | 3-month EPC | Link |
 |---|---|
-| **$144.40** | 15733832 Evergreen (deep-link enabled) |
+| **$144.40** | 15733832 Evergreen — *advertised as deep-link enabled; returns an error page* |
 | $15.77 | 5516693 Tickets – Orlando |
 | $15.38 | 12540860 Orlando + LA tickets |
 | $14.48 | 10723176 Undercover Tourist (Cart) |
