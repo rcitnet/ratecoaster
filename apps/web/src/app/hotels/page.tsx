@@ -11,6 +11,15 @@ import {
 import { AdSlot } from "@/components/AdSlot";
 import { CompareButton } from "@/components/CompareButton";
 
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Universal hotel rates — a full year of prices",
+  description:
+    "Compare nightly rates across every on-site Universal hotel, at Annual Passholder and standard prices, for the next 365 nights. See which hotels include free Express Unlimited.",
+  path: "/hotels",
+});
+
 export const revalidate = 60;
 
 const DESTS = [

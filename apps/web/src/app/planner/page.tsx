@@ -1,4 +1,4 @@
-import { centsToDisplay, ORIGINS, RATE_CODE_LABELS, type TripCostDay } from "@ratecoaster/shared";
+﻿import { centsToDisplay, ORIGINS, RATE_CODE_LABELS, type TripCostDay } from "@ratecoaster/shared";
 import {
   dayNumber,
   dayOfWeekLabel,
@@ -10,6 +10,14 @@ import {
 } from "@/lib/api";
 import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
 import { CompareButton } from "@/components/CompareButton";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Trip cost calendar â€” when is Universal cheapest?",
+  description:
+    "Hotel, tickets and travel added up for every possible start date, so you can see the weeks that cost thousands less before you book anything.",
+  path: "/planner",
+});
 
 export const revalidate = 300;
 
@@ -82,7 +90,7 @@ export default async function PlannerPage({
     <main className="section">
       <h1>What will the whole trip cost?</h1>
       <p className="lede" style={{ marginTop: 12 }}>
-        Flights, hotel and park tickets added up for every possible start date — so you can see the
+        Flights, hotel and park tickets added up for every possible start date â€” so you can see the
         weeks that cost thousands less, before you book anything. Hotel prices use the{" "}
         {RATE_CODE_LABELS[rateCode as "APH"] ?? "passholder"} rate.
       </p>
@@ -96,7 +104,7 @@ export default async function PlannerPage({
               FLYING FROM
             </div>
             <select className="field" name="origin" defaultValue={origin}>
-              <option value="">We&apos;re driving — no flights</option>
+              <option value="">We&apos;re driving â€” no flights</option>
               {ORIGINS.map((o) => (
                 <option key={o.code} value={o.code}>
                   {o.label}
@@ -164,7 +172,7 @@ export default async function PlannerPage({
       {priced.length === 0 ? (
         <div className="notice" style={{ marginTop: 26 }}>
           <b>The trip planner isn&apos;t live yet.</b> It needs hotel rates, ticket prices and
-          fares in place before it can total a trip honestly — and half a total is worse than none.
+          fares in place before it can total a trip honestly â€” and half a total is worse than none.
           {notes.length > 0 ? (
             <ul style={{ margin: "10px 0 0", paddingLeft: 20 }}>
               {notes.map((n) => (
@@ -175,7 +183,7 @@ export default async function PlannerPage({
             </ul>
           ) : null}
           {/* Also here, not only in the priced breakdown below. Until the
-              collectors fill in, that breakdown never renders — so the CTA
+              collectors fill in, that breakdown never renders â€” so the CTA
               would be invisible on the exact page a planning family lands on. */}
           <div style={{ marginTop: 14 }}>
             <CompareButton linkKey="tickets-orlando" />
@@ -247,8 +255,8 @@ export default async function PlannerPage({
                       <td>Flights</td>
                       <td className="muted">
                         {origin
-                          ? `${origin} return for ${partySize}${best.airline ? ` · ${best.airline}` : ""}${
-                              best.transfers === 0 ? " · non-stop" : ""
+                          ? `${origin} return for ${partySize}${best.airline ? ` Â· ${best.airline}` : ""}${
+                              best.transfers === 0 ? " Â· non-stop" : ""
                             }`
                           : "Driving"}
                       </td>
@@ -257,7 +265,7 @@ export default async function PlannerPage({
                     <tr>
                       <td>Hotel</td>
                       <td className="muted">
-                        {best.hotelName ?? "—"}
+                        {best.hotelName ?? "â€”"}
                         {best.hotelIncludesExpressPass ? (
                           <span className="badge badge-express" style={{ marginLeft: 8 }}>
                             Free Express Unlimited
@@ -271,7 +279,7 @@ export default async function PlannerPage({
                       <td className="muted">
                         {summary.parkDays}-day admission for {partySize}
                         {/* Beside the line item, not stranded at the bottom of
-                            the page — this is the row they are pricing. */}
+                            the page â€” this is the row they are pricing. */}
                         <CompareButton linkKey="tickets-orlando" />
                       </td>
                       <td className="num">{centsToDisplay(best.components.ticketsCents)}</td>
@@ -291,7 +299,7 @@ export default async function PlannerPage({
               {best.hotelIncludesExpressPass ? (
                 <p className="tiny muted" style={{ marginTop: 12, marginBottom: 0 }}>
                   This hotel includes Express Unlimited for everyone in the room. On a busy week
-                  that perk alone is worth more than the difference in room rate — it is not
+                  that perk alone is worth more than the difference in room rate â€” it is not
                   included in the total above, so the real gap is wider than it looks.
                 </p>
               ) : null}
@@ -316,8 +324,8 @@ export default async function PlannerPage({
                   }`}
                   title={
                     day.totalCents === null
-                      ? `We can't price this date yet — missing ${day.missing.join(", ")}`
-                      : `${day.hotelName ?? ""} · ${centsToDisplay(day.perPersonPerDayCents)} per person per day`
+                      ? `We can't price this date yet â€” missing ${day.missing.join(", ")}`
+                      : `${day.hotelName ?? ""} Â· ${centsToDisplay(day.perPersonPerDayCents)} per person per day`
                   }
                 >
                   <div className="cal-dow">{dayOfWeekLabel(day.startDate)}</div>
@@ -325,7 +333,7 @@ export default async function PlannerPage({
                   <div className="cal-price">
                     {day.totalCents === null ? (
                       <span className="muted" style={{ fontSize: 13 }}>
-                        —
+                        â€”
                       </span>
                     ) : (
                       centsToDisplay(day.totalCents)
@@ -344,7 +352,7 @@ export default async function PlannerPage({
           {days.length > priced.length ? (
             <p className="tiny muted" style={{ marginTop: 14 }}>
               {days.length - priced.length} of {days.length} dates show a dash. Those are dates
-              where one of the three legs hasn&apos;t been collected yet — we&apos;d rather show
+              where one of the three legs hasn&apos;t been collected yet â€” we&apos;d rather show
               nothing than a total that quietly leaves out your flights.
             </p>
           ) : null}
@@ -361,17 +369,17 @@ export default async function PlannerPage({
       {gate.gated ? (
         <section className="paywall" style={{ marginTop: 28 }}>
           <div className="hero-kicker" style={{ marginBottom: 14 }}>
-            Free — no card needed
+            Free â€” no card needed
           </div>
           <h2>{gate.withheldDays} more days of trip costs are waiting</h2>
           <p>
             You&apos;re seeing the next {gate.visibleDays} days. The cheapest week to go is almost
-            always further out than that — create a free account and the full 365-day calendar
+            always further out than that â€” create a free account and the full 365-day calendar
             unlocks instantly.
           </p>
           <div className="paywall-actions">
             <a href="/join?next=%2Fplanner" className="btn btn-primary btn-lg">
-              Unlock the full year — free
+              Unlock the full year â€” free
             </a>
           </div>
         </section>

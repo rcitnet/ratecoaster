@@ -1,6 +1,14 @@
-import { centsToDisplay, ExpressPassType } from "@ratecoaster/shared";
+﻿import { centsToDisplay, ExpressPassType } from "@ratecoaster/shared";
 import { getClient, dayNumber, dayOfWeekLabel, safe } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Universal Express Pass prices by date",
+  description:
+    "Express Pass is the most volatile price at Universal, swinging by hundreds of dollars between dates. Compare every day before you buy â€” or check which hotels include it free.",
+  path: "/express-pass",
+});
 
 export const revalidate = 300;
 
@@ -125,7 +133,7 @@ export default async function ExpressPage({
           <span className="badge badge-purple">{TYPE_LABELS[selected.passType]}</span>
           <h2>{selected.name}</h2>
           <p className="muted">
-            {selected.days} day{selected.days === 1 ? "" : "s"} · {selected.parkSlugs.map((slug) => PARK_LABELS[slug] ?? slug).join(" + ")}
+            {selected.days} day{selected.days === 1 ? "" : "s"} Â· {selected.parkSlugs.map((slug) => PARK_LABELS[slug] ?? slug).join(" + ")}
           </p>
         </section>
       ) : null}

@@ -6,6 +6,15 @@ import {
 import { AdSlot } from "@/components/AdSlot";
 import { formatLongDate, getClient, TIER_LABELS } from "@/lib/api";
 
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Price your Universal trip",
+  description:
+    "Pick your dates and party, and see hotel and ticket costs totalled for that exact stay — including how the Annual Passholder rate compares with the standard one.",
+  path: "/plan",
+});
+
 export const revalidate = 0;
 
 function todayInOrlando(): string {

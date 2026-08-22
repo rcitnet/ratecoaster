@@ -4,6 +4,15 @@ import { AdSlot } from "@/components/AdSlot";
 import { BookButton } from "@/components/BookButton";
 import { CompareButton } from "@/components/CompareButton";
 
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Universal ticket prices by date",
+  description:
+    "Universal prices admission dynamically, so the same ticket costs noticeably more on a December Saturday than a September Tuesday. See every date priced side by side.",
+  path: "/tickets",
+});
+
 export const revalidate = 300;
 
 export default async function TicketsPage({
