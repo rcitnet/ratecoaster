@@ -92,7 +92,13 @@ export const ParkHours = z.object({
   closesAt: IsoInstant.nullable(),
   /** Early Park Admission window for on-site hotel guests. */
   earlyEntryAt: IsoInstant.nullable(),
-  kind: z.enum(["operating", "closed", "special-ticketed"]),
+  /*
+   * The upstream schedule's own word for the day — OPERATING, TICKETED_EVENT,
+   * INFO and so on. Deliberately a free string rather than an enum: the
+   * vocabulary belongs to the provider, and an enum would reject the first new
+   * value they invent, taking the whole wait board down over a label.
+   */
+  kind: z.string(),
 });
 export type ParkHours = z.infer<typeof ParkHours>;
 

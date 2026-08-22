@@ -1,3 +1,4 @@
+import { deriveParkState, formatParkHours, parkStateMessage } from "@ratecoaster/shared";
 import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { pageMetadata } from "@/lib/seo";
@@ -130,9 +131,11 @@ export default async function WaitsPage({
         </div>
       )}
 
-      {parks.map(({ park, waits }) => {
+      {parks.map(({ park, waits, hours }) => {
         const open = waits.filter((w) => w.status === "operating" && w.waitMinutes !== null);
         const color = PARK_COLORS[park.slug] ?? "#3355ee";
+        const state = deriveParkState({ waits, hours });
+        const todaysHours = formatParkHours(hours, park.timezone);
         return (
           <section key={park.slug}>
             <div className="park-head">
@@ -140,10 +143,25 @@ export default async function WaitsPage({
               <div>
                 <h2 style={{ margin: 0 }}>{park.name}</h2>
                 <div className="tiny muted">
-                  {open.length} of {waits.length} rides open
-                  {open.length > 0
-                    ? ` · average ${Math.round(open.reduce((s, w) => s + (w.waitMinutes ?? 0), 0) / open.length)} min`
-                    : ""}
+                  {/*
+                    Hours first when the park is shut. "0 of 36 rides open" is
+                    technically true and useless at midnight; "Closed — opens at
+                    9:00 AM" is the thing the visitor came to find out.
+                  */}
+                  {state === "closed" ? (
+                    <>
+                      {parkStateMessage(state, 0, 0, hours, park.timezone)}
+                      {todaysHours ? ` · today ${todaysHours}` : ""}
+                    </>
+                  ) : (
+                    <>
+                      {open.length} of {waits.length} rides open
+                      {open.length > 0
+                        ? ` · average ${Math.round(open.reduce((s, w) => s + (w.waitMinutes ?? 0), 0) / open.length)} min`
+                        : ""}
+                      {todaysHours ? ` · open ${todaysHours}` : ""}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
