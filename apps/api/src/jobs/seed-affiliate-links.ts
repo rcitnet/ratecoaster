@@ -22,36 +22,30 @@ import { buildAffiliateLink, UNDERCOVER_TOURIST } from "@ratecoaster/shared";
 const MERCHANT = UNDERCOVER_TOURIST.merchant;
 
 /**
- * Product-slug → merchant landing page.
+ * Per-product destinations. Keys must match `ticket_products.slug`.
  *
- * Keys must match `ticket_products.slug`. Anything not listed simply keeps
- * whatever it already had; this never clears a link.
+ * Empty on purpose. It previously held eight paths invented from a naming
+ * pattern — `.../universal-orlando-resort/3-day-park-to-park/` and similar —
+ * none of which were ever opened. That is not a shortcut worth taking: the
+ * merchant returns 200 with a friendly "not found" page, so a wrong path looks
+ * indistinguishable from a working link right up until a visitor clicks it.
+ *
+ * To add one: open the product page on undercovertourist.com, copy the address
+ * bar, paste it here. Anything absent falls back to the verified landing page
+ * below, which is a worse click-through but an honest one.
  */
-const DESTINATIONS: Record<string, string> = {
-  // Universal Orlando
-  "uo-1-day-1-park": "https://www.undercovertourist.com/orlando/universal-orlando-resort/",
-  "uo-2-day-park-to-park":
-    "https://www.undercovertourist.com/orlando/universal-orlando-resort/2-day-park-to-park/",
-  "uo-3-day-park-to-park":
-    "https://www.undercovertourist.com/orlando/universal-orlando-resort/3-day-park-to-park/",
-  "uo-4-day-park-to-park":
-    "https://www.undercovertourist.com/orlando/universal-orlando-resort/4-day-park-to-park/",
-  "uo-2-day-base": "https://www.undercovertourist.com/orlando/universal-orlando-resort/2-day-base/",
-  "uo-3-day-base": "https://www.undercovertourist.com/orlando/universal-orlando-resort/3-day-base/",
-
-  // Universal Studios Hollywood
-  "ush-1-day-general": "https://www.undercovertourist.com/los-angeles/universal-studios-hollywood/",
-  "ush-1-day": "https://www.undercovertourist.com/los-angeles/universal-studios-hollywood/",
-};
+const DESTINATIONS: Record<string, string> = {};
 
 /**
  * The catch-all. Products with no specific page still get a tracked link to the
  * merchant's Universal landing page rather than no Book button at all.
  */
 const FALLBACK_BY_DESTINATION: Record<string, string> = {
+  // Both fetched and confirmed to return real pages.
   "universal-orlando": "https://www.undercovertourist.com/orlando/universal-orlando-resort/",
   "universal-hollywood":
     "https://www.undercovertourist.com/los-angeles/universal-studios-hollywood/",
+  // Frisco deliberately absent: the merchant carries no inventory there.
 };
 
 async function main() {
