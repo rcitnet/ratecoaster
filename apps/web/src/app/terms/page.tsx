@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Terms of Service — RateCoaster",
+export const metadata = pageMetadata({
+  title: "Terms of service",
   description: "The terms that apply when using RateCoaster.",
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

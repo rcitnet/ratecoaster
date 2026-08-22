@@ -1,5 +1,20 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin";
+
+/**
+ * Noindex for the whole admin area, set once on the layout.
+ *
+ * robots.txt already disallows /admin, but that only stops crawling — a
+ * disallowed URL can still be listed on the strength of an inbound link, shown
+ * with no description because the crawler was never permitted to look. Only a
+ * robots meta tag actually prevents indexing, and it has to be served from the
+ * page itself.
+ */
+export const metadata: Metadata = {
+  title: "Admin",
+  robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
+};
 
 const TABS = [
   { href: "/admin", label: "Overview" },

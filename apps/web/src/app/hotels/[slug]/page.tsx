@@ -7,9 +7,52 @@ import {
 import {
   getClient, EMPTY_GATE, formatLongDate, formatStayDate, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
+import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
+import { breadcrumbSchema, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 60;
+
+/**
+ * Per-hotel metadata — the highest-value SEO surface on the site.
+ *
+ * "cabana bay passholder rate" and its cousins are exactly the long-tail
+ * queries this site should own, and they can only be won with a page whose
+ * title and description name that specific hotel. A shared title makes eleven
+ * hotels compete as one page and win nothing.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const client = await getClient();
+  const properties = await safe(client.listProperties(), []);
+  const property = properties.find((p) => p.slug === slug);
+
+  if (!property) {
+    return pageMetadata({
+      title: "Hotel not found",
+      description: "We don't track a hotel with that name yet.",
+      path: `/hotels/${slug}`,
+      noindex: true,
+    });
+  }
+
+  const express = property.includesExpressPass
+    ? " Includes free Express Unlimited for every guest in the room."
+    : "";
+
+  return pageMetadata({
+    title: `${property.name} rates — passholder and standard prices`,
+    description:
+      `Nightly rates for ${property.name} for the next 365 nights, at Annual Passholder ` +
+      `and standard prices, with price history so you can tell a genuine low from the ` +
+      `new normal.${express}`,
+    path: `/hotels/${slug}`,
+  });
+}
 
 /**
  * Inline SVG step chart rather than a charting library.
@@ -105,8 +148,59 @@ export default async function PropertyPage({
   const cheapest = [...rates.items].sort((a, b) => a.nightlyCents - b.nightlyCents)[0];
   const roomTypeParam = roomTypeId ? `&roomTypeId=${encodeURIComponent(roomTypeId)}` : "";
 
+  /*
+   * Hotel schema, with an offer only when a real price exists.
+   *
+   * Deliberately no `priceRange` or `offers` on an empty page. Structured data
+   * asserting a price we do not have is worse than none: Google penalises
+   * markup that contradicts the visible page, and a family seeing a fabricated
+   * rate in a search result is exactly the harm this site exists to prevent.
+   */
+  const hotelSchema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    name: property.name,
+    url: `${SITE_URL}/hotels/${slug}`,
+    ...(property.latitude && property.longitude
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: property.latitude,
+            longitude: property.longitude,
+          },
+        }
+      : {}),
+    ...(property.roomCount ? { numberOfRooms: property.roomCount } : {}),
+    ...(cheapest
+      ? {
+          makesOffer: {
+            "@type": "Offer",
+            priceCurrency: "USD",
+            price: (cheapest.nightlyCents / 100).toFixed(2),
+            availability: "https://schema.org/InStock",
+          },
+        }
+      : {}),
+  };
+
   return (
     <main className="section">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(hotelSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLd(
+            breadcrumbSchema([
+              { name: "Home", path: "/" },
+              { name: "Hotels", path: "/hotels" },
+              { name: property.name, path: `/hotels/${slug}` },
+            ])
+          ),
+        }}
+      />
       <a href="/hotels" className="tiny muted">← All hotels</a>
       <h1 style={{ marginTop: 10 }}>{property.name}</h1>
 

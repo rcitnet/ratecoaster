@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy — RateCoaster",
+export const metadata = pageMetadata({
+  title: "Privacy policy",
   description: "How RateCoaster collects, uses, stores, and protects personal information.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

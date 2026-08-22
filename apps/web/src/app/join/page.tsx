@@ -1,4 +1,12 @@
-import { JoinForm } from "@/components/JoinForm";
+﻿import { JoinForm } from "@/components/JoinForm";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Create a free account",
+  description: "Unlock the full 365-day calendar with a free RateCoaster account.",
+  path: "/join",
+  noindex: true,
+});
 
 export default async function JoinPage({
   searchParams,
@@ -33,7 +41,7 @@ export default async function JoinPage({
               ["Watch 5 trips at once", "Compare options before you commit."],
             ].map(([title, body]) => (
               <div key={title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <span className="save-flag" style={{ padding: "3px 9px", flexShrink: 0 }}>✓</span>
+                <span className="save-flag" style={{ padding: "3px 9px", flexShrink: 0 }}>âœ“</span>
                 <span>
                   <b>{title}</b>
                   <br />

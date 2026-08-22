@@ -4,11 +4,70 @@ import "./globals.css";
 import { getMe } from "@/lib/api";
 import { MobileMenu } from "@/components/MobileMenu";
 import { AdSenseScript } from "@/components/AdSenseScript";
+import {
+  DEFAULT_DESCRIPTION,
+  jsonLd,
+  organizationSchema,
+  SITE_NAME,
+  SITE_URL,
+  websiteSchema,
+} from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "RateCoaster — Universal hotel deals, tickets & live wait times",
-  description:
-    "Track passholder and public hotel rates a full year ahead for Universal resorts in Orlando and Frisco, plus live ride waits including Universal Studios Hollywood.",
+  /*
+   * metadataBase is the load-bearing line here. Without it Next emits RELATIVE
+   * Open Graph and canonical URLs — the tags are present and validators pass,
+   * but a relative og:image is meaningless to Facebook or Google and a relative
+   * canonical is ignored. It fails in the one way that looks like success.
+   */
+  metadataBase: new URL(SITE_URL),
+
+  title: {
+    default: "RateCoaster — Universal hotel deals, tickets & live wait times",
+    /*
+     * Pages set a short title and get the brand appended. Repeating the brand
+     * by hand on every page is how you end up with three different spellings of
+     * it, and Google truncates around 60 characters so the useful words must
+     * come first.
+     */
+    template: "%s | RateCoaster",
+  },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  referrer: "origin-when-cross-origin",
+  /*
+   * No canonical here on purpose.
+   *
+   * A canonical set on the root layout is INHERITED by every page that does not
+   * set its own — so three pages with their own metadata block quietly declared
+   * themselves to be the homepage, which is an instruction to Google to drop
+   * them from the index. A missing canonical is a minor loss; a wrong one is a
+   * page deletion. Each page sets its own via pageMetadata().
+   */
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_US",
+    url: SITE_URL,
+    title: "RateCoaster — Universal hotel deals, tickets & live wait times",
+    description: DEFAULT_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RateCoaster — Universal hotel deals, tickets & live wait times",
+    description: DEFAULT_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
 };
 
 const NAV = [
@@ -42,6 +101,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        {/*
+          Organization and WebSite, emitted once site-wide.
+          These describe the publisher rather than the page, so they belong in
+          the layout — repeating them per page adds bytes and no meaning.
+        */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd(organizationSchema()) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd(websiteSchema()) }}
+        />
         <AdSenseScript />
         <header className="masthead">
           <div className="masthead-inner">

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
 import { GUIDES } from "@/lib/guides";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Universal planning guides — RateCoaster",
-  description: "Original guides for comparing Universal hotel, ticket, Express Pass, and wait-time data.",
-};
+export const metadata = pageMetadata({
+  title: "Universal planning guides",
+  description:
+    "Plain-English guides to Universal pricing: when it's cheapest to go, how passholder rates really compare, whether Express Pass is worth it, and how far ahead to book.",
+  path: "/guides",
+});
 
 export default function GuidesPage() {
   return (

@@ -170,6 +170,164 @@ export const GUIDES: Guide[] = [
       },
     ],
   },
+  {
+    slug: "cheapest-time-to-visit-universal-orlando",
+    title: "The cheapest time to visit Universal Orlando",
+    summary:
+      "Which weeks are reliably cheap, which are reliably expensive, and why the gap between them is usually larger than any discount code.",
+    readTime: "6 min read",
+    sections: [
+      {
+        heading: "Dates move prices more than discounts do",
+        paragraphs: [
+          "Universal prices hotels and admission by demand, and the swing across a year is wide. The same room, the same ticket and the same family can cost dramatically different amounts depending only on which week is chosen. That variation is usually larger than any promotion, passholder rate or package deal applied to a fixed set of dates.",
+          "This is the single most useful thing to understand before booking. Hunting for a code to shave a few percent off a peak week is effort spent in the wrong place if moving the trip two weeks would save far more.",
+        ],
+      },
+      {
+        heading: "The pattern most years follow",
+        paragraphs: [
+          "Demand tracks school calendars and holidays almost perfectly. The expensive periods are the ones when the largest number of families are simultaneously free to travel, and they are predictable years in advance.",
+        ],
+        bullets: [
+          "Reliably expensive: late December through New Year, spring break, Thanksgiving week, and mid-June to mid-August.",
+          "Often cheaper: mid-January through early February, late April to mid-May, and September through early October.",
+          "Halloween season raises evening demand at Universal Orlando specifically, which can lift nearby hotel prices even midweek.",
+          "Weekends cost more than midweek almost everywhere, and the gap widens in busy seasons.",
+        ],
+      },
+      {
+        heading: "Cheap dates and quiet dates are not the same thing",
+        paragraphs: [
+          "It is tempting to assume the cheapest week is also the emptiest. Often it is, but not always — a low hotel rate can coincide with a busy park if an event is running, and a quiet park can sit inside an expensive week.",
+          "The two questions are worth answering separately. Price tells you what the trip costs; wait times tell you what it will feel like. A week that is cheap and busy may still be the right answer for a family on a tight budget, and a week that is dear and quiet may be worth it for a once-in-a-lifetime trip.",
+        ],
+      },
+      {
+        heading: "How to use this site to find your week",
+        paragraphs: [
+          "Rather than guessing at the pattern above, read it off the actual numbers. The hotel calendar shows a full year of nightly rates, the ticket calendar shows admission priced by date, and the wait-time history shows how busy each part of the year tends to be.",
+        ],
+        bullets: [
+          "Open the hotel calendar and scan for the green stretches across the whole year.",
+          "Cross-check those dates on the ticket calendar — the two do not always move together.",
+          "If your dates are fixed, compare hotel tiers instead; that is the remaining lever.",
+          "Confirm the final price with the official seller before booking anything.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "how-far-ahead-to-book-universal",
+    title: "How far ahead should you book Universal?",
+    summary:
+      "Why booking early and watching prices are not in conflict, and what actually changes as your dates approach.",
+    readTime: "5 min read",
+    sections: [
+      {
+        heading: "Book early for choice, watch prices for cost",
+        paragraphs: [
+          "These are two separate decisions that often get muddled. Booking early secures the room type and hotel you want, which genuinely does get harder as popular dates fill. It does not, on its own, secure the best price.",
+          "Most on-site hotel bookings can be changed or cancelled within the terms shown at checkout, which means an early booking is not a commitment to that price — it is a commitment to that room. If the rate falls later, the booking can often be rebooked at the lower one.",
+        ],
+      },
+      {
+        heading: "What actually moves as dates approach",
+        paragraphs: [
+          "Hotel rates respond to how full a property is becoming. A hotel filling faster than expected tends to rise; one filling slowly may soften. Neither is guaranteed, and both directions happen.",
+          "Admission pricing behaves differently. Ticket prices for a given date tend to be set well in advance and change less often, so waiting rarely helps much and can hurt if a general price increase lands in between.",
+        ],
+        bullets: [
+          "Hotel rates: genuinely volatile, worth watching after booking.",
+          "Tickets: relatively stable per date, but subject to across-the-board increases.",
+          "Express Pass: the most volatile of all, and often cheapest well before the date.",
+        ],
+      },
+      {
+        heading: "A practical approach",
+        paragraphs: [
+          "Book the room when you find dates and a hotel that work, on refundable terms if they are offered. Then keep watching that date. If the rate drops meaningfully, rebook. If it rises, you already have the lower one.",
+          "This is the entire reason RateCoaster records price history rather than only today's number: without knowing what a rate has been, there is no way to judge whether the one in front of you is good.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "universal-orlando-with-young-kids",
+    title: "Universal Orlando with young children",
+    summary:
+      "What actually matters when the party includes small children — height limits, hotel choice, and where the money is best spent.",
+    readTime: "6 min read",
+    sections: [
+      {
+        heading: "Height limits shape the trip more than anything else",
+        paragraphs: [
+          "Universal's headline attractions are thrill rides with height requirements, and a family with a child below those limits will experience a very different park than the marketing suggests. Checking the requirements against your children's actual heights, before choosing dates or tickets, prevents the most common disappointment.",
+          "Universal publishes current height requirements for every attraction, and they do change as rides open and close. Check them close to your trip rather than relying on an article — including this one.",
+        ],
+      },
+      {
+        heading: "Where Express Pass is and isn't worth it",
+        paragraphs: [
+          "Express Pass skips the standby queue on most attractions. Its value depends on how many of those attractions your family can actually ride. A group that can ride everything gets far more from it than a group spending much of the day on attractions with no queue to skip.",
+          "For families with young children, the honest calculation often favours spending that money on an extra day, a better hotel, or simply not spending it. Rider Switch — which lets adults take turns without queueing twice — reduces the pressure further.",
+        ],
+      },
+      {
+        heading: "Hotel choice matters more with small children",
+        paragraphs: [
+          "Proximity is worth more when someone in the party needs a midday nap. A hotel within walking distance of the parks turns a two-hour round trip into a twenty-minute one, and that difference compounds across a week.",
+          "The Premier hotels include Express Unlimited for every guest in the room, which can make an expensive room cheaper overall than a budget room plus Express for four people. Whether that maths works depends entirely on your party size and dates.",
+        ],
+        bullets: [
+          "Compare the total: room rate plus Express for your party, against a Premier room.",
+          "Weigh walking distance against nightly rate if young children nap.",
+          "Check what each hotel actually includes before comparing rates — the perks differ by tier.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "universal-express-pass-worth-it",
+    title: "Is Universal Express Pass worth it?",
+    summary:
+      "An honest look at when Express Pass pays for itself, when it doesn't, and the cheaper way to get it.",
+    readTime: "5 min read",
+    sections: [
+      {
+        heading: "What you are actually buying",
+        paragraphs: [
+          "Express Pass buys time, not access. Everyone in the park can ride the same attractions; Express holders wait less. So its value is entirely a function of how long the queues would otherwise be, which varies enormously by date.",
+          "On a quiet January weekday, when many attractions have short waits anyway, the same Express Pass delivers a fraction of the benefit it does on a busy Saturday in July — while often costing less. That inversion is why buying it reflexively is a mistake in both directions.",
+        ],
+      },
+      {
+        heading: "The free route most people miss",
+        paragraphs: [
+          "Universal Orlando's Premier hotels include Express Unlimited for every guest in the room, for the whole stay, at no extra cost. For a family of four on a busy week, that perk can be worth more than the difference between a Premier room and a cheaper one.",
+          "This is the comparison worth doing before buying Express separately: the total cost of a cheaper room plus Express for everyone, against the total cost of a Premier room. It frequently comes out in favour of the Premier hotel, and almost nobody checks.",
+        ],
+        bullets: [
+          "Premier hotels include Express Unlimited for all room guests.",
+          "The value scales with party size — the more people, the better the maths.",
+          "It applies to the whole stay, including arrival and departure days.",
+        ],
+      },
+      {
+        heading: "When buying it separately makes sense",
+        paragraphs: [
+          "If you are staying off-site, or at a hotel tier that does not include it, buying Express for the single busiest day of the trip is often better value than buying it for every day. Queues are not uniformly long across a week.",
+          "Prices for Express vary by date more sharply than any other product Universal sells, so checking the calendar before choosing which day to buy is worth real money.",
+        ],
+      },
+      {
+        heading: "Check before you commit",
+        paragraphs: [
+          "Express Pass availability and terms change, some attractions are excluded, and the perks attached to each hotel tier are set by Universal and can be revised. Confirm the current details on the official site before booking — this guide explains how to think about the decision, not what today's terms are.",
+        ],
+      },
+    ],
+  },
 ];
 
 export function guideBySlug(slug: string): Guide | undefined {

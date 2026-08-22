@@ -1,5 +1,13 @@
-import { getMe } from "@/lib/api";
+﻿import { getMe } from "@/lib/api";
 import { LogoutButton } from "@/components/LogoutButton";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Your account",
+  description: "Manage your RateCoaster account.",
+  path: "/account",
+  noindex: true,
+});
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +66,7 @@ export default async function AccountPage() {
           <h2>No upgrade required</h2>
           <p>
             The full 365-day calendar, every room type, price history, and planning comparisons are
-            public. Accounts exist for saved trips and alerts—not to hide prices.
+            public. Accounts exist for saved trips and alertsâ€”not to hide prices.
           </p>
         </div>
       </div>

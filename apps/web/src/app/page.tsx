@@ -1,4 +1,4 @@
-import { centsToDisplay } from "@ratecoaster/shared";
+﻿import { centsToDisplay } from "@ratecoaster/shared";
 import {
   formatLongDate,
   getClient,
@@ -9,6 +9,14 @@ import {
   TIER_LABELS,
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Universal hotel deals â€” passholder and public rates",
+  description:
+    "The cheapest upcoming nights at Universal Orlando and Hollywood hotels, ranked against each hotel's own price history rather than raw nightly cost. Free, updated daily.",
+  path: "/",
+});
 
 export const revalidate = 60;
 
@@ -71,12 +79,12 @@ export default async function DealsPage() {
     <main>
       <section className="hero">
         <div className="hero-kicker">
-          <span aria-hidden="true">✦</span> Live waits · 365-day price calendars
+          <span aria-hidden="true">âœ¦</span> Live waits Â· 365-day price calendars
         </div>
-        <h1>Know when to go—and what it should cost.</h1>
+        <h1>Know when to goâ€”and what it should cost.</h1>
         <p className="lede">
           Live park waits, public and passholder hotel rates, and Orlando ticket prices in one
-          place. Find shorter lines and dates that are genuinely a deal—not merely the cheapest
+          place. Find shorter lines and dates that are genuinely a dealâ€”not merely the cheapest
           option on the page.
         </p>
         <div className="hero-actions">
@@ -97,11 +105,11 @@ export default async function DealsPage() {
             <div className="hero-stat-label">official hotels tracked</div>
           </div>
           <div>
-            <div className="hero-stat-value">{parkSummaries.length || "—"}</div>
+            <div className="hero-stat-value">{parkSummaries.length || "â€”"}</div>
             <div className="hero-stat-label">Orlando parks monitored</div>
           </div>
           <div>
-            <div className="hero-stat-value">{ticketProducts.length || "—"}</div>
+            <div className="hero-stat-value">{ticketProducts.length || "â€”"}</div>
             <div className="hero-stat-label">Orlando ticket types priced</div>
           </div>
           <div>
@@ -165,13 +173,13 @@ export default async function DealsPage() {
                       className="display"
                       style={{ fontSize: 42, color: average === null ? "var(--ink-mute)" : color }}
                     >
-                      {average ?? "—"}
+                      {average ?? "â€”"}
                     </span>
                     <span className="tiny muted">min average</span>
                   </div>
                   <div className="tiny muted" style={{ marginTop: 10 }}>
                     {openCount > 0
-                      ? `${openCount} attractions reporting · ${walkOnCount} at 15 min or less`
+                      ? `${openCount} attractions reporting Â· ${walkOnCount} at 15 min or less`
                       : "No operating attractions reporting right now"}
                   </div>
                   {shortest ? (
@@ -179,7 +187,7 @@ export default async function DealsPage() {
                       className="tiny"
                       style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}
                     >
-                      <b>Shortest posted:</b> {shortest.attractionName} · {shortest.waitMinutes}m
+                      <b>Shortest posted:</b> {shortest.attractionName} Â· {shortest.waitMinutes}m
                     </div>
                   ) : null}
                 </a>
@@ -194,7 +202,7 @@ export default async function DealsPage() {
             attractions.
             {waits.attribution.map((credit) => (
               <span key={credit.source}>
-                {" "}·{" "}
+                {" "}Â·{" "}
                 <a href={credit.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
                   {credit.text}
                 </a>
@@ -230,7 +238,7 @@ export default async function DealsPage() {
         {deals.length === 0 ? (
           <div className="notice">
             <b>We&apos;re still gathering hotel rates.</b> Live ride wait times are up and
-            running now — <a href="/waits"><b>take a look</b></a> while we finish.
+            running now â€” <a href="/waits"><b>take a look</b></a> while we finish.
           </div>
         ) : (
           <div className="grid grid-4">
@@ -341,7 +349,7 @@ export default async function DealsPage() {
             </span>
             <h3>See the full price history</h3>
             <p className="muted" style={{ margin: "8px 0 0", fontSize: 15 }}>
-              Find out whether today&apos;s price is a genuine low or simply the new normal —
+              Find out whether today&apos;s price is a genuine low or simply the new normal â€”
               before you put down a deposit.
             </p>
           </div>
