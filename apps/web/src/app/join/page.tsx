@@ -41,7 +41,7 @@ export default async function JoinPage({
               ["Watch 5 trips at once", "Compare options before you commit."],
             ].map(([title, body]) => (
               <div key={title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <span className="save-flag" style={{ padding: "3px 9px", flexShrink: 0 }}>âœ“</span>
+                <span className="save-flag" style={{ padding: "3px 9px", flexShrink: 0 }}>✓</span>
                 <span>
                   <b>{title}</b>
                   <br />
