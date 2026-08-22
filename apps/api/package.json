@@ -9,14 +9,15 @@
     "har:import": "tsx src/collectors/hotels/har-import.ts",
     "verify:endpoint": "tsx src/jobs/verify-endpoint.ts",
     "rollup": "tsx src/jobs/rollup.ts",
-    "test": "node --import tsx --test src/collectors/collectors.test.ts src/collectors/waits/providers.test.ts src/lib/google-oauth.test.ts src/collectors/flights/flights.test.ts src/lib/trip-cost.test.ts",
+    "test": "node --import tsx --test src/collectors/collectors.test.ts src/collectors/waits/providers.test.ts src/lib/google-oauth.test.ts src/collectors/flights/flights.test.ts src/lib/trip-cost.test.ts src/lib/alerts.test.ts src/claims.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
     "smoke:waits": "tsx src/jobs/smoke-waits.ts",
     "admin:grant": "tsx src/jobs/grant-admin.ts",
     "login:link": "tsx src/jobs/login-link.ts",
     "flights:probe": "tsx src/jobs/probe-flights.ts",
-    "affiliate:seed": "tsx src/jobs/seed-affiliate-links.ts"
+    "affiliate:seed": "tsx src/jobs/seed-affiliate-links.ts",
+    "alerts:dispatch": "tsx src/jobs/dispatch-alerts.ts"
   },
   "dependencies": {
     "@ratecoaster/db": "*",
