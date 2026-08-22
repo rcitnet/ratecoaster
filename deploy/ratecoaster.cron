@@ -27,6 +27,14 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # our rate limit learning nothing.
 52 2 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only flight-prices >> /home/ratecoaster/logs/flights.log 2>&1
 
+# Rate-drop alerts — 20 minutes after the hotel collector, four times a day.
+#
+# It can only act on prices already written, so it has to follow the collector
+# rather than race it. Four runs a day is well inside the per-watch cooldown, so
+# the extra passes cost nothing and only shorten the delay between a real drop
+# and the email about it.
+37 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api alerts:dispatch -- --send >> /home/ratecoaster/logs/alerts.log 2>&1
+
 # Nightly: fold wait samples into hourly averages and prune the raw rows.
 30 3 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api rollup >> /home/ratecoaster/logs/rollup.log 2>&1
 

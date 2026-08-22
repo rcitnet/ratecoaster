@@ -5,11 +5,12 @@ import {
   type RateCode as RateCodeValue,
 } from "@ratecoaster/shared";
 import {
-  getClient, EMPTY_GATE, formatLongDate, formatStayDate, relativeTime, safe, TIER_LABELS,
+  getClient, EMPTY_GATE, formatLongDate, formatStayDate, getMe, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
 import { breadcrumbSchema, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
+import { WatchButton } from "@/components/WatchButton";
 
 export const revalidate = 60;
 
@@ -147,6 +148,8 @@ export default async function PropertyPage({
 
   const cheapest = [...rates.items].sort((a, b) => a.nightlyCents - b.nightlyCents)[0];
   const roomTypeParam = roomTypeId ? `&roomTypeId=${encodeURIComponent(roomTypeId)}` : "";
+  // Decides whether the watch control invites a sign-up or creates the watch.
+  const me = await getMe();
 
   /*
    * Hotel schema, with an offer only when a real price exists.
@@ -203,6 +206,14 @@ export default async function PropertyPage({
       />
       <a href="/hotels" className="tiny muted">← All hotels</a>
       <h1 style={{ marginTop: 10 }}>{property.name}</h1>
+
+      <WatchButton
+        propertyId={property.id}
+        propertyName={property.name}
+        rateCode={rateCode}
+        signedIn={Boolean(me.user)}
+        returnTo={`/hotels/${slug}`}
+      />
 
       {rateChoices.length > 1 ? (
         <div className="chips" style={{ margin: "16px 0 4px" }} aria-label="Rate type">

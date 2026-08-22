@@ -79,6 +79,115 @@ export async function sendMagicLinkEmail(to: string, link: string): Promise<Send
   return { sent: true };
 }
 
+export interface PriceDropEmail {
+  to: string;
+  hotelName: string;
+  checkIn: string;
+  checkOut: string;
+  /** Whole-stay total, in cents. */
+  currentCents: number;
+  previousCents: number | null;
+  rateLabel: string;
+  /** Deep link back to the exact page that shows this. */
+  url: string;
+}
+
+/**
+ * The alert people signed up for.
+ *
+ * Subject line leads with the saving rather than the brand, because that is the
+ * only thing that decides whether this gets opened — and an unopened price
+ * alert is worse than none, since it trains the recipient to ignore the next.
+ */
+export async function sendPriceDropEmail(input: PriceDropEmail): Promise<SendResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+  const siteName = process.env.SITE_NAME ?? "RateCoaster";
+
+  if (!apiKey || !from) {
+    return { sent: false, reason: "RESEND_API_KEY or EMAIL_FROM is not set" };
+  }
+
+  const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  const saving = input.previousCents !== null ? input.previousCents - input.currentCents : null;
+
+  const subject =
+    saving && saving > 0
+      ? `${money(saving)} off your ${input.hotelName} dates`
+      : `${input.hotelName} is now ${money(input.currentCents)}`;
+
+  const res = await fetch(RESEND_ENDPOINT, {
+    method: "POST",
+    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      from,
+      to: input.to,
+      subject,
+      html: priceDropHtml(input, siteName, saving),
+      text:
+        `${input.hotelName}\n${input.checkIn} to ${input.checkOut} · ${input.rateLabel}\n\n` +
+        `Now ${money(input.currentCents)} for the stay` +
+        (saving && saving > 0 ? `, down ${money(saving)}.` : ".") +
+        `\n\n${input.url}\n\n` +
+        `Prices are observations, not quotes — confirm on the official site before booking.\n` +
+        `Manage or stop these alerts: ${input.url.split("/hotels")[0]}/account\n`,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    return { sent: false, reason: `Resend returned ${res.status}: ${body.slice(0, 300)}` };
+  }
+  return { sent: true };
+}
+
+function priceDropHtml(input: PriceDropEmail, siteName: string, saving: number | null): string {
+  const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  const accountUrl = `${input.url.split("/hotels")[0]}/account`;
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#fff9f2;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;">
+          <tr><td>
+            <div style="font-size:22px;font-weight:700;color:#16123c;margin-bottom:20px;">${siteName}</div>
+            <div style="font-size:20px;font-weight:600;color:#16123c;margin-bottom:6px;">
+              ${saving && saving > 0 ? `The price dropped ${money(saving)}` : "Your watched dates moved"}
+            </div>
+            <div style="font-size:15px;color:#4a4470;line-height:1.6;margin-bottom:22px;">
+              ${input.hotelName}<br />
+              ${input.checkIn} to ${input.checkOut} · ${input.rateLabel}
+            </div>
+            <div style="background:#e8fbf7;border-radius:12px;padding:18px;margin-bottom:24px;">
+              <div style="font-size:13px;font-weight:700;color:#077368;letter-spacing:0.5px;">NOW</div>
+              <div style="font-size:32px;font-weight:700;color:#077368;">${money(input.currentCents)}</div>
+              ${
+                input.previousCents !== null
+                  ? `<div style="font-size:13px;color:#4a4470;">was ${money(input.previousCents)} for the whole stay</div>`
+                  : `<div style="font-size:13px;color:#4a4470;">for the whole stay</div>`
+              }
+            </div>
+            <a href="${input.url}"
+               style="display:inline-block;background:#e6218c;color:#ffffff;text-decoration:none;
+                      padding:14px 28px;border-radius:999px;font-weight:600;font-size:16px;">
+              See the dates
+            </a>
+            <div style="font-size:13px;color:#7d76a3;line-height:1.6;margin-top:26px;">
+              Prices here are observations, not held quotes — always confirm on the official site
+              before booking.<br /><br />
+              <a href="${accountUrl}" style="color:#7d76a3;">Manage or stop these alerts</a>
+            </div>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+}
+
 function magicLinkHtml(link: string, siteName: string): string {
   // Inline styles and a table layout, because email clients support neither
   // external stylesheets nor modern CSS reliably. This looks dated on purpose.
