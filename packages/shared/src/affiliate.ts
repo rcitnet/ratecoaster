@@ -23,10 +23,11 @@ export interface AffiliateNetwork {
   /**
    * Link ID of a **deep-link-enabled** creative.
    *
-   * For Commission Junction this must be an "Evergreen Link". Ordinary creative
-   * IDs ignore `url=` and dump the visitor on the advertiser's homepage — which
-   * looks like it works, converts far worse, and is invisible unless you click
-   * one and watch where you land.
+   * Take this from CJ's own Deep Link Generator, never from a catalogue export.
+   * The export lists a creative described as "deep-link enabled" with a far
+   * higher EPC, and it does not work — links built on it return an error page.
+   * The generator is the only source that reflects what the network will
+   * actually honour today.
    */
   evergreenLinkId: string;
   /** One of the network's interchangeable redirect hosts. */
@@ -36,18 +37,20 @@ export interface AffiliateNetwork {
 /**
  * Undercover Tourist, via Commission Junction.
  *
- * Link 15733832 is CJ's Evergreen creative for this advertiser — the only one in
- * the catalogue that is deep-link enabled, and by a wide margin the highest
- * earning ($144.40 three-month EPC against $15.77 for the best fixed link).
- * The specific "Save $53 on…" creatives are both lower earning and stale, most
- * last touched in April 2023.
+ * These values come from a link produced by CJ's Deep Link Generator and
+ * confirmed working in a browser — not from the catalogue export.
+ *
+ * The export's "Evergreen Link" (15733832) advertises itself as deep-link
+ * enabled and carries by far the highest EPC, so it looked like the obvious
+ * choice. Links built on it return an error page, as do the plain creatives in
+ * that file. Catalogue exports go stale; the generator does not.
  */
 export const UNDERCOVER_TOURIST: AffiliateNetwork = {
   merchant: "undercover-tourist",
   label: "Undercover Tourist",
   publisherId: "101861754",
-  evergreenLinkId: "15733832",
-  host: "www.anrdoezrs.net",
+  evergreenLinkId: "11556282",
+  host: "www.jdoqocy.com",
 };
 
 export const NETWORKS: Record<string, AffiliateNetwork> = {
@@ -162,30 +165,35 @@ export interface NamedLink {
   label: string;
 }
 
+/**
+ * Every URL below has been fetched and confirmed to return a real page.
+ *
+ * An earlier version of this file guessed plausible-looking paths from a naming
+ * pattern. Do not add one that has not been opened in a browser: a merchant's
+ * 404 handler often returns 200 with a "we couldn't find that" page, so a bad
+ * path fails silently and looks exactly like a working link.
+ */
 export const NAMED_LINKS: Record<string, NamedLink> = {
   "tickets-orlando": {
     key: "tickets-orlando",
     merchant: UNDERCOVER_TOURIST.merchant,
+    // "Universal Studios Florida Discount Tickets | Undercover Tourist"
     url: "https://www.undercovertourist.com/orlando/universal-orlando-resort/",
     label: "Compare Universal Orlando ticket prices",
   },
   "tickets-hollywood": {
     key: "tickets-hollywood",
     merchant: UNDERCOVER_TOURIST.merchant,
+    // "Universal Studios Hollywood | Universal discount tickets, crowds…"
     url: "https://www.undercovertourist.com/los-angeles/universal-studios-hollywood/",
     label: "Compare Hollywood ticket prices",
   },
   "hotels-orlando": {
     key: "hotels-orlando",
     merchant: UNDERCOVER_TOURIST.merchant,
+    // "Disney Hotels Discount | Universal, SeaWorld, Orlando Hotels"
     url: "https://www.undercovertourist.com/orlando/hotels/",
     label: "Compare Orlando hotel prices",
-  },
-  "hotels-la": {
-    key: "hotels-la",
-    merchant: UNDERCOVER_TOURIST.merchant,
-    url: "https://www.undercovertourist.com/los-angeles/hotels/",
-    label: "Compare Los Angeles hotel prices",
   },
 };
 
