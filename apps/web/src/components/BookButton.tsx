@@ -17,10 +17,13 @@ export function BookButton({
   url,
   merchant,
   size = "sm",
+  label,
 }: {
   url: string | null | undefined;
   merchant?: string | null;
   size?: "sm" | "lg";
+  /** Overrides "Book on X" where the action is comparing rather than booking. */
+  label?: string;
 }) {
   if (!url) return null;
 
@@ -32,7 +35,7 @@ export function BookButton({
         rel="sponsored nofollow noopener noreferrer"
         className={`btn btn-book ${size === "lg" ? "btn-lg" : "btn-sm"}`}
       >
-        Book on {merchantLabel(merchant)}
+        {label ?? `Book on ${merchantLabel(merchant)}`}
         <span aria-hidden="true"> ↗</span>
       </a>
       <AffiliateDisclosure variant="inline" merchant={merchant} />

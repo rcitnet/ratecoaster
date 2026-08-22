@@ -2,6 +2,7 @@ import { centsToDisplay, GuestCategory } from "@ratecoaster/shared";
 import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, safe } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { BookButton } from "@/components/BookButton";
+import { CompareButton } from "@/components/CompareButton";
 
 export const revalidate = 300;
 
@@ -89,6 +90,23 @@ export default async function TicketsPage({
                   {centsToDisplay(cheapest.displayCents)}
                 </div>
                 <div className="tiny muted">{formatLongDate(cheapest.validDate)}</div>
+                {/* The moment of highest intent on this page: they have just
+                    found the cheap date. A CTA 400px further up is a CTA they
+                    have to go back for. */}
+                {selectedProduct?.bookingUrl ? (
+                  <BookButton
+                    url={selectedProduct.bookingUrl}
+                    merchant={selectedProduct.bookingMerchant}
+                  />
+                ) : (
+                  <CompareButton
+                    linkKey={
+                      destination === "universal-hollywood"
+                        ? "tickets-hollywood"
+                        : "tickets-orlando"
+                    }
+                  />
+                )}
               </div>
               <div className="card" style={{ background: "var(--coral-tint)", borderColor: "transparent" }}>
                 <div className="tiny" style={{ fontWeight: 700, color: "#b03514" }}>PEAK DAY</div>

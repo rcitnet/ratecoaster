@@ -5,11 +5,68 @@ import { outboundClicks, ticketProducts } from "@ratecoaster/db/schema";
 import {
   buildAffiliateLink,
   buildMerchantLink,
+  namedLink,
   normalizeSid,
   UnsafeDestinationError,
 } from "@ratecoaster/shared";
 
 export const outboundRouter = new Hono();
+
+/**
+ * Record a click, and never let that failure cost us the click.
+ *
+ * `getDb()` throws synchronously when no database is configured, so the obvious
+ * `void db.insert(...).catch(...)` still takes the whole handler down — the
+ * `.catch` never gets a chance to run. That turned every affiliate link into a
+ * redirect back to our own homepage whenever Postgres was unreachable, which is
+ * precisely backwards: resolving a link needs no database, and losing a log row
+ * is a rounding error next to losing the sale.
+ */
+function logClick(sid: string, merchant: string, from: string | null): void {
+  try {
+    void getDb()
+      .insert(outboundClicks)
+      .values({
+        sid,
+        merchant,
+        // Path only. Query strings on our pages carry dates and party sizes,
+        // and a click log has no business keeping those.
+        fromPath: from ? from.split("?")[0]!.slice(0, 200) : null,
+      })
+      .catch((err) => console.error("[outbound] click log failed:", err));
+  } catch (err) {
+    console.error("[outbound] click log unavailable:", err);
+  }
+}
+
+/**
+ * GET /v1/outbound/link/:key
+ *
+ * Resolves a named destination — the CTAs that aren't tied to one tracked
+ * product, like "compare hotel prices" on the hotels index.
+ *
+ * Keys are looked up in a fixed registry rather than accepting a URL, so no
+ * page can ever cause this endpoint to forward somewhere arbitrary.
+ */
+outboundRouter.get("/link/:key", async (c) => {
+  const key = c.req.param("key");
+  const link = namedLink(key);
+  if (!link) {
+    return c.json({ error: { code: "not_found", message: "no such link" } }, 404);
+  }
+
+  const sid = normalizeSid(`link_${link.key}`);
+  let url: string;
+  try {
+    url = buildAffiliateLink({ merchant: link.merchant, destinationUrl: link.url, sid });
+  } catch (err) {
+    console.error(`[outbound] named link ${key} is misconfigured: ${String(err)}`);
+    return c.json({ error: { code: "bad_link", message: "link is misconfigured" } }, 500);
+  }
+
+  logClick(sid, link.merchant, c.req.query("from") ?? null);
+  return c.json({ url, merchant: link.merchant, product: link.label });
+});
 
 /**
  * GET /v1/outbound/ticket/:slug
@@ -77,21 +134,7 @@ outboundRouter.get("/ticket/:slug", async (c) => {
     throw err;
   }
 
-  /*
-   * Log after building, so a broken link never produces a click record, and
-   * fire-and-forget so a slow insert cannot delay someone leaving for the
-   * merchant. A lost row is a rounding error; a lost sale is not.
-   */
-  void db
-    .insert(outboundClicks)
-    .values({
-      sid,
-      merchant,
-      // Path only. Query strings on our own pages can carry dates and party
-      // sizes, and a click log has no business keeping those.
-      fromPath: fromPath ? fromPath.split("?")[0]!.slice(0, 200) : null,
-    })
-    .catch((err) => console.error("[outbound] click log failed:", err));
-
+  // After building, so a broken link never produces a click record.
+  logClick(sid, merchant, fromPath);
   return c.json({ url, merchant, product: product.name });
 });
