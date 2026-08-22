@@ -13,7 +13,16 @@
  */
 import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import { closeDb, getDb } from "@ratecoaster/db";
-import { alertEvents, properties, rateCurrent, users, watches } from "@ratecoaster/db/schema";
+import {
+  alertEvents,
+  expressPassPrices,
+  properties,
+  rateCurrent,
+  ticketPriceCurrent,
+  ticketProducts,
+  users,
+  watches,
+} from "@ratecoaster/db/schema";
 import { RATE_CODE_LABELS } from "@ratecoaster/shared";
 import { addDays } from "../collectors/framework/dates.js";
 import { evaluateWatch, totalForStay } from "../lib/alerts.js";
@@ -27,6 +36,74 @@ const DESTINATION_LABELS: Record<string, string> = {
   "universal-hollywood": "Universal Hollywood hotels",
   "universal-kids-frisco": "Universal Kids Resort hotels",
 };
+
+/**
+ * What a ticket or Express Pass watch costs today, for the whole party.
+ *
+ * Returns null rather than a partial figure when a price is missing, matching
+ * the rule everywhere else: an alert built on an incomplete number is worse
+ * than no alert.
+ */
+async function priceAdmissionWatch(
+  db: ReturnType<typeof getDb>,
+  w: {
+    kind: string;
+    ticketProductId: string | null;
+    destination: string | null;
+    checkIn: string;
+    adults: number;
+    children: number;
+  }
+): Promise<number | null> {
+  if (w.kind === "express") {
+    const rows = await db
+      .select({ priceCents: expressPassPrices.priceCents })
+      .from(expressPassPrices)
+      .where(
+        and(
+          eq(expressPassPrices.destination, (w.destination ?? "universal-orlando") as "universal-orlando"),
+          eq(expressPassPrices.validDate, w.checkIn),
+          eq(expressPassPrices.available, true)
+        )
+      )
+      .orderBy(asc(expressPassPrices.priceCents))
+      .limit(1);
+
+    const each = rows[0]?.priceCents;
+    if (each === undefined) return null;
+    // Express is per person and there is no child rate.
+    return each * (w.adults + w.children);
+  }
+
+  if (!w.ticketProductId) return null;
+
+  const rows = await db
+    .select({
+      guestCategory: ticketPriceCurrent.guestCategory,
+      priceCents: ticketPriceCurrent.priceCents,
+    })
+    .from(ticketPriceCurrent)
+    .where(
+      and(
+        eq(ticketPriceCurrent.productId, w.ticketProductId),
+        eq(ticketPriceCurrent.validDate, w.checkIn),
+        eq(ticketPriceCurrent.available, true)
+      )
+    );
+
+  const cheapest = (category: string) =>
+    rows
+      .filter((r) => r.guestCategory === category)
+      .reduce<number | null>((min, r) => (min === null || r.priceCents < min ? r.priceCents : min), null);
+
+  const adult = cheapest("adult") ?? cheapest("all-ages");
+  if (adult === null) return null;
+  // Where no child price is published, the adult one is used. Overstating a
+  // child ticket is the safe direction to be wrong.
+  const child = cheapest("child") ?? adult;
+
+  return adult * w.adults + child * w.children;
+}
 
 /** The nights of a stay: check-in inclusive, check-out exclusive. */
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -63,7 +140,10 @@ async function main() {
       id: watches.id,
       userId: watches.userId,
       email: users.email,
+      kind: watches.kind,
       propertyId: watches.propertyId,
+      ticketProductId: watches.ticketProductId,
+      ticketProductName: ticketProducts.name,
       propertySlug: properties.slug,
       propertyName: properties.name,
       destination: watches.destination,
@@ -81,6 +161,7 @@ async function main() {
     .from(watches)
     .innerJoin(users, eq(users.id, watches.userId))
     .leftJoin(properties, eq(properties.id, watches.propertyId))
+    .leftJoin(ticketProducts, eq(ticketProducts.id, watches.ticketProductId))
     .where(and(eq(watches.active, true), gte(watches.checkIn, today)))
     .orderBy(asc(watches.checkIn));
 
@@ -97,6 +178,78 @@ async function main() {
 
   for (const w of rows) {
     const label = `${w.propertyName ?? "(any hotel)"} ${w.checkIn}→${w.checkOut}`;
+
+    /*
+     * Ticket and Express watches price a single park date rather than a stay,
+     * so they take an entirely different query and short-circuit here.
+     */
+    if (w.kind === "ticket" || w.kind === "express") {
+      const total = await priceAdmissionWatch(db, w);
+      const decision = evaluateWatch(
+        {
+          thresholdCents: w.thresholdCents,
+          bookedNightlyCents: w.bookedNightlyCents,
+          lastNotifiedCents: w.lastNotifiedCents,
+          lastNotifiedAt: w.lastNotifiedAt,
+        },
+        total,
+        now
+      );
+
+      const money = (c: number | null) => (c === null ? "—" : `$${(c / 100).toFixed(2)}`);
+      if (!decision.notify) {
+        console.log(`  skip  ${label} — ${decision.reason}`);
+        skipped++;
+        continue;
+      }
+      console.log(
+        `  SEND  ${label} — ${money(w.lastNotifiedCents)} → ${money(total)} (${decision.reason})`
+      );
+      if (!send) continue;
+      if (!w.email) {
+        console.log("        no email on the account, skipping");
+        skipped++;
+        continue;
+      }
+
+      const url =
+        w.kind === "ticket"
+          ? `${SITE_URL}/tickets?destination=${w.destination ?? "universal-orlando"}`
+          : `${SITE_URL}/express-pass?destination=${w.destination ?? "universal-orlando"}`;
+
+      const result = await sendPriceDropEmail({
+        to: w.email,
+        hotelName:
+          w.kind === "ticket"
+            ? (w.ticketProductName ?? "Your watched ticket")
+            : "Universal Express Pass",
+        checkIn: w.checkIn,
+        checkOut: w.checkIn,
+        currentCents: total!,
+        previousCents: w.lastNotifiedCents,
+        rateLabel: w.kind === "ticket" ? "Admission" : "Express Pass",
+        url,
+      });
+
+      if (!result.sent) {
+        console.error(`        send failed: ${result.reason}`);
+        continue;
+      }
+
+      await db.insert(alertEvents).values({
+        watchId: w.id,
+        kind: decision.kind!,
+        previousCents: w.lastNotifiedCents,
+        currentCents: total!,
+        message: decision.reason,
+      });
+      await db
+        .update(watches)
+        .set({ lastNotifiedAt: now, lastNotifiedCents: total })
+        .where(eq(watches.id, w.id));
+      sent++;
+      continue;
+    }
 
     const nights = nightsBetween(w.checkIn, w.checkOut);
 

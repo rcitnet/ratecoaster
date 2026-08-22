@@ -26,7 +26,9 @@ watchesRouter.get("/", async (c) => {
   const rows = await db
     .select({
       id: watches.id,
+      kind: watches.kind,
       propertyId: watches.propertyId,
+      ticketProductId: watches.ticketProductId,
       propertySlug: properties.slug,
       propertyName: properties.name,
       destination: watches.destination,
@@ -111,6 +113,8 @@ watchesRouter.post("/", async (c) => {
     .insert(watches)
     .values({
       userId: user.userId,
+      kind: input.target.kind,
+      ticketProductId: input.target.ticketProductId,
       propertyId: input.target.propertyId,
       destination: input.target.destination as "universal-orlando" | null,
       rateCode: input.target.rateCode,
