@@ -1,4 +1,4 @@
-﻿import { JoinForm } from "@/components/JoinForm";
+import { JoinForm } from "@/components/JoinForm";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
