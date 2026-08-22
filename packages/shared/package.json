@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --emitDeclarationOnly false --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/affiliate.test.ts"
+    "test": "node --import tsx --test src/affiliate.test.ts src/park-state.test.ts"
   },
   "dependencies": { "zod": "^3.24.1" }
 }
