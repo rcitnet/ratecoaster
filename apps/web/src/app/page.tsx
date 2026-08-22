@@ -1,4 +1,4 @@
-import { centsToDisplay } from "@ratecoaster/shared";
+import { centsToDisplay, deriveParkState, parkStateMessage } from "@ratecoaster/shared";
 import {
   formatLongDate,
   getClient,
@@ -54,9 +54,14 @@ export default async function DealsPage() {
       (a, b) => (a.waitMinutes ?? Number.MAX_SAFE_INTEGER) - (b.waitMinutes ?? Number.MAX_SAFE_INTEGER)
     )[0];
 
+    // Derived in shared/park-state.ts so the four cases are unit-tested — the
+    // "open" one in particular can only be reproduced here during park hours.
+    const state = deriveParkState(parkWaits);
+
     return {
       park,
       average,
+      state,
       openCount: open.length,
       walkOnCount: open.filter((wait) => (wait.waitMinutes ?? 99) <= 15).length,
       shortest,
@@ -156,8 +161,9 @@ export default async function DealsPage() {
           </div>
         ) : (
           <div className="grid grid-4">
-            {parkSummaries.map(({ park, average, openCount, walkOnCount, shortest }) => {
+            {parkSummaries.map(({ park, average, state, openCount, walkOnCount, shortest }) => {
               const color = PARK_COLORS[park.slug] ?? "var(--blue)";
+              const status = parkStateMessage(state, openCount, walkOnCount);
               return (
                 <a
                   href={`/waits?park=${park.slug}`}
@@ -168,19 +174,29 @@ export default async function DealsPage() {
                   <div className="tiny muted" style={{ fontWeight: 700, minHeight: 42 }}>
                     {park.name.toUpperCase()}
                   </div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginTop: 8 }}>
-                    <span
+                  {/*
+                    A big dash beside the words "min average" is what made a
+                    closed park look broken — it reads as a failed number rather
+                    than an absent one. When there is no average, the status
+                    line below carries the whole message instead.
+                  */}
+                  {average === null ? (
+                    <div
                       className="display"
-                      style={{ fontSize: 42, color: average === null ? "var(--ink-mute)" : color }}
+                      style={{ fontSize: 26, color: "var(--ink-mute)", marginTop: 10 }}
                     >
-                      {average ?? "—"}
-                    </span>
-                    <span className="tiny muted">min average</span>
-                  </div>
+                      {state === "closed" ? "Closed" : "No waits posted"}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginTop: 8 }}>
+                      <span className="display" style={{ fontSize: 42, color }}>
+                        {average}
+                      </span>
+                      <span className="tiny muted">min average</span>
+                    </div>
+                  )}
                   <div className="tiny muted" style={{ marginTop: 10 }}>
-                    {openCount > 0
-                      ? `${openCount} attractions reporting · ${walkOnCount} at 15 min or less`
-                      : "No operating attractions reporting right now"}
+                    {status}
                   </div>
                   {shortest ? (
                     <div

@@ -11,7 +11,7 @@
  * Runs after the hotel collector, since it can only act on prices that have
  * already been written.
  */
-import { and, asc, eq, gte, inArray, lt, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import { closeDb, getDb } from "@ratecoaster/db";
 import { alertEvents, properties, rateCurrent, users, watches } from "@ratecoaster/db/schema";
 import { RATE_CODE_LABELS } from "@ratecoaster/shared";
@@ -20,6 +20,13 @@ import { evaluateWatch, totalForStay } from "../lib/alerts.js";
 import { emailConfigured, sendPriceDropEmail } from "../lib/email.js";
 
 const SITE_URL = process.env.WEB_ORIGIN ?? "https://ratecoaster.net";
+
+/** What to call a destination-wide watch in a subject line. */
+const DESTINATION_LABELS: Record<string, string> = {
+  "universal-orlando": "Universal Orlando hotels",
+  "universal-hollywood": "Universal Hollywood hotels",
+  "universal-kids-frisco": "Universal Kids Resort hotels",
+};
 
 /** The nights of a stay: check-in inclusive, check-out exclusive. */
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -59,6 +66,7 @@ async function main() {
       propertyId: watches.propertyId,
       propertySlug: properties.slug,
       propertyName: properties.name,
+      destination: watches.destination,
       rateCode: watches.rateCode,
       checkIn: watches.checkIn,
       checkOut: watches.checkOut,
@@ -90,22 +98,39 @@ async function main() {
   for (const w of rows) {
     const label = `${w.propertyName ?? "(any hotel)"} ${w.checkIn}→${w.checkOut}`;
 
-    if (!w.propertyId) {
-      // Destination-wide watches need a different query shape; not built yet,
-      // and quietly skipping is better than silently mis-pricing them.
-      console.log(`  skip  ${label} — destination-wide watches aren't supported yet`);
-      skipped++;
-      continue;
-    }
-
     const nights = nightsBetween(w.checkIn, w.checkOut);
 
+    /*
+     * A watch names either one hotel or a whole destination. The destination
+     * case is what someone sets when they want "anywhere on-site, cheapest" —
+     * which is most families — so skipping it silently, as this did, left the
+     * most common intent unserved.
+     */
+    const scope = w.propertyId
+      ? eq(rateCurrent.propertyId, w.propertyId)
+      : inArray(
+          rateCurrent.propertyId,
+          db
+            .select({ id: properties.id })
+            .from(properties)
+            .where(
+              and(
+                eq(properties.active, true),
+                eq(properties.destination, w.destination ?? "universal-orlando")
+              )
+            )
+        );
+
     const priceRows = await db
-      .select({ stayDate: rateCurrent.stayDate, nightlyCents: rateCurrent.nightlyCents })
+      .select({
+        stayDate: rateCurrent.stayDate,
+        nightlyCents: rateCurrent.nightlyCents,
+        propertyId: rateCurrent.propertyId,
+      })
       .from(rateCurrent)
       .where(
         and(
-          eq(rateCurrent.propertyId, w.propertyId),
+          scope,
           eq(rateCurrent.rateCode, w.rateCode),
           eq(rateCurrent.nights, 1),
           eq(rateCurrent.adults, w.adults),
@@ -117,15 +142,31 @@ async function main() {
       )
       .orderBy(asc(rateCurrent.nightlyCents));
 
-    // Cheapest room type per night — rows arrive price-ascending.
-    const cheapestByNight = new Map<string, number>();
+    /*
+     * Group by property first, then total each stay separately, and take the
+     * cheapest property that can cover every night.
+     *
+     * Taking the cheapest room per night across all hotels would produce a
+     * total nobody can actually book — it would quietly assume the family
+     * changes hotel every morning. Same rule as the trip planner.
+     */
+    const byProperty = new Map<string, Map<string, number>>();
     for (const row of priceRows) {
-      if (!cheapestByNight.has(row.stayDate)) {
-        cheapestByNight.set(row.stayDate, row.nightlyCents);
+      let nightly = byProperty.get(row.propertyId);
+      if (!nightly) {
+        nightly = new Map();
+        byProperty.set(row.propertyId, nightly);
       }
+      // Rows arrive price-ascending, so the first sighting of a date is the
+      // cheapest room type for that night at that hotel.
+      if (!nightly.has(row.stayDate)) nightly.set(row.stayDate, row.nightlyCents);
     }
 
-    const total = totalForStay(cheapestByNight, nights);
+    let total: number | null = null;
+    for (const nightly of byProperty.values()) {
+      const stay = totalForStay(nightly, nights);
+      if (stay !== null && (total === null || stay < total)) total = stay;
+    }
     const decision = evaluateWatch(
       {
         thresholdCents: w.thresholdCents,
@@ -156,10 +197,21 @@ async function main() {
       continue;
     }
 
-    const url = `${SITE_URL}/hotels/${w.propertySlug}?rateCode=${w.rateCode}&stayDate=${w.checkIn}`;
+    /*
+     * A destination-wide watch has no single hotel to link to, so it goes to
+     * the grid filtered to that destination. Linking to /hotels/null was the
+     * obvious bug waiting in the previous version of this line.
+     */
+    const url = w.propertySlug
+      ? `${SITE_URL}/hotels/${w.propertySlug}?rateCode=${w.rateCode}&stayDate=${w.checkIn}`
+      : `${SITE_URL}/hotels?destination=${w.destination ?? "universal-orlando"}&rateCode=${w.rateCode}`;
+
     const result = await sendPriceDropEmail({
       to: w.email,
-      hotelName: w.propertyName ?? "Your watched hotel",
+      hotelName:
+        w.propertyName ??
+        DESTINATION_LABELS[w.destination ?? "universal-orlando"] ??
+        "Your watched hotels",
       checkIn: w.checkIn,
       checkOut: w.checkOut,
       currentCents: total!,
