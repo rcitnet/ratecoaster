@@ -8,7 +8,16 @@ import { ImageResponse } from "next/og";
  * design task per page that nobody will keep up with. Generated at build time
  * from the same palette as the site, so it cannot drift from the brand.
  */
-export const runtime = "edge";
+/*
+ * No `runtime = "edge"` here on purpose.
+ *
+ * The Next examples all set it, and it is wrong for this deployment: the edge
+ * runtime is a Vercel construct, and this runs as one Node process on a single
+ * Lightsail box. Declaring it bought nothing and cost the build-time render —
+ * Next warns "using edge runtime on a page currently disables static
+ * generation", meaning the card was regenerated on every crawler request
+ * instead of once at build.
+ */
 export const alt = "RateCoaster — Universal hotel rates, tickets and live wait times";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
