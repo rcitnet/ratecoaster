@@ -11,6 +11,10 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # Live wait times — every 5 minutes. Works immediately, no setup needed.
 */5 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only wait-times >> /home/ratecoaster/logs/waits.log 2>&1
 
+# Park hours — twice a day. Published weeks ahead and rarely revised, so this
+# is generous; it is what lets the site tell a closed park from a quiet one.
+8 3,15 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only park-hours >> /home/ratecoaster/logs/hours.log 2>&1
+
 # Hotel rates — every 6 hours, offset off the hour to avoid stampeding.
 17 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only hotel-rates >> /home/ratecoaster/logs/hotels.log 2>&1
 

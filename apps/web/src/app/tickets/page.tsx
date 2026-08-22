@@ -1,5 +1,6 @@
 import { centsToDisplay, GuestCategory } from "@ratecoaster/shared";
-import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, safe } from "@/lib/api";
+import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, getMe, safe } from "@/lib/api";
+import { WatchDateButton } from "@/components/WatchDateButton";
 import { AdSlot } from "@/components/AdSlot";
 import { BookButton } from "@/components/BookButton";
 import { CompareButton } from "@/components/CompareButton";
@@ -24,6 +25,8 @@ export default async function TicketsPage({
   const destination = params.destination ?? "universal-orlando";
   const guestCategory = GuestCategory.catch("adult").parse(params.guest);
   const client = await getClient();
+  // Decides whether the watch control offers a sign-up or creates the watch.
+  const me = await getMe();
   const products = await safe(client.listTicketProducts(destination), []);
   const selected = params.product ?? products[0]?.slug;
   const selectedProduct = products.find((p) => p.slug === selected);
@@ -116,6 +119,19 @@ export default async function TicketsPage({
                     }
                   />
                 )}
+                {/* Defaults to the cheapest date, which is the one they are
+                    looking at when the thought "tell me if this drops" occurs. */}
+                {selectedProduct ? (
+                  <WatchDateButton
+                    kind="ticket"
+                    productId={selectedProduct.id}
+                    productName={selectedProduct.name}
+                    destination={destination}
+                    signedIn={Boolean(me.user)}
+                    returnTo={`/tickets?destination=${destination}&product=${selected ?? ""}`}
+                    defaultDate={cheapest.validDate}
+                  />
+                ) : null}
               </div>
               <div className="card" style={{ background: "var(--coral-tint)", borderColor: "transparent" }}>
                 <div className="tiny" style={{ fontWeight: 700, color: "#b03514" }}>PEAK DAY</div>

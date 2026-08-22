@@ -597,7 +597,29 @@ demoApp.get("/v1/waits/live", async (c) => {
           typicalMinutes: null,
           vsTypicalMinutes: null,
         })),
-        hours: null,
+        /*
+         * Plausible hours so the closed/open display can actually be exercised
+         * without a database. `hours: null` here meant the whole hours path was
+         * unverifiable locally — which is precisely how the "open, but only
+         * shows are running" bug reached production.
+         */
+        hours: (() => {
+          const today = new Date();
+          const day = today.toISOString().slice(0, 10);
+          const at = (h: number) => {
+            const d = new Date(today);
+            d.setUTCHours(h + 4, 0, 0, 0); // 4 = Eastern offset in summer
+            return d.toISOString();
+          };
+          return {
+            parkId: `demo-${park.slug}`,
+            date: day,
+            opensAt: at(9),
+            closesAt: at(21),
+            earlyEntryAt: null,
+            kind: "OPERATING",
+          };
+        })(),
       };
     })
   );

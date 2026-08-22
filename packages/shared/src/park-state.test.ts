@@ -1,71 +1,147 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deriveParkState, parkStateMessage } from "./park-state.js";
+import {
+  deriveParkState,
+  formatParkHours,
+  formatParkTime,
+  parkStateMessage,
+  type ParkWaitSample,
+} from "./park-state.js";
 
-test("a park with rides posting waits is open", () => {
-  const state = deriveParkState([
-    { status: "operating", waitMinutes: 35 },
-    { status: "operating", waitMinutes: null },
-    { status: "closed", waitMinutes: null },
-  ]);
-  assert.equal(state, "open");
-  assert.match(parkStateMessage(state, 1, 0), /1 rides reporting/);
-});
+const TZ = "America/New_York";
 
-test("a park with nothing operating is closed", () => {
-  // The 10pm case: every ride reports closed with a null wait.
-  const state = deriveParkState([
-    { status: "closed", waitMinutes: null },
-    { status: "closed", waitMinutes: null },
-  ]);
-  assert.equal(state, "closed");
-  assert.match(parkStateMessage(state, 0, 0), /Closed right now/);
-});
+/** Universal Studios Florida on 21 Aug 2026: 10:00 to 21:00 Eastern. */
+const HOURS = {
+  opensAt: "2026-08-21T10:00:00-04:00",
+  closesAt: "2026-08-21T21:00:00-04:00",
+};
 
-test("shows and meets operating without queues is not closed", () => {
+/** What the feed looks like at 11pm: rides shut, shows still claiming OPERATING. */
+const LATE_NIGHT: ParkWaitSample[] = [
+  ...Array.from({ length: 30 }, () => ({ status: "closed", waitMinutes: null })),
+  ...Array.from({ length: 33 }, () => ({ status: "operating", waitMinutes: null })),
+];
+
+test("a park past closing time is closed, whatever the shows claim", () => {
   /*
-   * This is the case that made the old message wrong in both directions:
-   * calling it closed would be a lie, and calling it "no attractions
-   * reporting" made an open park look broken.
+   * The bug this was written for. At 11pm, 33 shows still reported OPERATING,
+   * and status-counting concluded the park was open.
    */
-  const state = deriveParkState([
-    { status: "operating", waitMinutes: null },
-    { status: "operating", waitMinutes: null },
-    { status: "closed", waitMinutes: null },
-  ]);
-  assert.equal(state, "no-standby");
-  assert.match(parkStateMessage(state, 0, 0), /only shows and character meets/);
+  const state = deriveParkState({
+    waits: LATE_NIGHT,
+    hours: HOURS,
+    now: new Date("2026-08-22T03:00:00Z"), // 11pm Eastern
+  });
+  assert.equal(state, "closed");
 });
 
-test("an empty park report is not the same as a closed park", () => {
-  const state = deriveParkState([]);
+test("a park before opening time is closed", () => {
+  const state = deriveParkState({
+    waits: LATE_NIGHT,
+    hours: HOURS,
+    now: new Date("2026-08-21T12:00:00Z"), // 8am Eastern, opens at 10
+  });
+  assert.equal(state, "closed");
+});
+
+test("and says when it opens", () => {
+  const msg = parkStateMessage(
+    "closed",
+    0,
+    0,
+    HOURS,
+    TZ,
+    new Date("2026-08-21T12:00:00Z")
+  );
+  assert.match(msg, /opens at 10:00 AM/);
+});
+
+test("after closing it points at tomorrow rather than a time that has passed", () => {
+  const msg = parkStateMessage(
+    "closed",
+    0,
+    0,
+    HOURS,
+    TZ,
+    new Date("2026-08-22T03:00:00Z")
+  );
+  assert.match(msg, /tomorrow/);
+  assert.doesNotMatch(msg, /opens at/);
+});
+
+test("inside opening hours with rides posting is open", () => {
+  const state = deriveParkState({
+    waits: [{ status: "operating", waitMinutes: 35 }],
+    hours: HOURS,
+    now: new Date("2026-08-21T18:00:00Z"), // 2pm Eastern
+  });
+  assert.equal(state, "open");
+});
+
+test("open early with nothing posting yet is not called closed", () => {
+  // 10:05am: gates open, the feed has not caught up. Saying "closed" here
+  // would be as wrong as saying "open" at midnight.
+  const state = deriveParkState({
+    waits: [{ status: "operating", waitMinutes: null }],
+    hours: HOURS,
+    now: new Date("2026-08-21T14:05:00Z"),
+  });
+  assert.equal(state, "no-standby");
+  assert.match(parkStateMessage(state, 0, 0, HOURS, TZ), /no rides are posting/);
+});
+
+test("without hours it falls back to statuses", () => {
+  // Universal Kids Resort has no schedule provider yet.
+  assert.equal(
+    deriveParkState({ waits: [{ status: "closed", waitMinutes: null }], hours: null }),
+    "closed"
+  );
+  assert.equal(
+    deriveParkState({ waits: [{ status: "operating", waitMinutes: 20 }], hours: null }),
+    "open"
+  );
+});
+
+test("an empty report is not the same as a closed park", () => {
+  const state = deriveParkState({ waits: [], hours: null });
   assert.equal(state, "no-data");
   assert.match(parkStateMessage(state, 0, 0), /No report/);
-});
-
-test("one ride posting a wait beats any number of silent ones", () => {
-  // Guards against a future 'majority' rule: a single real number is still
-  // a real number, and hiding it would be worse than showing it.
-  const waits = Array.from({ length: 40 }, () => ({
-    status: "operating",
-    waitMinutes: null as number | null,
-  }));
-  waits.push({ status: "operating", waitMinutes: 5 });
-  assert.equal(deriveParkState(waits), "open");
 });
 
 test("a zero-minute wait is a real wait, not a missing one", () => {
   // A walk-on ride posts 0. Treating that as absent would drop the emptiest
   // rides from the average, which is exactly backwards.
-  assert.equal(deriveParkState([{ status: "operating", waitMinutes: 0 }]), "open");
+  const state = deriveParkState({
+    waits: [{ status: "operating", waitMinutes: 0 }],
+    hours: HOURS,
+    now: new Date("2026-08-21T18:00:00Z"),
+  });
+  assert.equal(state, "open");
 });
 
-test("down and refurbishment do not count as operating", () => {
+test("times render in 12-hour form in the park's own timezone", () => {
+  // A visitor from California still arrives at Orlando's 9am, and nobody
+  // planning a park day thinks in 21:00.
+  assert.equal(formatParkTime("2026-08-21T21:00:00-04:00", TZ), "9:00 PM");
+  assert.equal(formatParkTime("2026-08-21T10:00:00-04:00", TZ), "10:00 AM");
+  assert.equal(formatParkHours(HOURS, TZ), "10:00 AM to 9:00 PM");
+});
+
+test("Hollywood hours render in Pacific, not Eastern", () => {
   assert.equal(
-    deriveParkState([
-      { status: "down", waitMinutes: null },
-      { status: "refurbishment", waitMinutes: null },
-    ]),
-    "closed"
+    formatParkTime("2026-08-21T09:00:00-07:00", "America/Los_Angeles"),
+    "9:00 AM"
   );
+});
+
+test("a half-known schedule still says something useful", () => {
+  assert.equal(formatParkHours({ opensAt: HOURS.opensAt, closesAt: null }, TZ), "Opens 10:00 AM");
+  assert.equal(formatParkHours({ opensAt: null, closesAt: HOURS.closesAt }, TZ), "Closes 9:00 PM");
+  assert.equal(formatParkHours({ opensAt: null, closesAt: null }, TZ), null);
+  assert.equal(formatParkHours(null, TZ), null);
+});
+
+test("one ride reporting reads as singular", () => {
+  assert.match(parkStateMessage("open", 1, 0), /1 ride reporting/);
+  assert.match(parkStateMessage("open", 7, 2), /7 rides reporting/);
 });

@@ -1,4 +1,9 @@
-import { centsToDisplay, deriveParkState, parkStateMessage } from "@ratecoaster/shared";
+import {
+  centsToDisplay,
+  deriveParkState,
+  formatParkHours,
+  parkStateMessage,
+} from "@ratecoaster/shared";
 import {
   formatLongDate,
   getClient,
@@ -43,7 +48,7 @@ export default async function DealsPage() {
   const orlandoProperties = properties.filter(
     (property) => property.destination === "universal-orlando"
   );
-  const parkSummaries = waits.parks.map(({ park, waits: parkWaits }) => {
+  const parkSummaries = waits.parks.map(({ park, waits: parkWaits, hours }) => {
     const open = parkWaits.filter(
       (wait) => wait.status === "operating" && wait.waitMinutes !== null
     );
@@ -54,14 +59,20 @@ export default async function DealsPage() {
       (a, b) => (a.waitMinutes ?? Number.MAX_SAFE_INTEGER) - (b.waitMinutes ?? Number.MAX_SAFE_INTEGER)
     )[0];
 
-    // Derived in shared/park-state.ts so the four cases are unit-tested — the
-    // "open" one in particular can only be reproduced here during park hours.
-    const state = deriveParkState(parkWaits);
+    /*
+     * Published hours decide this, not attraction statuses.
+     *
+     * Shows and character meets keep reporting OPERATING after the gates shut,
+     * so any status-based guess calls an empty midnight park "open". The
+     * schedule is the only source that actually answers the question.
+     */
+    const state = deriveParkState({ waits: parkWaits, hours });
 
     return {
       park,
       average,
       state,
+      hours,
       openCount: open.length,
       walkOnCount: open.filter((wait) => (wait.waitMinutes ?? 99) <= 15).length,
       shortest,
@@ -161,9 +172,10 @@ export default async function DealsPage() {
           </div>
         ) : (
           <div className="grid grid-4">
-            {parkSummaries.map(({ park, average, state, openCount, walkOnCount, shortest }) => {
+            {parkSummaries.map(({ park, average, state, hours, openCount, walkOnCount, shortest }) => {
               const color = PARK_COLORS[park.slug] ?? "var(--blue)";
-              const status = parkStateMessage(state, openCount, walkOnCount);
+              const status = parkStateMessage(state, openCount, walkOnCount, hours, park.timezone);
+              const todaysHours = formatParkHours(hours, park.timezone);
               return (
                 <a
                   href={`/waits?park=${park.slug}`}
@@ -198,6 +210,11 @@ export default async function DealsPage() {
                   <div className="tiny muted" style={{ marginTop: 10 }}>
                     {status}
                   </div>
+                  {todaysHours ? (
+                    <div className="tiny muted" style={{ marginTop: 6, opacity: 0.8 }}>
+                      Today: {todaysHours}
+                    </div>
+                  ) : null}
                   {shortest ? (
                     <div
                       className="tiny"

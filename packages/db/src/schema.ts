@@ -572,6 +572,9 @@ export const expressPassPrices = pgTable(
 
 export const tierEnum = pgEnum("tier", ["anonymous", "free", "pro", "admin"]);
 
+/** What a saved watch is tracking. */
+export const watchKindEnum = pgEnum("watch_kind", ["hotel", "ticket", "express"]);
+
 export const users = pgTable(
   "users",
   {
@@ -651,7 +654,24 @@ export const watches = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * What this watch is about.
+     *
+     * The table started hotel-only, and the columns show it. Rather than a
+     * parallel table per product — three dispatchers, three sets of alert
+     * plumbing, three ways to get the cooldown subtly wrong — one row shape
+     * covers all three and the unused columns stay null.
+     *
+     * For `ticket` and `express`, `checkIn` is the park date being watched and
+     * `checkOut` is the day after. That keeps the existing NOT NULL columns and
+     * the checkOut > checkIn rule honest without a nullable migration on a
+     * live table.
+     */
+    kind: watchKindEnum("kind").notNull().default("hotel"),
     propertyId: uuid("property_id").references(() => properties.id, { onDelete: "cascade" }),
+    ticketProductId: uuid("ticket_product_id").references(() => ticketProducts.id, {
+      onDelete: "cascade",
+    }),
     destination: destinationEnum("destination"),
     rateCode: rateCodeEnum("rate_code").notNull().default("APH"),
     checkIn: date("check_in").notNull(),

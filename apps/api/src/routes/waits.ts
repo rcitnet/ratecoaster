@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
-import { attractions, parks, waitCurrent, waitRollups } from "@ratecoaster/db/schema";
+import { attractions, parkHours, parks, waitCurrent, waitRollups } from "@ratecoaster/db/schema";
 import {
   QUEUE_TIMES_ATTRIBUTION,
   THEMEPARKS_WIKI_ATTRIBUTION,
@@ -36,6 +36,62 @@ waitsRouter.get("/live", async (c) => {
   const now = new Date();
   const dow = now.getUTCDay();
   const hour = now.getUTCHours();
+
+  /*
+   * Today's hours, per park, in the park's own local date.
+   *
+   * "Today" has to be computed in the park's timezone, not the server's. At
+   * 1am UTC it is still the previous day in Orlando, and looking up the wrong
+   * date would report a park closed on the very evening it is busiest.
+   */
+  const hoursByPark = new Map<
+    string,
+    {
+      parkId: string;
+      date: string;
+      opensAt: string | null;
+      closesAt: string | null;
+      earlyEntryAt: string | null;
+      kind: string;
+    }
+  >();
+  for (const park of parkRows) {
+    const localDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: park.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
+
+    const rows = await db
+      .select({
+        opensAt: parkHours.opensAt,
+        closesAt: parkHours.closesAt,
+        kind: parkHours.kind,
+      })
+      .from(parkHours)
+      .where(and(eq(parkHours.parkId, park.id), eq(parkHours.date, localDate)));
+
+    if (rows.length === 0) continue;
+
+    /*
+     * Prefer the OPERATING row. A date can also carry TICKETED_EVENT (Halloween
+     * Horror Nights and similar), and answering "is the park open" with the
+     * separately-ticketed event's hours would tell a normal guest they can walk
+     * in when they cannot.
+     */
+    const row = rows.find((r) => r.kind.toUpperCase() === "OPERATING") ?? rows[0]!;
+    hoursByPark.set(park.id, {
+      parkId: park.id,
+      date: localDate,
+      opensAt: row.opensAt?.toISOString() ?? null,
+      closesAt: row.closesAt?.toISOString() ?? null,
+      // Not published by this endpoint; the column stays for when a source is
+      // found, rather than being guessed at from the opening time.
+      earlyEntryAt: null,
+      kind: row.kind,
+    });
+  }
 
   const result = [];
   for (const park of parkRows) {
@@ -99,7 +155,7 @@ waitsRouter.get("/live", async (c) => {
             ? r.waitMinutes - r.typicalMinutes
             : null,
       })),
-      hours: null,
+      hours: hoursByPark.get(park.id) ?? null,
     });
   }
 
