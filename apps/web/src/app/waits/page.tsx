@@ -1,4 +1,4 @@
-﻿import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
+import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { pageMetadata } from "@/lib/seo";
 
@@ -42,7 +42,7 @@ export default async function WaitsPage({
   /*
    * All parks come back in one request and the filter is applied here rather
    * than through the API's `parkSlug` parameter, because the chip row needs the
-   * full park list either way â€” filtering upstream would mean a second round
+   * full park list either way — filtering upstream would mean a second round
    * trip just to rebuild it. An unrecognised ?park= slug falls back to showing
    * everything rather than rendering a confusing empty page.
    */
@@ -61,7 +61,7 @@ export default async function WaitsPage({
     <main className="section">
       <h1>Live ride waits</h1>
       <p className="lede" style={{ marginTop: 12 }}>
-        {selectedName ?? "Every Universal park"}, updated every few minutes â€” and free for
+        {selectedName ?? "Every Universal park"}, updated every few minutes — and free for
         everyone.
       </p>
 
@@ -123,7 +123,7 @@ export default async function WaitsPage({
             </>
           ) : (
             <>
-              <b>Wait times are coming online.</b> We refresh from the parks every few minutes â€”
+              <b>Wait times are coming online.</b> We refresh from the parks every few minutes —
               check back shortly.
             </>
           )}
@@ -142,7 +142,7 @@ export default async function WaitsPage({
                 <div className="tiny muted">
                   {open.length} of {waits.length} rides open
                   {open.length > 0
-                    ? ` Â· average ${Math.round(open.reduce((s, w) => s + (w.waitMinutes ?? 0), 0) / open.length)} min`
+                    ? ` · average ${Math.round(open.reduce((s, w) => s + (w.waitMinutes ?? 0), 0) / open.length)} min`
                     : ""}
                 </div>
               </div>
@@ -156,9 +156,9 @@ export default async function WaitsPage({
                     <div style={{ minWidth: 0 }}>
                       <div className="wait-name">{w.attractionName}</div>
                       <div className="wait-land">
-                        {w.land ?? "â€”"}
+                        {w.land ?? "—"}
                         {w.singleRiderMinutes !== null
-                          ? ` Â· single rider ${w.singleRiderMinutes}m`
+                          ? ` · single rider ${w.singleRiderMinutes}m`
                           : ""}
                       </div>
                     </div>
