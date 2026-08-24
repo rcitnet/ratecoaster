@@ -16,7 +16,7 @@ import type { Metadata } from "next";
  * Graph and canonical URLs, which are invalid in both — the tag is present, the
  * validator is happy, and the value is useless.
  */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ratecoaster.net").replace(
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ratecoaster.net").replace(
   /\/+$/,
   ""
 );
@@ -25,7 +25,7 @@ export const SITE_NAME = "RateCoaster";
 
 /** Used where a page has no better description of its own. */
 export const DEFAULT_DESCRIPTION =
-  "Track Universal Orlando and Hollywood hotel rates a full year ahead, at both passholder and public prices, alongside ticket costs, Express Pass and live ride wait times. Free.";
+  "Track Universal Orlando hotel rates a full year ahead at passholder and public prices, alongside ticket costs, Express Pass and live Universal ride wait times. Free.";
 
 export function absoluteUrl(path: string): string {
   return path.startsWith("http") ? path : `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
@@ -117,7 +117,7 @@ export function organizationSchema() {
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: absoluteUrl("/brand/ratecoaster-logo-v1.png"),
+    logo: absoluteUrl("/brand/ratecoaster-logo-5x1-150kb.png"),
     description: DEFAULT_DESCRIPTION,
   };
 }
@@ -169,7 +169,7 @@ export function articleSchema(input: {
       name: SITE_NAME,
       logo: {
         "@type": "ImageObject",
-        url: absoluteUrl("/brand/ratecoaster-logo-v1.png"),
+        url: absoluteUrl("/brand/ratecoaster-logo-5x1-150kb.png"),
       },
     },
   };

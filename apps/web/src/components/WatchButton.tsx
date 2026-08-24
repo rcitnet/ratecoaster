@@ -14,12 +14,14 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
 export function WatchButton({
   propertyId,
   propertyName,
+  destination,
   rateCode,
   signedIn,
   returnTo,
 }: {
   propertyId: string;
   propertyName: string;
+  destination: string;
   rateCode: string;
   signedIn: boolean;
   returnTo: string;
@@ -57,7 +59,7 @@ export function WatchButton({
           channels: ["email"],
           target: {
             propertyId,
-            destination: null,
+            destination,
             rateCode,
             checkIn,
             checkOut,

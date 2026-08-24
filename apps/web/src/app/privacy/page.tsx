@@ -60,11 +60,21 @@ export default function PrivacyPage() {
         targeted advertising, or exercise applicable state privacy choices. Browser controls can
         also delete or block cookies, although doing so may affect some site features.
       </p>
+
       <p>
         Learn more about how Google uses information from sites that use its services at{" "}
         <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer noopener">
           Google&apos;s partner-sites privacy page
         </a>.
+      </p>
+
+      <h3>Affiliate links</h3>
+      <p>
+        Some booking links are affiliate links. When you use one, RateCoaster records the merchant,
+        the page the click came from, a product or link identifier, and the time of the click. We do
+        not attach your account, IP address, or browser fingerprint to that click record. The
+        affiliate network receives the link identifier so commissions can be attributed, and its
+        own privacy policy applies after you leave RateCoaster.
       </p>
 
       <h2>How we use information</h2>

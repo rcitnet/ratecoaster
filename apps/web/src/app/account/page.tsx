@@ -1,6 +1,7 @@
 import { apiFetch, getMe } from "@/lib/api";
+import type { WatchView } from "@ratecoaster/shared";
 import { LogoutButton } from "@/components/LogoutButton";
-import { WatchList, type WatchRow } from "@/components/WatchList";
+import { WatchList } from "@/components/WatchList";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -30,7 +31,7 @@ export default async function AccountPage() {
   const e = me.entitlements;
   // Empty array on failure rather than a crash: a dead watch list should cost
   // the section, not the whole account page.
-  const watchRows = await apiFetch<WatchRow[]>("/v1/watches", []);
+  const watchRows = await apiFetch<WatchView[]>("/v1/watches", []);
 
   const rows: Array<[string, string, boolean]> = [
     ["Rate calendar", `${e.lookaheadDays} days ahead`, true],
@@ -78,8 +79,8 @@ export default async function AccountPage() {
 
       <h2 style={{ marginTop: 36 }}>Trips you&apos;re watching</h2>
       <p className="muted" style={{ fontSize: 15, marginTop: 6, marginBottom: 16 }}>
-        You can watch {e.maxWatches} at once. We email you when the total for those nights falls —
-        at most once a day per trip, and only on a real drop.
+        You can watch {e.maxWatches} at once. We email you when a watched hotel stay, ticket, or
+        Express Pass falls — at most once a day per watch, and only on a real drop.
       </p>
       <WatchList watches={watchRows} />
     </main>

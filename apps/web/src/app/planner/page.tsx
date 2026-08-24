@@ -60,7 +60,7 @@ export default async function PlannerPage({
 
   const origin = sp.origin ?? "";
   const adults = sp.adults ?? "2";
-  const children = sp.children ?? "2";
+  const children = sp.children ?? "0";
   const nights = sp.nights ?? "4";
   const rateCode = sp.rateCode ?? "APH";
 
@@ -133,7 +133,6 @@ export default async function PlannerPage({
             <select className="field" name="rateCode" defaultValue={rateCode}>
               <option value="APH">Annual Passholder</option>
               <option value="STANDARD">Standard (public)</option>
-              <option value="FLR">Florida Resident</option>
             </select>
           </label>
 

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, lt, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
-import { properties, watches } from "@ratecoaster/db/schema";
+import { properties, ticketProducts, watches } from "@ratecoaster/db/schema";
 import { CreateWatch, ENTITLEMENTS } from "@ratecoaster/shared";
 import { tierOf } from "../lib/entitlements.js";
 
@@ -44,17 +44,45 @@ watchesRouter.get("/", async (c) => {
       createdAt: watches.createdAt,
       lastNotifiedAt: watches.lastNotifiedAt,
       lastNotifiedCents: watches.lastNotifiedCents,
+      baselineAt: watches.baselineAt,
+      baselineCents: watches.baselineCents,
+      ticketProductSlug: ticketProducts.slug,
+      ticketProductName: ticketProducts.name,
     })
     .from(watches)
     .leftJoin(properties, eq(properties.id, watches.propertyId))
-    .where(eq(watches.userId, user.userId))
+    .leftJoin(ticketProducts, eq(ticketProducts.id, watches.ticketProductId))
+    .where(and(eq(watches.userId, user.userId), eq(watches.active, true)))
     .orderBy(asc(watches.checkIn));
 
   return c.json(
     rows.map((r) => ({
-      ...r,
+      id: r.id,
+      userId: user.userId,
+      target: {
+        kind: r.kind,
+        propertyId: r.propertyId,
+        ticketProductId: r.ticketProductId,
+        destination: r.destination,
+        rateCode: r.rateCode,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut,
+        adults: r.adults,
+        children: r.children,
+      },
+      thresholdCents: r.thresholdCents,
+      bookedNightlyCents: r.bookedNightlyCents,
+      channels: r.channels,
+      active: r.active,
       createdAt: r.createdAt.toISOString(),
       lastNotifiedAt: r.lastNotifiedAt?.toISOString() ?? null,
+      lastNotifiedCents: r.lastNotifiedCents,
+      baselineAt: r.baselineAt?.toISOString() ?? null,
+      baselineCents: r.baselineCents,
+      propertySlug: r.propertySlug,
+      propertyName: r.propertyName,
+      ticketProductSlug: r.ticketProductSlug,
+      ticketProductName: r.ticketProductName,
     }))
   );
 });
@@ -75,6 +103,13 @@ watchesRouter.post("/", async (c) => {
   }
   const input = parsed.data;
 
+  if (input.channels.some((channel) => channel !== "email")) {
+    return c.json(
+      { error: { code: "unsupported_channel", message: "Only email alerts are available right now." } },
+      400
+    );
+  }
+
   if (input.target.checkOut <= input.target.checkIn) {
     return c.json(
       { error: { code: "invalid_body", message: "check-out must be after check-in" } },
@@ -90,13 +125,79 @@ watchesRouter.post("/", async (c) => {
    * date-window gating: the server decides.
    */
   const db = getDb();
-  const entitlements = ENTITLEMENTS[tierOf(c)];
-  const [existing] = await db
-    .select({ n: count() })
-    .from(watches)
-    .where(and(eq(watches.userId, user.userId), eq(watches.active, true)));
+  const today = new Date().toISOString().slice(0, 10);
+  // Completed trips are no longer "at once" and must not consume the limit.
+  await db
+    .update(watches)
+    .set({ active: false })
+    .where(and(eq(watches.userId, user.userId), eq(watches.active, true), lt(watches.checkOut, today)));
 
-  if ((existing?.n ?? 0) >= entitlements.maxWatches) {
+  let normalizedDestination = input.target.destination;
+  if (input.target.propertyId) {
+    const [property] = await db
+      .select({ id: properties.id, destination: properties.destination })
+      .from(properties)
+      .where(and(eq(properties.id, input.target.propertyId), eq(properties.active, true)))
+      .limit(1);
+    if (!property) {
+      return c.json({ error: { code: "invalid_target", message: "That hotel is not available." } }, 400);
+    }
+    if (normalizedDestination && normalizedDestination !== property.destination) {
+      return c.json({ error: { code: "invalid_target", message: "That hotel is in a different destination." } }, 400);
+    }
+    // Older clients omitted this for property-specific hotel watches. Store the
+    // canonical value so links, expiration and time-zone handling stay correct.
+    normalizedDestination = property.destination;
+  }
+
+  if (input.target.ticketProductId) {
+    const [product] = await db
+      .select({ kind: ticketProducts.kind, destination: ticketProducts.destination })
+      .from(ticketProducts)
+      .where(and(eq(ticketProducts.id, input.target.ticketProductId), eq(ticketProducts.active, true)))
+      .limit(1);
+    const expectedKind = input.target.kind === "express" ? "express-pass" : null;
+    if (
+      !product ||
+      (expectedKind ? product.kind !== expectedKind : product.kind === "express-pass") ||
+      product.destination !== input.target.destination
+    ) {
+      return c.json({ error: { code: "invalid_target", message: "That price product is not available." } }, 400);
+    }
+  }
+  const entitlements = ENTITLEMENTS[tierOf(c)];
+  const createdId = await db.transaction(async (tx) => {
+    // Serialize creations for one account so two simultaneous clicks cannot
+    // both pass the count check and exceed the entitlement.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${user.userId}))`);
+    const [existing] = await tx
+      .select({ n: count() })
+      .from(watches)
+      .where(and(eq(watches.userId, user.userId), eq(watches.active, true)));
+    if ((existing?.n ?? 0) >= entitlements.maxWatches) return null;
+
+    const [created] = await tx
+      .insert(watches)
+      .values({
+        userId: user.userId,
+        kind: input.target.kind,
+        ticketProductId: input.target.ticketProductId,
+        propertyId: input.target.propertyId,
+        destination: normalizedDestination,
+        rateCode: input.target.rateCode,
+        checkIn: input.target.checkIn,
+        checkOut: input.target.checkOut,
+        adults: input.target.adults,
+        children: input.target.children,
+        thresholdCents: input.thresholdCents,
+        bookedNightlyCents: input.bookedNightlyCents,
+        channels: input.channels,
+      })
+      .returning({ id: watches.id });
+    return created!.id;
+  });
+
+  if (createdId === null) {
     return c.json(
       {
         error: {
@@ -105,30 +206,11 @@ watchesRouter.post("/", async (c) => {
           details: { maxWatches: entitlements.maxWatches },
         },
       },
-      402
+      409
     );
   }
 
-  const [created] = await db
-    .insert(watches)
-    .values({
-      userId: user.userId,
-      kind: input.target.kind,
-      ticketProductId: input.target.ticketProductId,
-      propertyId: input.target.propertyId,
-      destination: input.target.destination as "universal-orlando" | null,
-      rateCode: input.target.rateCode,
-      checkIn: input.target.checkIn,
-      checkOut: input.target.checkOut,
-      adults: input.target.adults,
-      children: input.target.children,
-      thresholdCents: input.thresholdCents,
-      bookedNightlyCents: input.bookedNightlyCents,
-      channels: input.channels,
-    })
-    .returning({ id: watches.id });
-
-  return c.json({ id: created!.id, ok: true }, 201);
+  return c.json({ id: createdId, ok: true }, 201);
 });
 
 watchesRouter.delete("/:id", async (c) => {

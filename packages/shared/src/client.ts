@@ -24,7 +24,7 @@ import {
   type FlightQuery,
   type TripPlannerQuery,
 } from "./schemas/flights.js";
-import { CreateWatch, Watch } from "./schemas/alerts.js";
+import { CreateWatch, WatchView } from "./schemas/alerts.js";
 import { Entitlements, GateInfo, SessionUser } from "./schemas/auth.js";
 import { TripQuote, type TripQuoteQuery } from "./schemas/trips.js";
 
@@ -261,11 +261,11 @@ export class RateCoasterClient {
   // ---- Watches (auth required) ----
 
   listWatches() {
-    return this.request("/v1/watches", z.array(Watch));
+    return this.request("/v1/watches", z.array(WatchView));
   }
 
   createWatch(body: CreateWatch) {
-    return this.request("/v1/watches", Watch, {
+    return this.request("/v1/watches", z.object({ id: z.string().uuid(), ok: z.literal(true) }), {
       method: "POST",
       body: JSON.stringify(body),
     });

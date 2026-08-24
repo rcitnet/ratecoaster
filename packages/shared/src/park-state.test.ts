@@ -90,6 +90,18 @@ test("open early with nothing posting yet is not called closed", () => {
   assert.match(parkStateMessage(state, 0, 0, HOURS, TZ), /no rides are posting/);
 });
 
+test("scheduled-open hours override an all-closed stale attraction feed", () => {
+  const state = deriveParkState({
+    waits: [{ status: "closed", waitMinutes: null }],
+    hours: {
+      opensAt: "2026-08-21T12:00:00Z",
+      closesAt: "2026-08-22T01:00:00Z",
+    },
+    now: new Date("2026-08-21T15:00:00Z"),
+  });
+  assert.equal(state, "no-standby");
+});
+
 test("without hours it falls back to statuses", () => {
   // Universal Kids Resort has no schedule provider yet.
   assert.equal(

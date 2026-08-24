@@ -162,8 +162,8 @@ export default async function ExpressPage({
               */}
               <WatchDateButton
                 kind="express"
-                productId={null}
-                productName="Express Pass"
+                productId={selected.id}
+                productName={selected.name}
                 destination={destination}
                 signedIn={Boolean(me.user)}
                 returnTo="/express-pass"

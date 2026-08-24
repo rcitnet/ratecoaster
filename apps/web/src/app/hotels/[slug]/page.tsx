@@ -210,6 +210,7 @@ export default async function PropertyPage({
       <WatchButton
         propertyId={property.id}
         propertyName={property.name}
+        destination={property.destination}
         rateCode={rateCode}
         signedIn={Boolean(me.user)}
         returnTo={`/hotels/${slug}`}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { parks, parkHours } from "@ratecoaster/db/schema";
 import type { Collector, CollectorContext } from "../framework/types.js";
 import { fetchJson } from "../framework/http.js";
@@ -18,7 +18,7 @@ import { fetchJson } from "../framework/http.js";
  */
 
 const ScheduleEntry = z.object({
-  date: z.string(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   type: z.string(),
   openingTime: z.string().optional(),
   closingTime: z.string().optional(),
@@ -50,6 +50,7 @@ export function parseSchedule(payload: unknown): NormalizedHours[] {
   if (!parsed.success) return [];
 
   const out: NormalizedHours[] = [];
+  const seen = new Set<string>();
   for (const entry of parsed.data.schedule) {
     const opensAt = entry.openingTime ? new Date(entry.openingTime) : null;
     const closesAt = entry.closingTime ? new Date(entry.closingTime) : null;
@@ -59,6 +60,9 @@ export function parseSchedule(payload: unknown): NormalizedHours[] {
     if (opensAt && Number.isNaN(opensAt.getTime())) continue;
     if (closesAt && Number.isNaN(closesAt.getTime())) continue;
 
+    const key = `${entry.date}|${entry.type}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push({
       date: entry.date,
       /*
@@ -125,23 +129,32 @@ export const parkHoursCollector: Collector = {
         continue;
       }
 
-      for (const entry of entries) {
-        stats.parsedCount++;
-        await db
-          .insert(parkHours)
-          .values({
+      stats.parsedCount += entries.length;
+      const dates = entries.map((entry) => entry.date).sort();
+      await db.transaction(async (tx) => {
+        // The provider response is a snapshot. Replacing its covered range
+        // removes cancelled events and obsolete OPERATING rows instead of
+        // letting them override the corrected schedule forever.
+        await tx
+          .delete(parkHours)
+          .where(
+            and(
+              eq(parkHours.parkId, park.id),
+              gte(parkHours.date, dates[0]!),
+              lte(parkHours.date, dates.at(-1)!)
+            )
+          );
+        await tx.insert(parkHours).values(
+          entries.map((entry) => ({
             parkId: park.id,
             date: entry.date,
             opensAt: entry.opensAt,
             closesAt: entry.closesAt,
             kind: entry.kind,
-          })
-          .onConflictDoUpdate({
-            target: [parkHours.parkId, parkHours.date, parkHours.kind],
-            set: { opensAt: entry.opensAt, closesAt: entry.closesAt },
-          });
-        stats.writtenCount++;
-      }
+          }))
+        );
+      });
+      stats.writtenCount += entries.length;
 
       logger.info(`${park.slug}: ${entries.length} days of hours`);
       stats.notes[park.slug] = entries.length;

@@ -55,6 +55,10 @@ export function deriveParkState(input: ParkStateInput): ParkState {
     const beforeOpen = opens !== null && now < opens;
     const afterClose = closes !== null && now >= closes;
     if (beforeOpen || afterClose) return "closed";
+
+    if (waits.length === 0) return "no-data";
+    const posting = waits.some((w) => w.status === "operating" && w.waitMinutes !== null);
+    return posting ? "open" : "no-standby";
   }
 
   if (waits.length === 0) return "no-data";

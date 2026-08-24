@@ -110,6 +110,7 @@ export async function sendPriceDropEmail(input: PriceDropEmail): Promise<SendRes
 
   const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
   const saving = input.previousCents !== null ? input.previousCents - input.currentCents : null;
+  const accountUrl = new URL("/account", input.url).toString();
 
   const subject =
     saving && saving > 0
@@ -130,7 +131,7 @@ export async function sendPriceDropEmail(input: PriceDropEmail): Promise<SendRes
         (saving && saving > 0 ? `, down ${money(saving)}.` : ".") +
         `\n\n${input.url}\n\n` +
         `Prices are observations, not quotes — confirm on the official site before booking.\n` +
-        `Manage or stop these alerts: ${input.url.split("/hotels")[0]}/account\n`,
+        `Manage or stop these alerts: ${accountUrl}\n`,
     }),
   });
 
