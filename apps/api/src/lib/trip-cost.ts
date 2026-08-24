@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import type { Db } from "@ratecoaster/db";
 import {
   flightQuoteCurrent,
@@ -9,6 +9,7 @@ import {
 } from "@ratecoaster/db/schema";
 import {
   DESTINATION_AIRPORTS,
+  APH_EPIC_TICKET_SLUG,
   type DestinationSlug,
   type RateCode,
   type TripCostDay,
@@ -46,6 +47,20 @@ export interface TripCostInput {
 }
 
 type MissingLeg = "flights" | "hotel" | "tickets";
+
+export function selectTripTicketProduct<T extends { slug: string; days: number | null }>(
+  candidates: T[],
+  rateCode: RateCode,
+  parkDays: number
+): T | undefined {
+  return rateCode === "APH"
+    ? candidates.find((candidate) => candidate.slug === APH_EPIC_TICKET_SLUG)
+    : candidates.find((candidate) => candidate.days === parkDays);
+}
+
+export function comparableTicketCents(row: { priceCents: number; totalCents: number | null }): number {
+  return row.totalCents ?? row.priceCents;
+}
 
 /**
  * Nightly rates are stored per stay-date, so an N-night stay is the sum of N
@@ -130,6 +145,8 @@ export async function computeTripCosts(
           ),
           eq(rateCurrent.rateCode, input.rateCode),
           eq(rateCurrent.nights, 1),
+          eq(rateCurrent.adults, input.adults),
+          eq(rateCurrent.children, input.children),
           eq(rateCurrent.available, true),
           gte(rateCurrent.stayDate, input.from),
           lte(rateCurrent.stayDate, rateWindowEnd)
@@ -152,7 +169,12 @@ export async function computeTripCosts(
     }
   }
 
-  if (ratesByProperty.size === 0) notes.push("No hotel rates collected yet.");
+  if (ratesByProperty.size === 0) {
+    notes.push(
+      `No hotel rates collected for ${input.adults} adult${input.adults === 1 ? "" : "s"}` +
+        ` and ${input.children} child${input.children === 1 ? "" : "ren"}.`
+    );
+  }
 
   /* ---------- tickets ---------- */
 
@@ -162,7 +184,9 @@ export async function computeTripCosts(
    * only correct answer for a 3-park-day trip — multiplying a 1-day price would
    * overstate the cost by a wide margin and make every trip look worse than it is.
    */
-  const wantedKinds = input.parkToPark
+  const wantedKinds = input.rateCode === "APH"
+    ? (["single-park-1-day"] as const)
+    : input.parkToPark
     ? (["park-to-park-1-day", "park-to-park-multi-day"] as const)
     : (["single-park-1-day", "single-park-multi-day"] as const);
 
@@ -171,7 +195,7 @@ export async function computeTripCosts(
 
   if (input.parkDays > 0) {
     const candidates = await db
-      .select({ id: ticketProducts.id, days: ticketProducts.days })
+      .select({ id: ticketProducts.id, slug: ticketProducts.slug, days: ticketProducts.days })
       .from(ticketProducts)
       .where(
         and(
@@ -181,11 +205,13 @@ export async function computeTripCosts(
         )
       );
 
-    const product = candidates.find((p) => p.days === input.parkDays);
+    const product = selectTripTicketProduct(candidates, input.rateCode, input.parkDays);
 
     if (!product) {
       notes.push(
-        `No ${input.parkDays}-day ${input.parkToPark ? "park-to-park" : "single-park"} ticket is tracked yet.`
+        input.rateCode === "APH"
+          ? "No separately ticketed Epic Universe admission is tracked yet."
+          : `No ${input.parkDays}-day ${input.parkToPark ? "park-to-park" : "single-park"} ticket is tracked yet.`
       );
     } else {
       const ticketRows = await db
@@ -193,6 +219,7 @@ export async function computeTripCosts(
           validDate: ticketPriceCurrent.validDate,
           guestCategory: ticketPriceCurrent.guestCategory,
           priceCents: ticketPriceCurrent.priceCents,
+          totalCents: ticketPriceCurrent.totalCents,
           observedAt: ticketPriceCurrent.observedAt,
         })
         .from(ticketPriceCurrent)
@@ -215,9 +242,10 @@ export async function computeTripCosts(
       for (const row of ticketRows) {
         if (!row.validDate) continue;
         const target = row.guestCategory === "child" ? childByDate : adultByDate;
+        const comparable = comparableTicketCents(row);
         const existing = target.get(row.validDate);
-        if (existing === undefined || row.priceCents < existing) {
-          target.set(row.validDate, row.priceCents);
+        if (existing === undefined || comparable < existing) {
+          target.set(row.validDate, comparable);
         }
         if (!oldestTicketObservedAt || row.observedAt < oldestTicketObservedAt) {
           oldestTicketObservedAt = row.observedAt;
@@ -256,6 +284,7 @@ export async function computeTripCosts(
           eq(flightQuoteCurrent.origin, input.origin),
           eq(flightQuoteCurrent.destination, airport),
           eq(flightQuoteCurrent.tripLengthDays, input.nights),
+          or(isNull(flightQuoteCurrent.expiresAt), gt(flightQuoteCurrent.expiresAt, new Date())),
           gte(flightQuoteCurrent.departDate, input.from),
           lte(flightQuoteCurrent.departDate, input.to)
         )

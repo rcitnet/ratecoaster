@@ -11,6 +11,7 @@ import {
 import {
   TripQuote,
   TripQuoteQuery,
+  APH_EPIC_TICKET_SLUG,
   type TripHotelOption,
   type TripRateCode,
   type TripTicketRecommendation,
@@ -89,8 +90,6 @@ export interface TicketQuoteRow {
   priceCents: number;
   totalCents: number | null;
 }
-
-export const APH_EPIC_TICKET_SLUG = "uor-1-day-epic-universe";
 
 /** Passholders only need the separately ticketed Epic Universe admission. */
 export function eligibleTicketRows(

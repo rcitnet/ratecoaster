@@ -1,8 +1,28 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { combineTripDays, type TripCostInput, type TripCostTables } from "./trip-cost.js";
+import {
+  combineTripDays,
+  comparableTicketCents,
+  selectTripTicketProduct,
+  type TripCostInput,
+  type TripCostTables,
+} from "./trip-cost.js";
 
 const OBSERVED = new Date("2026-08-20T12:00:00Z");
+
+test("APH planner selects only separately ticketed Epic Universe admission", () => {
+  const products = [
+    { slug: "uor-3-day-park-to-park", days: 3 },
+    { slug: "uor-1-day-epic-universe", days: 1 },
+  ];
+  assert.equal(selectTripTicketProduct(products, "APH", 3)?.slug, "uor-1-day-epic-universe");
+  assert.equal(selectTripTicketProduct(products, "STANDARD", 3)?.slug, "uor-3-day-park-to-park");
+});
+
+test("multi-day planner uses the exact full-ticket total, not the advertised per-day price", () => {
+  assert.equal(comparableTicketCents({ priceCents: 12_000, totalCents: 36_000 }), 36_000);
+  assert.equal(comparableTicketCents({ priceCents: 12_000, totalCents: null }), 12_000);
+});
 
 function input(overrides: Partial<TripCostInput> = {}): TripCostInput {
   return {

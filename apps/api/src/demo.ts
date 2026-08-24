@@ -605,11 +605,26 @@ demoApp.get("/v1/waits/live", async (c) => {
          */
         hours: (() => {
           const today = new Date();
-          const day = today.toISOString().slice(0, 10);
+          const day = new Intl.DateTimeFormat("en-CA", {
+            timeZone: park.timezone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(today);
           const at = (h: number) => {
-            const d = new Date(today);
-            d.setUTCHours(h + 4, 0, 0, 0); // 4 = Eastern offset in summer
-            return d.toISOString();
+            const [year, month, date] = day.split("-").map(Number);
+            const nominalUtc = Date.UTC(year!, month! - 1, date!, h);
+            const zoneName = new Intl.DateTimeFormat("en-US", {
+              timeZone: park.timezone,
+              timeZoneName: "longOffset",
+            })
+              .formatToParts(new Date(nominalUtc))
+              .find((part) => part.type === "timeZoneName")?.value;
+            const match = zoneName?.match(/GMT([+-])(\d{2}):(\d{2})/);
+            const offsetMinutes = match
+              ? (match[1] === "+" ? 1 : -1) * (Number(match[2]) * 60 + Number(match[3]))
+              : 0;
+            return new Date(nominalUtc - offsetMinutes * 60_000).toISOString();
           };
           return {
             parkId: `demo-${park.slug}`,

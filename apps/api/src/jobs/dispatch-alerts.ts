@@ -11,11 +11,10 @@
  * Runs after the hotel collector, since it can only act on prices that have
  * already been written.
  */
-import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import { closeDb, getDb } from "@ratecoaster/db";
 import {
   alertEvents,
-  expressPassPrices,
   properties,
   rateCurrent,
   ticketPriceCurrent,
@@ -36,6 +35,20 @@ const DESTINATION_LABELS: Record<string, string> = {
   "universal-hollywood": "Universal Hollywood hotels",
   "universal-kids-frisco": "Universal Kids Resort hotels",
 };
+const DESTINATION_TIMEZONES: Record<string, string> = {
+  "universal-orlando": "America/New_York",
+  "universal-hollywood": "America/Los_Angeles",
+  "universal-kids-frisco": "America/Chicago",
+};
+
+function localDate(now: Date, destination: string | null): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: DESTINATION_TIMEZONES[destination ?? "universal-orlando"] ?? "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
 
 /**
  * What a ticket or Express Pass watch costs today, for the whole party.
@@ -56,20 +69,24 @@ async function priceAdmissionWatch(
   }
 ): Promise<number | null> {
   if (w.kind === "express") {
+    if (!w.ticketProductId) return null;
     const rows = await db
-      .select({ priceCents: expressPassPrices.priceCents })
-      .from(expressPassPrices)
+      .select({
+        priceCents: ticketPriceCurrent.priceCents,
+        totalCents: ticketPriceCurrent.totalCents,
+      })
+      .from(ticketPriceCurrent)
       .where(
         and(
-          eq(expressPassPrices.destination, (w.destination ?? "universal-orlando") as "universal-orlando"),
-          eq(expressPassPrices.validDate, w.checkIn),
-          eq(expressPassPrices.available, true)
+          eq(ticketPriceCurrent.productId, w.ticketProductId),
+          eq(ticketPriceCurrent.validDate, w.checkIn),
+          eq(ticketPriceCurrent.guestCategory, "all-ages"),
+          eq(ticketPriceCurrent.available, true)
         )
       )
-      .orderBy(asc(expressPassPrices.priceCents))
       .limit(1);
 
-    const each = rows[0]?.priceCents;
+    const each = rows[0] ? (rows[0].totalCents ?? rows[0].priceCents) : undefined;
     if (each === undefined) return null;
     // Express is per person and there is no child rate.
     return each * (w.adults + w.children);
@@ -81,6 +98,7 @@ async function priceAdmissionWatch(
     .select({
       guestCategory: ticketPriceCurrent.guestCategory,
       priceCents: ticketPriceCurrent.priceCents,
+      totalCents: ticketPriceCurrent.totalCents,
     })
     .from(ticketPriceCurrent)
     .where(
@@ -94,7 +112,10 @@ async function priceAdmissionWatch(
   const cheapest = (category: string) =>
     rows
       .filter((r) => r.guestCategory === category)
-      .reduce<number | null>((min, r) => (min === null || r.priceCents < min ? r.priceCents : min), null);
+      .reduce<number | null>((min, r) => {
+        const price = r.totalCents ?? r.priceCents;
+        return min === null || price < min ? price : min;
+      }, null);
 
   const adult = cheapest("adult") ?? cheapest("all-ages");
   if (adult === null) return null;
@@ -117,11 +138,30 @@ function nightsBetween(checkIn: string, checkOut: string): string[] {
   return out;
 }
 
+/** Claim a watch briefly so overlapping cron/manual runs cannot both email it. */
+async function claimWatch(db: ReturnType<typeof getDb>, id: string, now: Date): Promise<boolean> {
+  const staleClaim = new Date(now.getTime() - 30 * 60_000);
+  const claimed = await db
+    .update(watches)
+    .set({ dispatchClaimedAt: now })
+    .where(
+      and(
+        eq(watches.id, id),
+        or(isNull(watches.dispatchClaimedAt), lt(watches.dispatchClaimedAt, staleClaim))
+      )
+    )
+    .returning({ id: watches.id });
+  return claimed.length === 1;
+}
+
+async function releaseClaim(db: ReturnType<typeof getDb>, id: string): Promise<void> {
+  await db.update(watches).set({ dispatchClaimedAt: null }).where(eq(watches.id, id));
+}
+
 async function main() {
   const send = process.argv.includes("--send");
   const db = getDb();
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
 
   if (send && !emailConfigured()) {
     console.error("Email is not configured — refusing to run with --send.");
@@ -146,6 +186,7 @@ async function main() {
       ticketProductName: ticketProducts.name,
       propertySlug: properties.slug,
       propertyName: properties.name,
+      propertyDestination: properties.destination,
       destination: watches.destination,
       rateCode: watches.rateCode,
       checkIn: watches.checkIn,
@@ -157,12 +198,14 @@ async function main() {
       channels: watches.channels,
       lastNotifiedAt: watches.lastNotifiedAt,
       lastNotifiedCents: watches.lastNotifiedCents,
+      baselineAt: watches.baselineAt,
+      baselineCents: watches.baselineCents,
     })
     .from(watches)
     .innerJoin(users, eq(users.id, watches.userId))
     .leftJoin(properties, eq(properties.id, watches.propertyId))
     .leftJoin(ticketProducts, eq(ticketProducts.id, watches.ticketProductId))
-    .where(and(eq(watches.active, true), gte(watches.checkIn, today)))
+    .where(eq(watches.active, true))
     .orderBy(asc(watches.checkIn));
 
   if (rows.length === 0) {
@@ -177,7 +220,15 @@ async function main() {
   let skipped = 0;
 
   for (const w of rows) {
-    const label = `${w.propertyName ?? "(any hotel)"} ${w.checkIn}→${w.checkOut}`;
+    const destination = w.destination ?? w.propertyDestination;
+    if (w.checkIn < localDate(now, destination)) {
+      if (send) {
+        await db.update(watches).set({ active: false }).where(eq(watches.id, w.id));
+      }
+      skipped++;
+      continue;
+    }
+    const label = `${w.propertyName ?? w.ticketProductName ?? "(any hotel)"} ${w.checkIn}→${w.checkOut}`;
 
     /*
      * Ticket and Express watches price a single park date rather than a stay,
@@ -191,6 +242,7 @@ async function main() {
           bookedNightlyCents: w.bookedNightlyCents,
           lastNotifiedCents: w.lastNotifiedCents,
           lastNotifiedAt: w.lastNotifiedAt,
+          baselineCents: w.baselineCents,
         },
         total,
         now
@@ -199,23 +251,40 @@ async function main() {
       const money = (c: number | null) => (c === null ? "—" : `$${(c / 100).toFixed(2)}`);
       if (!decision.notify) {
         console.log(`  skip  ${label} — ${decision.reason}`);
+        if (send && total !== null && w.baselineCents === null && w.lastNotifiedCents === null) {
+          await db
+            .update(watches)
+            .set({ baselineCents: total, baselineAt: now })
+            .where(eq(watches.id, w.id));
+        }
         skipped++;
         continue;
       }
+      const previous = w.lastNotifiedCents ?? w.baselineCents;
       console.log(
-        `  SEND  ${label} — ${money(w.lastNotifiedCents)} → ${money(total)} (${decision.reason})`
+        `  SEND  ${label} — ${money(previous)} → ${money(total)} (${decision.reason})`
       );
       if (!send) continue;
+      if (!w.channels.includes("email")) {
+        console.log("        email channel is not enabled, skipping");
+        skipped++;
+        continue;
+      }
       if (!w.email) {
         console.log("        no email on the account, skipping");
+        skipped++;
+        continue;
+      }
+      if (!(await claimWatch(db, w.id, now))) {
+        console.log("        already claimed by another dispatcher, skipping");
         skipped++;
         continue;
       }
 
       const url =
         w.kind === "ticket"
-          ? `${SITE_URL}/tickets?destination=${w.destination ?? "universal-orlando"}`
-          : `${SITE_URL}/express-pass?destination=${w.destination ?? "universal-orlando"}`;
+          ? `${SITE_URL}/tickets?destination=${destination ?? "universal-orlando"}`
+          : `${SITE_URL}/express-pass?destination=${destination ?? "universal-orlando"}`;
 
       const result = await sendPriceDropEmail({
         to: w.email,
@@ -226,27 +295,36 @@ async function main() {
         checkIn: w.checkIn,
         checkOut: w.checkIn,
         currentCents: total!,
-        previousCents: w.lastNotifiedCents,
+        previousCents: previous,
         rateLabel: w.kind === "ticket" ? "Admission" : "Express Pass",
         url,
       });
 
       if (!result.sent) {
         console.error(`        send failed: ${result.reason}`);
+        await releaseClaim(db, w.id);
         continue;
       }
 
-      await db.insert(alertEvents).values({
-        watchId: w.id,
-        kind: decision.kind!,
-        previousCents: w.lastNotifiedCents,
-        currentCents: total!,
-        message: decision.reason,
+      await db.transaction(async (tx) => {
+        await tx.insert(alertEvents).values({
+          watchId: w.id,
+          kind: decision.kind!,
+          previousCents: previous,
+          currentCents: total!,
+          message: decision.reason,
+        });
+        await tx
+          .update(watches)
+          .set({
+            lastNotifiedAt: now,
+            lastNotifiedCents: total,
+            baselineAt: now,
+            baselineCents: total,
+            dispatchClaimedAt: null,
+          })
+          .where(eq(watches.id, w.id));
       });
-      await db
-        .update(watches)
-        .set({ lastNotifiedAt: now, lastNotifiedCents: total })
-        .where(eq(watches.id, w.id));
       sent++;
       continue;
     }
@@ -269,7 +347,7 @@ async function main() {
             .where(
               and(
                 eq(properties.active, true),
-                eq(properties.destination, w.destination ?? "universal-orlando")
+                eq(properties.destination, destination ?? "universal-orlando")
               )
             )
         );
@@ -322,10 +400,14 @@ async function main() {
     }
     const decision = evaluateWatch(
       {
-        thresholdCents: w.thresholdCents,
-        bookedNightlyCents: w.bookedNightlyCents,
+        // Hotel targets are entered as nightly figures; comparisons are made
+        // against a whole-stay total, so normalize the units exactly once.
+        thresholdCents: w.thresholdCents === null ? null : w.thresholdCents * nights.length,
+        bookedNightlyCents:
+          w.bookedNightlyCents === null ? null : w.bookedNightlyCents * nights.length,
         lastNotifiedCents: w.lastNotifiedCents,
         lastNotifiedAt: w.lastNotifiedAt,
+        baselineCents: w.baselineCents,
       },
       total,
       now
@@ -333,19 +415,36 @@ async function main() {
 
     if (!decision.notify) {
       console.log(`  skip  ${label} — ${decision.reason}`);
+      if (send && total !== null && w.baselineCents === null && w.lastNotifiedCents === null) {
+        await db
+          .update(watches)
+          .set({ baselineCents: total, baselineAt: now })
+          .where(eq(watches.id, w.id));
+      }
       skipped++;
       continue;
     }
 
     const money = (c: number | null) => (c === null ? "—" : `$${(c / 100).toFixed(2)}`);
+    const previous = w.lastNotifiedCents ?? w.baselineCents;
     console.log(
-      `  SEND  ${label} — ${money(w.lastNotifiedCents)} → ${money(total)} (${decision.reason})`
+      `  SEND  ${label} — ${money(previous)} → ${money(total)} (${decision.reason})`
     );
 
     if (!send) continue;
 
+    if (!w.channels.includes("email")) {
+      console.log("        email channel is not enabled, skipping");
+      skipped++;
+      continue;
+    }
     if (!w.email) {
       console.log("        no email on the account, skipping");
+      skipped++;
+      continue;
+    }
+    if (!(await claimWatch(db, w.id, now))) {
+      console.log("        already claimed by another dispatcher, skipping");
       skipped++;
       continue;
     }
@@ -357,18 +456,18 @@ async function main() {
      */
     const url = w.propertySlug
       ? `${SITE_URL}/hotels/${w.propertySlug}?rateCode=${w.rateCode}&stayDate=${w.checkIn}`
-      : `${SITE_URL}/hotels?destination=${w.destination ?? "universal-orlando"}&rateCode=${w.rateCode}`;
+      : `${SITE_URL}/hotels?destination=${destination ?? "universal-orlando"}&rateCode=${w.rateCode}`;
 
     const result = await sendPriceDropEmail({
       to: w.email,
       hotelName:
         w.propertyName ??
-        DESTINATION_LABELS[w.destination ?? "universal-orlando"] ??
+        DESTINATION_LABELS[destination ?? "universal-orlando"] ??
         "Your watched hotels",
       checkIn: w.checkIn,
       checkOut: w.checkOut,
       currentCents: total!,
-      previousCents: w.lastNotifiedCents,
+      previousCents: previous,
       rateLabel: RATE_CODE_LABELS[w.rateCode] ?? w.rateCode,
       url,
     });
@@ -380,21 +479,29 @@ async function main() {
        * they actually wanted is suppressed forever by a transient outage.
        */
       console.error(`        send failed: ${result.reason}`);
+      await releaseClaim(db, w.id);
       continue;
     }
 
-    await db.insert(alertEvents).values({
-      watchId: w.id,
-      kind: decision.kind!,
-      previousCents: w.lastNotifiedCents,
-      currentCents: total!,
-      message: decision.reason,
+    await db.transaction(async (tx) => {
+      await tx.insert(alertEvents).values({
+        watchId: w.id,
+        kind: decision.kind!,
+        previousCents: previous,
+        currentCents: total!,
+        message: decision.reason,
+      });
+      await tx
+        .update(watches)
+        .set({
+          lastNotifiedAt: now,
+          lastNotifiedCents: total,
+          baselineAt: now,
+          baselineCents: total,
+          dispatchClaimedAt: null,
+        })
+        .where(eq(watches.id, w.id));
     });
-
-    await db
-      .update(watches)
-      .set({ lastNotifiedAt: now, lastNotifiedCents: total })
-      .where(eq(watches.id, w.id));
 
     sent++;
   }

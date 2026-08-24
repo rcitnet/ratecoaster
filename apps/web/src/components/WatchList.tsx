@@ -1,19 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import type { WatchView } from "@ratecoaster/shared";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
-
-export interface WatchRow {
-  id: string;
-  propertySlug: string | null;
-  propertyName: string | null;
-  rateCode: string;
-  checkIn: string;
-  checkOut: string;
-  lastNotifiedAt: string | null;
-  lastNotifiedCents: number | null;
-}
 
 /**
  * The watchlist, with a working remove button.
@@ -22,7 +12,7 @@ export interface WatchRow {
  * marking the emails as spam instead — which costs the sending domain's
  * reputation far more than the unsubscribe would have.
  */
-export function WatchList({ watches }: { watches: WatchRow[] }) {
+export function WatchList({ watches }: { watches: WatchView[] }) {
   const [removing, setRemoving] = useState<string | null>(null);
   const [gone, setGone] = useState<Set<string>>(new Set());
 
@@ -56,9 +46,9 @@ export function WatchList({ watches }: { watches: WatchRow[] }) {
       <table>
         <thead>
           <tr>
-            <th>Hotel</th>
+            <th>Watching</th>
             <th>Dates</th>
-            <th>Rate</th>
+            <th>Price type</th>
             <th>Last alert</th>
             <th />
           </tr>
@@ -67,16 +57,24 @@ export function WatchList({ watches }: { watches: WatchRow[] }) {
           {visible.map((w) => (
             <tr key={w.id}>
               <td>
-                {w.propertySlug ? (
+                {w.target.kind === "hotel" && w.propertySlug ? (
                   <a href={`/hotels/${w.propertySlug}`}>{w.propertyName}</a>
                 ) : (
-                  w.propertyName ?? "—"
+                  w.ticketProductName ?? w.propertyName ?? "Destination hotels"
                 )}
               </td>
               <td className="tiny muted">
-                {w.checkIn} → {w.checkOut}
+                {w.target.kind === "hotel"
+                  ? `${w.target.checkIn} → ${w.target.checkOut}`
+                  : w.target.checkIn}
               </td>
-              <td className="tiny muted">{w.rateCode}</td>
+              <td className="tiny muted">
+                {w.target.kind === "hotel"
+                  ? w.target.rateCode
+                  : w.target.kind === "express"
+                    ? "Express Pass"
+                    : "Admission"}
+              </td>
               <td className="tiny muted">
                 {w.lastNotifiedCents !== null
                   ? `$${(w.lastNotifiedCents / 100).toFixed(2)}`

@@ -23,8 +23,7 @@ export function WatchDateButton({
   defaultDate,
 }: {
   kind: "ticket" | "express";
-  /** Null for Express Pass, which is priced per destination rather than per product. */
-  productId: string | null;
+  productId: string;
   productName: string;
   destination: string;
   signedIn: boolean;
@@ -71,7 +70,7 @@ export function WatchDateButton({
           target: {
             kind,
             propertyId: null,
-            ticketProductId: kind === "ticket" ? productId : null,
+            ticketProductId: productId,
             destination,
             rateCode: "STANDARD",
             checkIn: date,

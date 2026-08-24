@@ -58,3 +58,5 @@ export const TripQuote = z.object({
   assumptions: z.array(z.string()),
 });
 export type TripQuote = z.infer<typeof TripQuote>;
+/** Annual passes currently require separate admission only for Epic Universe. */
+export const APH_EPIC_TICKET_SLUG = "uor-1-day-epic-universe";

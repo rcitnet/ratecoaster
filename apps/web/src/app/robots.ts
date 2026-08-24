@@ -22,9 +22,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/admin",
-          "/account",
-          "/join",
-          "/auth/",
           // Affiliate hops. No content, and crawling them would register clicks
           // that no human made.
           "/go/",

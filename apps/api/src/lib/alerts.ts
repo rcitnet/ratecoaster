@@ -20,6 +20,8 @@ export interface WatchState {
   /** The figure in the last alert we sent for this watch. */
   lastNotifiedCents: number | null;
   lastNotifiedAt: Date | null;
+  /** Silent first observation used until an alert has actually been sent. */
+  baselineCents: number | null;
 }
 
 export interface AlertDecision {
@@ -35,7 +37,7 @@ export interface AlertDecision {
  * Hotel rates can oscillate by a few dollars many times a day. Without a floor,
  * a single volatile date would generate a dozen emails before lunch.
  */
-export const COOLDOWN_HOURS = 12;
+export const COOLDOWN_HOURS = 24;
 
 /**
  * How much cheaper a price must be than the last alerted one to be worth a
@@ -66,30 +68,26 @@ export function evaluateWatch(
     }
   }
 
-  /*
-   * Never repeat a price we have already sent, and require the improvement to
-   * be meaningful. This is what stops the same drop generating an alert every
-   * time the collector runs.
-   */
-  if (watch.lastNotifiedCents !== null) {
-    const improvement = watch.lastNotifiedCents - currentTotalCents;
-    if (improvement < MIN_IMPROVEMENT_CENTS) {
-      return {
-        notify: false,
-        kind: null,
-        reason: `not meaningfully below the last alert (${improvement} cents)`,
-      };
-    }
-  }
+  const comparisonCents = watch.lastNotifiedCents ?? watch.baselineCents;
 
   /*
    * An explicit threshold is an instruction, so it wins over everything else.
    * The user said "tell me at this number" — not "tell me when it moves".
    */
   if (watch.thresholdCents !== null) {
-    return currentTotalCents <= watch.thresholdCents
-      ? { notify: true, kind: "price-drop", reason: "at or below your target" }
-      : { notify: false, kind: null, reason: "above your target" };
+    if (currentTotalCents > watch.thresholdCents) {
+      return { notify: false, kind: null, reason: "above your target" };
+    }
+    // The silent baseline must not suppress the first crossing of the user's
+    // exact target, even when that crossing is less than five dollars. After
+    // the first email, however, require a meaningful further improvement.
+    if (
+      watch.lastNotifiedCents !== null &&
+      watch.lastNotifiedCents - currentTotalCents < MIN_IMPROVEMENT_CENTS
+    ) {
+      return { notify: false, kind: null, reason: "target already reported at this price" };
+    }
+    return { notify: true, kind: "price-drop", reason: "at or below your target" };
   }
 
   /*
@@ -98,19 +96,35 @@ export function evaluateWatch(
    * differently — the email can say "you can rebook and save $340".
    */
   if (watch.bookedNightlyCents !== null) {
-    return currentTotalCents < watch.bookedNightlyCents
-      ? { notify: true, kind: "beats-booking", reason: "cheaper than what you booked" }
-      : { notify: false, kind: null, reason: "not below your booked rate" };
+    if (currentTotalCents >= watch.bookedNightlyCents) {
+      return { notify: false, kind: null, reason: "not below your booked rate" };
+    }
+    if (
+      watch.lastNotifiedCents !== null &&
+      watch.lastNotifiedCents - currentTotalCents < MIN_IMPROVEMENT_CENTS
+    ) {
+      return { notify: false, kind: null, reason: "booked-rate savings already reported" };
+    }
+    return { notify: true, kind: "beats-booking", reason: "cheaper than what you booked" };
   }
 
   // No threshold, no booking: any meaningful drop below the last alert.
-  if (watch.lastNotifiedCents === null) {
+  if (comparisonCents === null) {
     /*
      * First-ever evaluation. Deliberately silent: alerting on the first price
      * we happen to see would be an alert about nothing having changed, which
      * teaches the recipient that our emails are not worth opening.
      */
     return { notify: false, kind: null, reason: "first observation, nothing to compare" };
+  }
+
+  const improvement = comparisonCents - currentTotalCents;
+  if (improvement < MIN_IMPROVEMENT_CENTS) {
+    return {
+      notify: false,
+      kind: null,
+      reason: `not meaningfully below the last alert (${improvement} cents)`,
+    };
   }
 
   return { notify: true, kind: "new-low", reason: "lower than the last price we told you about" };

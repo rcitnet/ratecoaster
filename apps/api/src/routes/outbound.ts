@@ -11,6 +11,16 @@ import {
 } from "@ratecoaster/shared";
 
 export const outboundRouter = new Hono();
+const recentClicks = new Map<string, number>();
+
+function pathOnly(from: string | null): string | null {
+  if (!from) return null;
+  try {
+    return new URL(from, "https://www.ratecoaster.net").pathname.slice(0, 200);
+  } catch {
+    return from.split("?")[0]!.slice(0, 200);
+  }
+}
 
 /**
  * Record a click, and never let that failure cost us the click.
@@ -23,6 +33,22 @@ export const outboundRouter = new Hono();
  * is a rounding error next to losing the sale.
  */
 function logClick(sid: string, merchant: string, from: string | null): void {
+  const fromPath = pathOnly(from);
+  const key = `${sid}|${merchant}|${fromPath ?? ""}`;
+  const now = Date.now();
+  const previous = recentClicks.get(key);
+  if (previous && now - previous < 60_000) return;
+  recentClicks.set(key, now);
+  if (recentClicks.size > 2_000) {
+    for (const [candidate, at] of recentClicks) {
+      if (now - at > 60_000) recentClicks.delete(candidate);
+    }
+    while (recentClicks.size > 2_000) {
+      const oldest = recentClicks.keys().next().value as string | undefined;
+      if (!oldest) break;
+      recentClicks.delete(oldest);
+    }
+  }
   try {
     void getDb()
       .insert(outboundClicks)
@@ -31,7 +57,7 @@ function logClick(sid: string, merchant: string, from: string | null): void {
         merchant,
         // Path only. Query strings on our pages carry dates and party sizes,
         // and a click log has no business keeping those.
-        fromPath: from ? from.split("?")[0]!.slice(0, 200) : null,
+        fromPath,
       })
       .catch((err) => console.error("[outbound] click log failed:", err));
   } catch (err) {

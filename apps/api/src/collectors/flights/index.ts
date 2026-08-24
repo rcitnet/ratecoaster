@@ -14,17 +14,16 @@ import { fetchCalendarMonth, readCredentials } from "./travelpayouts.js";
  * Trip lengths to precompute.
  *
  * Each length is a separate request, so this list is a direct multiplier on the
- * whole job. Four, five and seven nights cover the overwhelming majority of
- * Universal trips — a long weekend, a short week, a full week — and a family
- * wanting six can read across the two either side without being misled.
+ * whole job. It intentionally matches every duration offered by the planner;
+ * exposing an option with no corresponding cache would only produce empty totals.
  */
 function tripLengths(): number[] {
-  const raw = process.env.FLIGHT_TRIP_LENGTHS ?? "4,5,7";
+  const raw = process.env.FLIGHT_TRIP_LENGTHS ?? "3,4,5,6,7";
   const parsed = raw
     .split(",")
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isInteger(n) && n >= 1 && n <= 30);
-  return parsed.length > 0 ? parsed : [4, 5, 7];
+  return parsed.length > 0 ? parsed : [3, 4, 5, 6, 7];
 }
 
 /** How many months ahead to fill. 12 gives the full 365-day catalogue. */

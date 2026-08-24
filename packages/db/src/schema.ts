@@ -78,8 +78,7 @@ export const flightSourceEnum = pgEnum("flight_source", ["travelpayouts", "manua
  * The extra dimension versus hotel rates is `origin`, and it is what stops this
  * table from being precomputable for everyone: 365 dates x N trip lengths x
  * *every US airport* is not a table, it is a denial-of-service against
- * ourselves. So the collector fills a fixed list of high-traffic origins, and
- * anything else can be fetched on demand and cached into the same table.
+ * ourselves. So the collector fills a fixed list of high-traffic origins.
  *
  * `priceCents` is per passenger. Party-size multiplication happens exactly once,
  * in trip-cost.ts.
@@ -684,6 +683,11 @@ export const watches = pgTable(
     active: boolean("active").notNull().default(true),
     lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
     lastNotifiedCents: integer("last_notified_cents"),
+    /** Silent first observation used as the comparison point for a real drop. */
+    baselineCents: integer("baseline_cents"),
+    baselineAt: timestamp("baseline_at", { withTimezone: true }),
+    /** Short-lived claim preventing overlapping dispatch jobs from double-sending. */
+    dispatchClaimedAt: timestamp("dispatch_claimed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

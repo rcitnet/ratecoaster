@@ -1,8 +1,32 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { CreateWatch } from "@ratecoaster/shared";
 import { COOLDOWN_HOURS, evaluateWatch, totalForStay, type WatchState } from "./alerts.js";
 
 const NOW = new Date("2026-08-21T12:00:00Z");
+
+test("watch targets require the product appropriate to their kind", () => {
+  const common = {
+    thresholdCents: null,
+    bookedNightlyCents: null,
+    channels: ["email"],
+  } as const;
+  const invalidExpress = CreateWatch.safeParse({
+    ...common,
+    target: {
+      kind: "express",
+      propertyId: null,
+      ticketProductId: null,
+      destination: "universal-orlando",
+      rateCode: "STANDARD",
+      checkIn: "2026-11-01",
+      checkOut: "2026-11-02",
+      adults: 2,
+      children: 0,
+    },
+  });
+  assert.equal(invalidExpress.success, false);
+});
 
 function watch(overrides: Partial<WatchState> = {}): WatchState {
   return {
@@ -10,6 +34,7 @@ function watch(overrides: Partial<WatchState> = {}): WatchState {
     bookedNightlyCents: null,
     lastNotifiedCents: null,
     lastNotifiedAt: null,
+    baselineCents: null,
     ...overrides,
   };
 }
@@ -44,6 +69,25 @@ test("a threshold overrides the generic drop rule", () => {
   assert.match(d.reason, /above your target/);
 });
 
+test("a threshold crossing is not suppressed by the generic five-dollar rule", () => {
+  const d = evaluateWatch(watch({ thresholdCents: 50_000, baselineCents: 50_200 }), 49_900, NOW);
+  assert.equal(d.notify, true);
+  assert.equal(d.kind, "price-drop");
+});
+
+test("does not repeatedly report the same target price", () => {
+  const d = evaluateWatch(
+    watch({
+      thresholdCents: 50_000,
+      lastNotifiedCents: 49_900,
+      lastNotifiedAt: new Date("2026-08-19T12:00:00Z"),
+    }),
+    49_900,
+    NOW
+  );
+  assert.equal(d.notify, false);
+});
+
 test("beating a booked rate is its own kind of alert", () => {
   const d = evaluateWatch(watch({ bookedNightlyCents: 70_000 }), 62_000, NOW);
   assert.equal(d.notify, true);
@@ -61,6 +105,12 @@ test("alerts on a new low below the last one we sent", () => {
     54_000,
     NOW
   );
+  assert.equal(d.notify, true);
+  assert.equal(d.kind, "new-low");
+});
+
+test("alerts on a meaningful drop below the silent first-observation baseline", () => {
+  const d = evaluateWatch(watch({ baselineCents: 60_000 }), 54_000, NOW);
   assert.equal(d.notify, true);
   assert.equal(d.kind, "new-low");
 });

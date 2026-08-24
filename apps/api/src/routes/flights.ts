@@ -95,7 +95,7 @@ flightsRouter.get("/", async (c) => {
         destination: r.destination,
         departDate: r.departDate,
         returnDate: addDays(r.departDate, r.tripLengthDays),
-        passengers: 2,
+        passengers: q.passengers,
         marker: creds?.marker ?? null,
       }),
     })),

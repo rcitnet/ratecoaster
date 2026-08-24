@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Cents, IsoDate, IsoInstant } from "./common.js";
+import { Cents, DestinationSlug, IsoDate, IsoInstant } from "./common.js";
 import { RateCode } from "./hotels.js";
 
 /**
@@ -23,11 +23,11 @@ export type WatchKind = z.infer<typeof WatchKind>;
 
 export const WatchTarget = z.object({
   kind: WatchKind.default("hotel"),
-  propertyId: z.string().nullable(),
-  /** Set for ticket watches. Null for hotels and Express Pass. */
-  ticketProductId: z.string().nullable().default(null),
+  propertyId: z.string().uuid().nullable(),
+  /** Set for ticket and Express Pass watches. Null for hotel watches. */
+  ticketProductId: z.string().uuid().nullable().default(null),
   /** Watch a whole destination when propertyId is null. */
-  destination: z.string().nullable(),
+  destination: DestinationSlug.nullable(),
   rateCode: RateCode.default("APH"),
   /**
    * For a hotel this is check-in. For a ticket or Express Pass watch it is the
@@ -38,6 +38,42 @@ export const WatchTarget = z.object({
   checkOut: IsoDate,
   adults: z.number().int().min(1).max(8).default(2),
   children: z.number().int().min(0).max(8).default(0),
+}).superRefine((target, ctx) => {
+  if (target.kind === "hotel" && !target.propertyId && !target.destination) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["propertyId"],
+      message: "a hotel watch needs a property or destination",
+    });
+  }
+  if (target.kind === "hotel" && target.ticketProductId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["ticketProductId"],
+      message: "hotel watches cannot target a ticket product",
+    });
+  }
+  if ((target.kind === "ticket" || target.kind === "express") && target.propertyId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["propertyId"],
+      message: `${target.kind} watches cannot target a hotel`,
+    });
+  }
+  if ((target.kind === "ticket" || target.kind === "express") && !target.ticketProductId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["ticketProductId"],
+      message: `${target.kind} watches need a ticket product`,
+    });
+  }
+  if ((target.kind === "ticket" || target.kind === "express") && !target.destination) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["destination"],
+      message: `${target.kind} watches need a destination`,
+    });
+  }
 });
 export type WatchTarget = z.infer<typeof WatchTarget>;
 
@@ -59,8 +95,20 @@ export const Watch = z.object({
   lastNotifiedAt: IsoInstant.nullable(),
   /** Cheapest price we have notified about, to avoid re-alerting on the same low. */
   lastNotifiedCents: Cents.nullable(),
+  /** Initial/current comparison baseline, saved without sending an email. */
+  baselineCents: Cents.nullable(),
+  baselineAt: IsoInstant.nullable(),
 });
 export type Watch = z.infer<typeof Watch>;
+
+/** Account-facing watch plus human-readable labels for its target. */
+export const WatchView = Watch.extend({
+  propertySlug: z.string().nullable(),
+  propertyName: z.string().nullable(),
+  ticketProductSlug: z.string().nullable(),
+  ticketProductName: z.string().nullable(),
+});
+export type WatchView = z.infer<typeof WatchView>;
 
 export const CreateWatch = Watch.pick({
   thresholdCents: true,

@@ -72,6 +72,7 @@ export const FlightQuery = z.object({
   from: IsoDate.optional(),
   to: IsoDate.optional(),
   tripLengthDays: z.coerce.number().int().min(1).max(30).default(5),
+  passengers: z.coerce.number().int().min(1).max(9).default(2),
   limit: z.coerce.number().int().min(1).max(400).default(365),
 });
 export type FlightQuery = z.infer<typeof FlightQuery>;
@@ -131,7 +132,7 @@ export const TripPlannerQuery = z.object({
   /** Omit to price the trip without flights, for families driving in. */
   origin: IataCode.optional(),
   adults: z.coerce.number().int().min(1).max(8).default(2),
-  children: z.coerce.number().int().min(0).max(8).default(2),
+  children: z.coerce.number().int().min(0).max(8).default(0),
   nights: z.coerce.number().int().min(1).max(21).default(4),
   /**
    * Defaults to `nights - 1`: the arrival day is usually eaten by travel. A
@@ -173,8 +174,7 @@ export type Origin = z.infer<typeof Origin>;
  * Flight prices cannot be precomputed for every airport — the catalogue is
  * origins x dates x trip lengths, which explodes fast. These are the busiest US
  * origin markets for Orlando leisure traffic; together they cover the large
- * majority of visitors, and anything outside the list is fetched on demand and
- * cached.
+ * majority of visitors. Airports outside the list are not currently offered.
  *
  * Metro codes (NYC, CHI, WAS) are used where the feed supports them, because a
  * family in New Jersey does not care whether the bargain is out of JFK or EWR —

@@ -86,7 +86,7 @@ Or from the shell:
 sudo -u ratecoaster -H bash -c 'cd /home/ratecoaster/app && set -a && . ./.env && set +a && npm run collect -- --only flight-prices'
 ```
 
-The first full pass takes a while — roughly 30 origins × 3 trip lengths × 12
+The first full pass takes a while — roughly 30 origins × 5 trip lengths × 12
 months per destination, at a deliberately polite 120 requests a minute. Leave it
 running.
 
@@ -125,7 +125,7 @@ Three things follow, and they're built in rather than left to remember:
 
 | Variable | Default | Effect |
 |---|---|---|
-| `FLIGHT_TRIP_LENGTHS` | `4,5,7` | Nights to precompute. Each is a direct multiplier on job size. |
+| `FLIGHT_TRIP_LENGTHS` | `3,4,5,6,7` | Nights offered by the planner. Each is a direct multiplier on job size. |
 | `FLIGHT_MONTHS_AHEAD` | `12` | Months to fill. 12 = the full 365-day catalogue. |
 
 Origins live in `packages/shared/src/schemas/flights.ts` (`ORIGINS`). Thirty US

@@ -39,7 +39,22 @@ export default async function Image() {
           padding: 80,
         }}
       >
-        <div style={{ fontSize: 96, marginBottom: 16 }}>🎢</div>
+        <div
+          style={{
+            width: 112,
+            height: 112,
+            marginBottom: 18,
+            border: "8px solid white",
+            borderRadius: 32,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 72,
+            fontWeight: 700,
+          }}
+        >
+          $
+        </div>
         <div style={{ fontSize: 82, fontWeight: 700, letterSpacing: -2 }}>RateCoaster</div>
         <div
           style={{
