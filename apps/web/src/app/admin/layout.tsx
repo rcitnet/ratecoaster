@@ -22,6 +22,7 @@ const TABS = [
   { href: "/admin/sources", label: "Sources" },
   { href: "/admin/hotels", label: "Hotels" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/clicks", label: "Affiliate clicks" },
   { href: "/admin/status", label: "Data freshness" },
   { href: "/admin/social", label: "Social publishing" },
 ];

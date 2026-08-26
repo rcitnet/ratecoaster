@@ -5,6 +5,7 @@ import { getDb } from "@ratecoaster/db";
 import {
   adminAudit,
   collectorRuns,
+  outboundClicks,
   properties,
   rateCurrent,
   ticketProducts,
@@ -67,6 +68,75 @@ adminRouter.get("/overview", async (c) => {
       errorCount: r.errorCount,
       notes: r.notes,
     })),
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Outbound clicks
+ * ------------------------------------------------------------------ */
+
+/**
+ * Which of our pages actually produce affiliate clicks.
+ *
+ * The network reports revenue per creative, and every link deep-links through
+ * one evergreen creative, so their dashboard can say what we earned but never
+ * which page earned it. This half of the picture exists nowhere but here — no
+ * third-party analytics tool can see it, because the click leaves for their
+ * domain and the attribution dies at the boundary.
+ *
+ * Grouped by page AND merchant rather than page alone: the same row can offer
+ * two merchants, and collapsing them would hide which one people choose, which
+ * is the question that decides who to keep.
+ */
+adminRouter.get("/clicks", async (c) => {
+  const requested = Number(c.req.query("days"));
+  const days = Number.isFinite(requested) ? Math.min(Math.max(Math.trunc(requested), 1), 365) : 30;
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const db = getDb();
+
+  const clicks = sql<number>`count(*)::int`;
+  const day = sql`date_trunc('day', ${outboundClicks.clickedAt})`;
+
+  const [totals] = await db
+    .select({
+      clicks,
+      pages: sql<number>`count(distinct ${outboundClicks.fromPath})::int`,
+      merchants: sql<number>`count(distinct ${outboundClicks.merchant})::int`,
+    })
+    .from(outboundClicks)
+    .where(gte(outboundClicks.clickedAt, since));
+
+  const byPage = await db
+    .select({
+      fromPath: outboundClicks.fromPath,
+      merchant: outboundClicks.merchant,
+      clicks,
+      lastClickedAt: sql<string>`to_char(max(${outboundClicks.clickedAt}) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
+    })
+    .from(outboundClicks)
+    .where(gte(outboundClicks.clickedAt, since))
+    .groupBy(outboundClicks.fromPath, outboundClicks.merchant)
+    .orderBy(sql`count(*) desc`)
+    .limit(100);
+
+  const byDay = await db
+    .select({ day: sql<string>`to_char(${day}, 'YYYY-MM-DD')`, clicks })
+    .from(outboundClicks)
+    .where(gte(outboundClicks.clickedAt, since))
+    .groupBy(day)
+    .orderBy(day);
+
+  return c.json({
+    days,
+    totals: {
+      clicks: totals?.clicks ?? 0,
+      pages: totals?.pages ?? 0,
+      merchants: totals?.merchants ?? 0,
+    },
+    // fromPath is nullable because a click can arrive without a referrer.
+    // Labelling it here keeps the "unknown" case out of the page's markup.
+    byPage: byPage.map((r) => ({ ...r, fromPath: r.fromPath ?? "(no referrer)" })),
+    byDay,
   });
 });
 
