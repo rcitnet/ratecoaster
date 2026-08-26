@@ -23,6 +23,7 @@ const TABS = [
   { href: "/admin/hotels", label: "Hotels" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/status", label: "Data freshness" },
+  { href: "/admin/social", label: "Social publishing" },
 ];
 
 /**

@@ -39,6 +39,11 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # and the email about it.
 37 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api alerts:dispatch -- --send >> /home/ratecoaster/logs/alerts.log 2>&1
 
+# Social publishing — eight minutes past every hour, after a fresh wait-time
+# sample. The job itself checks park hours, source freshness, daily-deal timing,
+# admin enable switches and dry-run state. X is always queued for human approval.
+8 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api social:publish -- --send >> /home/ratecoaster/logs/social.log 2>&1
+
 # Nightly: fold wait samples into hourly averages and prune the raw rows.
 30 3 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api rollup >> /home/ratecoaster/logs/rollup.log 2>&1
 

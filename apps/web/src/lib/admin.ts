@@ -69,6 +69,38 @@ export interface AdminOverview {
   }>;
 }
 
+export interface AdminSocialSetting {
+  platform: "threads" | "bluesky" | "x";
+  enabled: boolean;
+  dryRun: boolean;
+  configured: boolean;
+  automatic: boolean;
+  detail: string;
+}
+
+export interface AdminSocialDelivery {
+  postId: string;
+  kind: string;
+  body: string;
+  url: string | null;
+  fullText: string;
+  sourceObservedAt: string | null;
+  expiresAt: string;
+  createdAt: string;
+  deliveryId: string | null;
+  platform: "threads" | "bluesky" | "x" | null;
+  status: "pending" | "claimed" | "published" | "failed" | "cancelled" | null;
+  attempts: number | null;
+  lastError: string | null;
+  externalUrl: string | null;
+  publishedAt: string | null;
+}
+
+export interface AdminSocial {
+  settings: AdminSocialSetting[];
+  deliveries: AdminSocialDelivery[];
+}
+
 /** True only if the server says so. Never inferred client-side. */
 export async function isAdmin(): Promise<boolean> {
   const me = await getMe();
@@ -87,6 +119,8 @@ export const getCollectors = () => apiFetch<AdminCollector[]>("/v1/admin/collect
 export const getSources = () => apiFetch<AdminSource[]>("/v1/admin/sources", []);
 export const getProperties = () => apiFetch<AdminProperty[]>("/v1/admin/properties", []);
 export const getUsers = () => apiFetch<AdminUser[]>("/v1/admin/users", []);
+export const getSocial = () =>
+  apiFetch<AdminSocial>("/v1/admin/social", { settings: [], deliveries: [] });
 export const getAudit = () =>
   apiFetch<Array<{ at: string; email: string | null; action: string; target: string | null }>>(
     "/v1/admin/audit",
