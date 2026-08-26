@@ -72,6 +72,15 @@ export const attractionStatusEnum = pgEnum("attraction_status", [
 
 export const flightSourceEnum = pgEnum("flight_source", ["travelpayouts", "manual"]);
 
+export const socialPlatformEnum = pgEnum("social_platform", ["threads", "bluesky", "x"]);
+export const socialDeliveryStatusEnum = pgEnum("social_delivery_status", [
+  "pending",
+  "claimed",
+  "published",
+  "failed",
+  "cancelled",
+]);
+
 /**
  * Cached round-trip fares, keyed by origin.
  *
@@ -727,6 +736,70 @@ export const alertEvents = pgTable(
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("alert_events_watch_idx").on(t.watchId, t.sentAt)]
+);
+
+/* ------------------------------------------------------------------ *
+ * Social publishing
+ * ------------------------------------------------------------------ */
+
+/**
+ * Safe-by-default switches for the three brand accounts.
+ *
+ * X is intentionally always human-approved. For Threads and Bluesky, turning
+ * off dry-run permits the scheduled publisher to send queued posts using the
+ * official APIs. Credentials remain in the server environment, never here.
+ */
+export const socialSettings = pgTable("social_settings", {
+  platform: socialPlatformEnum("platform").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  dryRun: boolean("dry_run").notNull().default(true),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One editorial item, shared by every destination platform. */
+export const socialPosts = pgTable(
+  "social_posts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: text("kind").notNull(),
+    /** Stable source/time-window key. Prevents cron retries creating duplicates. */
+    fingerprint: text("fingerprint").notNull(),
+    body: text("body").notNull(),
+    url: text("url"),
+    sourceObservedAt: timestamp("source_observed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("social_posts_fingerprint_uq").on(t.fingerprint),
+    index("social_posts_created_idx").on(t.createdAt),
+  ]
+);
+
+/** Platform-specific delivery state for one editorial item. */
+export const socialDeliveries = pgTable(
+  "social_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => socialPosts.id, { onDelete: "cascade" }),
+    platform: socialPlatformEnum("platform").notNull(),
+    status: socialDeliveryStatusEnum("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    externalPostId: text("external_post_id"),
+    externalUrl: text("external_url"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("social_delivery_post_platform_uq").on(t.postId, t.platform),
+    index("social_delivery_status_idx").on(t.platform, t.status, t.createdAt),
+  ]
 );
 
 /* ------------------------------------------------------------------ *

@@ -209,3 +209,148 @@ export function UserTierControl({ id, tier }: { id: string; tier: string }) {
     </span>
   );
 }
+
+/* ---------- social publishing ---------- */
+
+export function SocialSettingControls({
+  platform,
+  enabled,
+  dryRun,
+  configured,
+  automatic,
+}: {
+  platform: "threads" | "bluesky" | "x";
+  enabled: boolean;
+  dryRun: boolean;
+  configured: boolean;
+  automatic: boolean;
+}) {
+  const { busy, msg, run } = useAction();
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <button
+        className="btn btn-ghost btn-sm"
+        disabled={busy || (!enabled && !configured)}
+        onClick={() =>
+          run(
+            () => call(`/v1/admin/social/${platform}`, "PATCH", { enabled: !enabled }),
+            enabled ? "Disabled" : "Enabled"
+          )
+        }
+      >
+        {enabled ? "Disable" : "Enable"}
+      </button>
+      {automatic && enabled ? (
+        dryRun ? (
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={busy || !configured}
+            onClick={() => {
+              if (!window.confirm(`Turn on automatic live posting to ${platform}?`)) return;
+              void run(
+                () => call(`/v1/admin/social/${platform}`, "PATCH", { dryRun: false }),
+                "Automatic posting is live"
+              );
+            }}
+          >
+            Go live
+          </button>
+        ) : (
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() =>
+              run(
+                () => call(`/v1/admin/social/${platform}`, "PATCH", { dryRun: true }),
+                "Back to dry run"
+              )
+            }
+          >
+            Back to dry run
+          </button>
+        )
+      ) : null}
+      <Feedback msg={msg} />
+    </div>
+  );
+}
+
+export function SocialRunControls() {
+  const { busy, msg, run } = useAction();
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <button
+        className="btn btn-ghost btn-sm"
+        disabled={busy}
+        onClick={() => run(() => call("/v1/admin/social/run", "POST", { send: false }), "Generated")}
+      >
+        Generate now
+      </button>
+      <button
+        className="btn btn-primary btn-sm"
+        disabled={busy}
+        onClick={() => {
+          if (!window.confirm("Publish eligible queued posts to every live automatic platform now?")) return;
+          void run(() => call("/v1/admin/social/run", "POST", { send: true }), "Publishing run finished");
+        }}
+      >
+        Publish eligible now
+      </button>
+      <Feedback msg={msg} />
+    </div>
+  );
+}
+
+export function SocialDeliveryControls({
+  id,
+  platform,
+  status,
+  fullText,
+}: {
+  id: string;
+  platform: "threads" | "bluesky" | "x";
+  status: "pending" | "claimed" | "published" | "failed" | "cancelled";
+  fullText: string;
+}) {
+  const { busy, msg, run } = useAction();
+  const intent = `https://x.com/intent/tweet?text=${encodeURIComponent(fullText)}`;
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      {platform === "x" && status === "pending" ? (
+        <>
+          <a className="btn btn-primary btn-sm" href={intent} target="_blank" rel="noopener noreferrer">
+            Review on X
+          </a>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() =>
+              run(() => call(`/v1/admin/social/deliveries/${id}/mark-posted`, "POST"), "Marked posted")
+            }
+          >
+            Mark posted
+          </button>
+        </>
+      ) : null}
+      {status === "failed" ? (
+        <button
+          className="btn btn-ghost btn-sm"
+          disabled={busy}
+          onClick={() => run(() => call(`/v1/admin/social/deliveries/${id}/retry`, "POST"), "Queued again")}
+        >
+          Retry
+        </button>
+      ) : null}
+      {status === "pending" ? (
+        <button
+          className="btn btn-ghost btn-sm"
+          disabled={busy}
+          onClick={() => run(() => call(`/v1/admin/social/deliveries/${id}/cancel`, "POST"), "Cancelled")}
+        >
+          Cancel
+        </button>
+      ) : null}
+      <Feedback msg={msg} />
+    </div>
+  );
+}

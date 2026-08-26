@@ -17,8 +17,11 @@ import { getAllCollectorSettings, setCollectorSetting } from "../lib/settings.js
 import { COLLECTORS } from "../jobs/registry.js";
 import { runCollector } from "../collectors/framework/runner.js";
 import { universalOrlandoTicketCredentialsConfigured } from "../collectors/tickets/universal-orlando-commerce.js";
+import { adminSocialRouter } from "./admin-social.js";
 
 export const adminRouter = new Hono();
+
+adminRouter.route("/social", adminSocialRouter);
 
 /* ------------------------------------------------------------------ *
  * Overview

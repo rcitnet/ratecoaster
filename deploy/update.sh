@@ -41,6 +41,11 @@ echo "==> Building the website"
 # '<Html> should not be imported outside of pages/_document'.
 run_as_app "set -a && . ./.env && set +a && NODE_ENV=production npm run -w @ratecoaster/web build"
 
+echo "==> Installing scheduled jobs"
+# deploy/ratecoaster.cron is the authoritative schedule. Reinstall it on every
+# deploy so a newly added job does not exist in git but never run in production.
+sudo crontab -u "$APP_USER" "$APP_DIR/deploy/ratecoaster.cron"
+
 echo "==> Restarting services"
 # Pick up any change to the unit files first. Without this, systemd restarts
 # from its cached definition and warns that the units changed on disk — so an
