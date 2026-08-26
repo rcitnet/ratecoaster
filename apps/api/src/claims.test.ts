@@ -110,3 +110,55 @@ test("no client method points at an unmounted path", () => {
     `client calls paths with no mounted route: ${orphans.join(", ")}`
   );
 });
+
+/**
+ * The third way a promise goes hollow: the feature exists, and nothing runs it.
+ *
+ * A scheduled job is invisible when broken. cron reports to nobody, a failed
+ * command appends a line to a log file no one opens, and the site goes on
+ * advertising a nightly digest that has not run since the script was renamed.
+ * Every `npm run` in the crontab is therefore checked against the package.json
+ * it would actually resolve against — root for a bare name, the named workspace
+ * for `-w`.
+ *
+ * The trap this closes is specific and real: `alerts:dispatch` is declared in
+ * apps/api/package.json and NOT at the root, so `npm run alerts:dispatch` from
+ * the repo root fails with "Missing script" while the identical-looking
+ * `npm run -w @ratecoaster/api alerts:dispatch` succeeds.
+ */
+test("every scheduled command resolves to a declared script", () => {
+  const cron = readFileSync(join(repoRoot, "deploy/ratecoaster.cron"), "utf8");
+
+  const scriptsOf = (pkg: string): Set<string> => {
+    const raw = readFileSync(join(repoRoot, pkg, "package.json"), "utf8");
+    return new Set(Object.keys((JSON.parse(raw) as { scripts?: object }).scripts ?? {}));
+  };
+
+  const workspaceDirs = new Map([
+    ["@ratecoaster/api", "apps/api"],
+    ["@ratecoaster/web", "apps/web"],
+    ["@ratecoaster/db", "packages/db"],
+    ["@ratecoaster/shared", "packages/shared"],
+  ]);
+
+  const missing: string[] = [];
+
+  for (const line of cron.split("\n")) {
+    if (line.trim().startsWith("#") || !line.includes("npm run")) continue;
+
+    for (const m of line.matchAll(/npm run (?:-w (\S+) )?([\w:-]+)/g)) {
+      const [, workspace, script] = m;
+      const dir = workspace ? workspaceDirs.get(workspace) : ".";
+
+      if (dir === undefined) {
+        missing.push(`unknown workspace ${workspace}`);
+        continue;
+      }
+      if (!scriptsOf(dir).has(script!)) {
+        missing.push(workspace ? `${workspace} has no "${script}"` : `root has no "${script}"`);
+      }
+    }
+  }
+
+  assert.deepEqual(missing, [], `crontab calls scripts that do not exist: ${missing.join("; ")}`);
+});

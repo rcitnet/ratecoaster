@@ -4,6 +4,8 @@ import "./globals.css";
 import { getMe } from "@/lib/api";
 import { MobileMenu } from "@/components/MobileMenu";
 import { AdSenseScript } from "@/components/AdSenseScript";
+import { Analytics } from "@/components/Analytics";
+import { analyticsConfig } from "@/lib/analytics";
 import {
   DEFAULT_DESCRIPTION,
   jsonLd,
@@ -115,6 +117,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{ __html: jsonLd(websiteSchema()) }}
         />
         <AdSenseScript />
+        <Analytics {...analyticsConfig()} />
         <header className="masthead">
           <div className="masthead-inner">
             <a href="/" className="brand" aria-label="RateCoaster home">
