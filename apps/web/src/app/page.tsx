@@ -1,5 +1,6 @@
 import {
   centsToDisplay,
+  DEFAULT_HOMEPAGE_SETTINGS,
   deriveParkState,
   formatParkHours,
   parkStateMessage,
@@ -14,6 +15,7 @@ import {
   TIER_LABELS,
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
+import { HomeHero } from "@/components/HomeHero";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -29,7 +31,7 @@ const HOME_TIERS = ["premier", "preferred", "prime-value", "value"] as const;
 
 export default async function DealsPage() {
   const client = await getClient();
-  const [deals, properties, waits, ticketProducts] = await Promise.all([
+  const [deals, properties, waits, ticketProducts, homepage] = await Promise.all([
     safe(client.listDeals({ destination: "universal-orlando", limit: 40 }), []),
     safe(client.listProperties(), []),
     safe(client.liveWaits({ destination: "universal-orlando" }), {
@@ -38,6 +40,7 @@ export default async function DealsPage() {
       fetchedAt: new Date().toISOString(),
     }),
     safe(client.listTicketProducts("universal-orlando"), []),
+    safe(client.homepageSettings(), DEFAULT_HOMEPAGE_SETTINGS),
   ]);
 
   // This headline describes hotel inventory, not whichever deal rows happen
@@ -93,47 +96,16 @@ export default async function DealsPage() {
 
   return (
     <main>
-      <section className="hero">
-        <div className="hero-kicker">
-          <span aria-hidden="true">✦</span> Live waits · 365-day price calendars
-        </div>
-        <h1>Know when to go—and what it should cost.</h1>
-        <p className="lede">
-          Live park waits, public and passholder hotel rates, and Orlando ticket prices in one
-          place. Find shorter lines and dates that are genuinely a deal—not merely the cheapest
-          option on the page.
-        </p>
-        <div className="hero-actions">
-          <a href="/plan" className="btn btn-primary btn-lg">
-            Price my trip
-          </a>
-          <a href="#hotel-deals" className="btn btn-ghost btn-lg" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
-            Today&apos;s best deals
-          </a>
-          <a href="/waits" className="btn btn-ghost btn-lg" style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}>
-            Live wait times
-          </a>
-        </div>
-
-        <div className="hero-stats">
-          <div>
-            <div className="hero-stat-value">{properties.length}</div>
-            <div className="hero-stat-label">official hotels tracked</div>
-          </div>
-          <div>
-            <div className="hero-stat-value">{parkSummaries.length || "—"}</div>
-            <div className="hero-stat-label">Orlando parks monitored</div>
-          </div>
-          <div>
-            <div className="hero-stat-value">{ticketProducts.length || "—"}</div>
-            <div className="hero-stat-label">Orlando ticket types priced</div>
-          </div>
-          <div>
-            <div className="hero-stat-value">{withExpress}</div>
-            <div className="hero-stat-label">hotels with free Express</div>
-          </div>
-        </div>
-      </section>
+      <HomeHero
+        variant={homepage.heroVariant}
+        stats={{
+          hotelCount: properties.length,
+          parkCount: parkSummaries.length,
+          ticketCount: ticketProducts.length,
+          expressHotelCount: withExpress,
+        }}
+        parks={parkSummaries}
+      />
 
       <AdSlot
         placement="home-after-park-pulse"

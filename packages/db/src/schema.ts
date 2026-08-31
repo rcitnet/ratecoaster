@@ -904,6 +904,20 @@ export const collectorSettings = pgTable(
 );
 
 /**
+ * Site-wide presentation switches, keyed by string.
+ *
+ * The homepage hero is the first consumer: an admin picks a layout, the public
+ * page reads it, and a deploy is not required to try a different first screen.
+ * JSON values keep new knobs from needing a column each time.
+ */
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<Record<string, unknown>>().notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
  * Every admin action, recorded.
  *
  * This panel controls a scraper and the prices shown to the public. When

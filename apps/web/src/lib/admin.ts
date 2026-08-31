@@ -1,3 +1,4 @@
+import type { HeroVariant } from "@ratecoaster/shared";
 import { apiFetch, getMe } from "./api";
 
 /**
@@ -106,6 +107,14 @@ export async function isAdmin(): Promise<boolean> {
   const me = await getMe();
   return me.entitlements.admin === true;
 }
+
+export interface AdminHomepage {
+  heroVariant: HeroVariant;
+  updatedAt: string | null;
+}
+
+export const getHomepage = () =>
+  apiFetch<AdminHomepage>("/v1/admin/homepage", { heroVariant: "current", updatedAt: null });
 
 export const getOverview = () =>
   apiFetch<AdminOverview>("/v1/admin/overview", {

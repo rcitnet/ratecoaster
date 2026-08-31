@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 
 const TABS = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/homepage", label: "Homepage" },
   { href: "/admin/collectors", label: "Collectors" },
   { href: "/admin/sources", label: "Sources" },
   { href: "/admin/hotels", label: "Hotels" },

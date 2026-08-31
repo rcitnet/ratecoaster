@@ -13,6 +13,7 @@ import { plannerRouter } from "./routes/planner.js";
 import { outboundRouter } from "./routes/outbound.js";
 import { watchesRouter } from "./routes/watches.js";
 import { tripsRouter } from "./routes/trips.js";
+import { siteRouter } from "./routes/site.js";
 import { COLLECTORS } from "./jobs/registry.js";
 
 const app = new Hono();
@@ -121,6 +122,7 @@ if (!DEMO) {
   app.route("/v1/admin", adminRouter);
 }
 
+app.route("/v1/site", siteRouter);
 app.route("/v1/properties", propertiesRouter);
 app.route("/v1/rates", ratesRouter);
 app.route("/v1/deals", dealsRouter);

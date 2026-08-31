@@ -1,4 +1,5 @@
 export * from "./schemas/common.js";
+export * from "./schemas/site.js";
 export * from "./schemas/hotels.js";
 export * from "./schemas/tickets.js";
 export * from "./schemas/waits.js";
