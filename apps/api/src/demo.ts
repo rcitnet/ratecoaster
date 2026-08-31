@@ -648,6 +648,8 @@ demoApp.get("/v1/waits/live", async (c) => {
 
 demoApp.get("/v1/waits/:slug/typical", (c) => c.json([]));
 
+demoApp.get("/v1/site/homepage", (c) => c.json({ heroVariant: "current" }));
+
 demoApp.get("/v1/status", (c) =>
   c.json({
     collectors: [

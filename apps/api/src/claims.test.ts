@@ -81,6 +81,7 @@ test("the routes this project depends on are actually mounted", () => {
     "/v1/watches",
     "/v1/auth",
     "/v1/outbound",
+    "/v1/site",
   ]) {
     assert.ok(routes.includes(required), `${required} is not mounted in apps/api/src/index.ts`);
   }

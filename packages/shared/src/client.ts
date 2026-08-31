@@ -27,6 +27,7 @@ import {
 import { CreateWatch, WatchView } from "./schemas/alerts.js";
 import { Entitlements, GateInfo, SessionUser } from "./schemas/auth.js";
 import { TripQuote, type TripQuoteQuery } from "./schemas/trips.js";
+import { HomepageSettings } from "./schemas/site.js";
 
 export class RateCoasterApiError extends Error {
   constructor(
@@ -99,6 +100,12 @@ export class RateCoasterClient {
     // Parsing the response against the same schema the server validated with
     // turns a silent backend contract break into a loud, local failure.
     return schema.parse(json);
+  }
+
+  // ---- Site chrome ----
+
+  homepageSettings() {
+    return this.request("/v1/site/homepage", HomepageSettings);
   }
 
   // ---- Hotels ----

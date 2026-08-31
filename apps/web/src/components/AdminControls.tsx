@@ -1,5 +1,6 @@
 "use client";
 
+import type { HeroVariant } from "@ratecoaster/shared";
 import { useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
@@ -207,6 +208,35 @@ export function UserTierControl({ id, tier }: { id: string; tier: string }) {
       ))}
       <Feedback msg={msg} />
     </span>
+  );
+}
+
+/* ---------- homepage hero ---------- */
+
+export function HomepageHeroControl({
+  variant,
+  active,
+}: {
+  variant: HeroVariant;
+  active: boolean;
+}) {
+  const { busy, msg, run } = useAction();
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <button
+        className={`btn btn-sm ${active ? "btn-blue" : "btn-primary"}`}
+        disabled={busy || active}
+        onClick={() =>
+          run(
+            () => call("/v1/admin/homepage", "PATCH", { heroVariant: variant }),
+            "Homepage updated"
+          )
+        }
+      >
+        {active ? "Live now" : "Use this layout"}
+      </button>
+      <Feedback msg={msg} />
+    </div>
   );
 }
 
