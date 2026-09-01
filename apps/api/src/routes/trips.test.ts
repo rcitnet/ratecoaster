@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TripQuoteQuery } from "@ratecoaster/shared";
 import {
+  buildPlannerFlightEstimate,
   completeTripTotal,
   selectPlannerFare,
   type PlannerFareCandidate,
@@ -90,6 +91,33 @@ test("uses the closest same-length fare and discloses the date distance", () => 
   assert.equal(selected?.basis, "nearby-date");
   assert.equal(selected?.row.departDate, "2026-09-29");
   assert.equal(selected?.dateDifferenceDays, 2);
+});
+
+test("live flight search uses the requested dates when its estimate came from a nearby date", () => {
+  const selected = selectPlannerFare(
+    [fare("2026-09-27", 7, 36_000)],
+    "2026-09-15",
+    7
+  );
+  assert.ok(selected);
+
+  const flight = buildPlannerFlightEstimate(
+    selected,
+    {
+      checkIn: "2026-09-15",
+      checkOut: "2026-09-22",
+      passengers: 2,
+      marker: "767870",
+    },
+    new Date("2026-09-01T12:30:00Z")
+  );
+
+  assert.equal(flight.departDate, "2026-09-15");
+  assert.equal(flight.estimateDepartDate, "2026-09-27");
+  assert.equal(
+    flight.bookingUrl,
+    "https://www.aviasales.com/search/PDX1509MCO22092?marker=767870"
+  );
 });
 
 test("falls back to the median recent route fare when dates and lengths do not match", () => {

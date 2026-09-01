@@ -6,7 +6,9 @@ import {
 } from "@ratecoaster/shared";
 import { AdSlot } from "@/components/AdSlot";
 import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
+import { TripDateFields } from "@/components/TripDateFields";
 import { formatLongDate, getClient, relativeTime, TIER_LABELS } from "@/lib/api";
+import { addIsoDays } from "@/lib/trip-form";
 
 import { pageMetadata } from "@/lib/seo";
 
@@ -28,12 +30,6 @@ function todayInOrlando(): string {
   }).formatToParts(new Date());
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "01";
   return `${part("year")}-${part("month")}-${part("day")}`;
-}
-
-function addIsoDays(value: string, days: number): string {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day! + days));
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 function numberParam(value: string | undefined, fallback: number): number {
@@ -117,14 +113,11 @@ export default async function TripPlannerPage({
         </div>
 
         <form action="/plan" method="get" className="trip-form">
-          <label>
-            <span>Check-in</span>
-            <input className="field" type="date" name="checkIn" min={today} defaultValue={values.checkIn} required />
-          </label>
-          <label>
-            <span>Check-out</span>
-            <input className="field" type="date" name="checkOut" min={addIsoDays(today, 1)} defaultValue={values.checkOut} required />
-          </label>
+          <TripDateFields
+            initialCheckIn={values.checkIn}
+            initialCheckOut={values.checkOut}
+            today={today}
+          />
           <label>
             <span>Flying from</span>
             <select className="field" name="origin" defaultValue={values.origin}>
