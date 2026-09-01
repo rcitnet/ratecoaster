@@ -444,6 +444,26 @@ demoApp.get("/v1/trips/quote", (c) => {
     query.checkIn
   );
   const hotel = hotels[0] ?? null;
+  const partySize = query.adults + query.children;
+  const flight = query.origin
+    ? {
+        origin: query.origin,
+        destination: "MCO",
+        departDate: query.checkIn,
+        returnDate: query.checkOut,
+        perPassengerCents: 18_900,
+        subtotalCents: 18_900 * partySize,
+        currency: "USD",
+        airline: "B6",
+        transfers: 0,
+        observedAt: new Date().toISOString(),
+        bookingUrl: null,
+      }
+    : null;
+  const combinedTotalCents =
+    hotel && ticket && (!query.origin || flight)
+      ? hotel.subtotalCents + ticket.subtotalCents + (flight?.subtotalCents ?? 0)
+      : null;
 
   return c.json(
     TripQuote.parse({
@@ -454,16 +474,21 @@ demoApp.get("/v1/trips/quote", (c) => {
       rooms: query.rooms,
       adults: query.adults,
       children: query.children,
+      origin: query.origin ?? null,
       rateCode: query.rateCode,
       hotel,
       hotelAlternatives: hotels.slice(1, 7),
       ticket,
-      combinedTotalCents: hotel && ticket ? hotel.subtotalCents + ticket.subtotalCents : null,
+      flight,
+      combinedTotalCents,
       assumptions: [
         "Hotel estimates use one room type for the entire stay and the tracked two-adult occupancy, multiplied by the number of rooms.",
         query.rateCode === "APH"
           ? "Annual Passholder estimates add only one day of Epic Universe admission; eligible admission at the other parks is assumed to be covered by the Annual Pass."
           : "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
+        query.origin
+          ? "Flight estimates use a sample cached round-trip fare multiplied by every traveler."
+          : "Flights are excluded because no departure city was selected.",
         "Demo prices are sample data. Always confirm availability and the final price before booking.",
       ],
     })

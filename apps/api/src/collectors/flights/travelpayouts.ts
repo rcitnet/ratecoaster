@@ -36,7 +36,7 @@ export interface TravelpayoutsCredentials {
 
 export class MissingCredentialsError extends Error {
   constructor() {
-    super("TRAVELPAYOUTS_TOKEN is not set");
+    super("AVIASALES_API_TOKEN is not set");
     this.name = "MissingCredentialsError";
   }
 }
@@ -56,9 +56,12 @@ function isPlaceholder(value: string | undefined): boolean {
  * filled in should say so, not fail downstream wearing someone else's error.
  */
 export function readCredentials(): TravelpayoutsCredentials | null {
-  const token = process.env.TRAVELPAYOUTS_TOKEN;
+  // Prefer the names shown in the current Aviasales/Travelpayouts dashboard.
+  // Keep the older names as a migration path for existing deployments.
+  const token = process.env.AVIASALES_API_TOKEN ?? process.env.TRAVELPAYOUTS_TOKEN;
   if (isPlaceholder(token)) return null;
-  const marker = process.env.TRAVELPAYOUTS_MARKER;
+  const marker =
+    process.env.TRAVELPAYOUTS_PARTNER_ID ?? process.env.TRAVELPAYOUTS_MARKER;
   return { token: token!.trim(), marker: isPlaceholder(marker) ? null : marker!.trim() };
 }
 

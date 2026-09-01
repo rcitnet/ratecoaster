@@ -1,7 +1,33 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TripPlannerQuery } from "@ratecoaster/shared";
-import { buildBookingUrl, parseCalendar } from "./travelpayouts.js";
+import { buildBookingUrl, parseCalendar, readCredentials } from "./travelpayouts.js";
+
+test("reads the current Aviasales token and Travelpayouts partner ID names", () => {
+  const previous = {
+    token: process.env.AVIASALES_API_TOKEN,
+    partner: process.env.TRAVELPAYOUTS_PARTNER_ID,
+    legacyToken: process.env.TRAVELPAYOUTS_TOKEN,
+    legacyMarker: process.env.TRAVELPAYOUTS_MARKER,
+  };
+
+  try {
+    process.env.AVIASALES_API_TOKEN = "test-api-token";
+    process.env.TRAVELPAYOUTS_PARTNER_ID = "767870";
+    process.env.TRAVELPAYOUTS_TOKEN = "legacy-token";
+    process.env.TRAVELPAYOUTS_MARKER = "legacy-marker";
+    assert.deepEqual(readCredentials(), { token: "test-api-token", marker: "767870" });
+  } finally {
+    const restore = (key: string, value: string | undefined) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    };
+    restore("AVIASALES_API_TOKEN", previous.token);
+    restore("TRAVELPAYOUTS_PARTNER_ID", previous.partner);
+    restore("TRAVELPAYOUTS_TOKEN", previous.legacyToken);
+    restore("TRAVELPAYOUTS_MARKER", previous.legacyMarker);
+  }
+});
 
 /**
  * The calendar payload, in the documented shape.

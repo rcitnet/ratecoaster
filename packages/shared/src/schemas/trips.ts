@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Cents, IsoDate } from "./common.js";
 import { PropertyTier } from "./hotels.js";
+import { IataCode } from "./flights.js";
 
 export const TripRateCode = z.enum(["STANDARD", "APH"]);
 export type TripRateCode = z.infer<typeof TripRateCode>;
@@ -8,6 +9,8 @@ export type TripRateCode = z.infer<typeof TripRateCode>;
 export const TripQuoteQuery = z.object({
   checkIn: IsoDate,
   checkOut: IsoDate,
+  /** Omit when the party is driving. */
+  origin: IataCode.optional(),
   rooms: z.coerce.number().int().min(1).max(4).default(1),
   adults: z.coerce.number().int().min(1).max(8).default(2),
   children: z.coerce.number().int().min(0).max(8).default(0),
@@ -42,6 +45,23 @@ export const TripTicketRecommendation = z.object({
 });
 export type TripTicketRecommendation = z.infer<typeof TripTicketRecommendation>;
 
+export const TripFlightEstimate = z.object({
+  origin: IataCode,
+  destination: IataCode,
+  departDate: IsoDate,
+  returnDate: IsoDate,
+  /** Cached Aviasales fare for one traveler. */
+  perPassengerCents: Cents,
+  /** The same per-person fare multiplied by every traveler in the party. */
+  subtotalCents: Cents,
+  currency: z.string().length(3),
+  airline: z.string().nullable(),
+  transfers: z.number().int().nonnegative().nullable(),
+  observedAt: z.string().datetime(),
+  bookingUrl: z.string().url().nullable(),
+});
+export type TripFlightEstimate = z.infer<typeof TripFlightEstimate>;
+
 export const TripQuote = z.object({
   checkIn: IsoDate,
   checkOut: IsoDate,
@@ -50,10 +70,13 @@ export const TripQuote = z.object({
   rooms: z.number().int().positive(),
   adults: z.number().int().positive(),
   children: z.number().int().nonnegative(),
+  origin: IataCode.nullable(),
   rateCode: TripRateCode,
   hotel: TripHotelOption.nullable(),
   hotelAlternatives: z.array(TripHotelOption),
   ticket: TripTicketRecommendation.nullable(),
+  flight: TripFlightEstimate.nullable(),
+  /** Null whenever any requested component is unavailable. */
   combinedTotalCents: Cents.nullable(),
   assumptions: z.array(z.string()),
 });

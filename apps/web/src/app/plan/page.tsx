@@ -1,10 +1,12 @@
 import {
   centsToDisplay,
+  ORIGINS,
   TripQuoteQuery,
   type TripQuote,
 } from "@ratecoaster/shared";
 import { AdSlot } from "@/components/AdSlot";
-import { formatLongDate, getClient, TIER_LABELS } from "@/lib/api";
+import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
+import { formatLongDate, getClient, relativeTime, TIER_LABELS } from "@/lib/api";
 
 import { pageMetadata } from "@/lib/seo";
 
@@ -53,6 +55,7 @@ export default async function TripPlannerPage({
   searchParams: Promise<{
     checkIn?: string;
     checkOut?: string;
+    origin?: string;
     rooms?: string;
     adults?: string;
     children?: string;
@@ -64,6 +67,7 @@ export default async function TripPlannerPage({
   const defaults = {
     checkIn: addIsoDays(today, 14),
     checkOut: addIsoDays(today, 17),
+    origin: "",
     rooms: 1,
     adults: 2,
     children: 0,
@@ -72,13 +76,17 @@ export default async function TripPlannerPage({
   const values = {
     checkIn: params.checkIn ?? defaults.checkIn,
     checkOut: params.checkOut ?? defaults.checkOut,
+    origin: params.origin ?? defaults.origin,
     rooms: numberParam(params.rooms, defaults.rooms),
     adults: numberParam(params.adults, defaults.adults),
     children: numberParam(params.children, defaults.children),
     rateCode: params.rateCode ?? defaults.rateCode,
   };
   const submitted = Boolean(params.checkIn || params.checkOut);
-  const parsed = TripQuoteQuery.safeParse(values);
+  const parsed = TripQuoteQuery.safeParse({
+    ...values,
+    origin: values.origin || undefined,
+  });
   let quote: TripQuote | null = null;
   let error: string | null = parsed.success ? null : "Check the dates and party details, then try again.";
 
@@ -98,7 +106,7 @@ export default async function TripPlannerPage({
           <h1>Price the whole trip, not just one night</h1>
           <p className="lede">
             Enter your dates and party size. We&apos;ll find the least-expensive complete hotel stay
-            and match it with the ticket duration that best fits your visit.
+            and match it with the ticket duration and cached round-trip airfare that best fit your visit.
           </p>
         </div>
 
@@ -110,6 +118,15 @@ export default async function TripPlannerPage({
           <label>
             <span>Check-out</span>
             <input className="field" type="date" name="checkOut" min={addIsoDays(today, 1)} defaultValue={values.checkOut} required />
+          </label>
+          <label>
+            <span>Flying from</span>
+            <select className="field" name="origin" defaultValue={values.origin}>
+              <option value="">We&apos;re driving — no flights</option>
+              {ORIGINS.map((origin) => (
+                <option key={origin.code} value={origin.code}>{origin.label}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Rooms</span>
@@ -149,13 +166,13 @@ export default async function TripPlannerPage({
               </p>
             </div>
             <div className="trip-grand-total">
-              <span>Hotel + tickets</span>
+              <span>{quote.origin ? "Flights + hotel + tickets" : "Hotel + tickets"}</span>
               <strong>{centsToDisplay(quote.combinedTotalCents)}</strong>
-              <small>estimated trip total</small>
+              <small>{quote.combinedTotalCents === null ? "complete total unavailable" : "estimated trip total"}</small>
             </div>
           </div>
 
-          <div className="grid grid-2 trip-breakdown">
+          <div className={`grid ${quote.origin ? "grid-3" : "grid-2"} trip-breakdown`}>
             <article className="card">
               <span className="badge badge-blue">Best hotel stay</span>
               {quote.hotel ? (
@@ -193,6 +210,50 @@ export default async function TripPlannerPage({
                 </>
               ) : <p>No tracked ticket price is available for the first day of this trip yet.</p>}
             </article>
+
+            {quote.origin ? (
+              <article className="card">
+                <span className="badge badge-blue">Cached round-trip airfare</span>
+                {quote.flight ? (
+                  <>
+                    <h3>{quote.flight.origin} to {quote.flight.destination}</h3>
+                    <p className="muted">
+                      {quote.flight.airline ? `${quote.flight.airline} · ` : ""}
+                      {quote.flight.transfers === 0
+                        ? "Non-stop"
+                        : quote.flight.transfers === null
+                          ? "Stops not reported"
+                          : `${quote.flight.transfers} stop${quote.flight.transfers === 1 ? "" : "s"}`}
+                    </p>
+                    <div className="trip-price-line">
+                      <strong>{centsToDisplay(quote.flight.subtotalCents, quote.flight.currency)}</strong>
+                      <span>party airfare estimate</span>
+                    </div>
+                    <p className="tiny muted">
+                      From {centsToDisplay(quote.flight.perPassengerCents, quote.flight.currency)} per traveler · observed {relativeTime(quote.flight.observedAt)}
+                    </p>
+                    {quote.flight.bookingUrl ? (
+                      <div>
+                        <a
+                          className="btn btn-ghost btn-sm"
+                          href={quote.flight.bookingUrl}
+                          target="_blank"
+                          rel="sponsored noopener noreferrer"
+                        >
+                          Check live flights
+                        </a>
+                        <AffiliateDisclosure merchant="aviasales" />
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <p>
+                    No current cached fare is available for this exact route and trip length yet.
+                    The hotel and ticket amounts remain visible, but they are not presented as a complete total.
+                  </p>
+                )}
+              </article>
+            ) : null}
           </div>
 
           {quote.hotelAlternatives.length ? (
