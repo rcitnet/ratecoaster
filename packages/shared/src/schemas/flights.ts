@@ -211,7 +211,7 @@ export const ORIGINS: Origin[] = [
   { code: "SFO", city: "San Francisco", state: "CA", label: "San Francisco" },
   { code: "SEA", city: "Seattle", state: "WA", label: "Seattle" },
   { code: "PDX", city: "Portland", state: "OR", label: "Portland" },
-];
+].sort((left, right) => left.label.localeCompare(right.label, "en"));
 
 /**
  * Destination airports.

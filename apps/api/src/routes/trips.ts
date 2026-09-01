@@ -14,6 +14,7 @@ import {
   TripQuoteQuery,
   APH_EPIC_TICKET_SLUG,
   DESTINATION_AIRPORTS,
+  type TripFlightEstimate,
   type TripHotelOption,
   type TripRateCode,
   type TripTicketRecommendation,
@@ -236,6 +237,51 @@ export function selectPlannerFare(
   };
 }
 
+/**
+ * Turn a cached fare observation into the estimate shown by the planner.
+ *
+ * A nearby fare can inform the price, but it must never replace the visitor's
+ * requested travel dates in the live-search link. Mixing those dates can create
+ * an impossible itinerary (for example, returning before departure), which
+ * causes Aviasales to discard the entire search.
+ */
+export function buildPlannerFlightEstimate(
+  selected: PlannerFareSelection,
+  request: {
+    checkIn: string;
+    checkOut: string;
+    passengers: number;
+    marker: string | null;
+  },
+  now = new Date()
+): TripFlightEstimate {
+  const fare = selected.row;
+  return {
+    origin: fare.origin,
+    destination: fare.destination,
+    departDate: request.checkIn,
+    returnDate: request.checkOut,
+    perPassengerCents: fare.priceCents,
+    subtotalCents: fare.priceCents * request.passengers,
+    currency: fare.currency,
+    airline: selected.basis === "route-baseline" ? null : fare.airline,
+    transfers: selected.basis === "route-baseline" ? null : fare.transfers,
+    observedAt: fare.observedAt.toISOString(),
+    basis: selected.basis,
+    estimateDepartDate: selected.basis === "route-baseline" ? null : fare.departDate,
+    dateDifferenceDays: selected.dateDifferenceDays,
+    upstreamExpired: fare.expiresAt ? fare.expiresAt.getTime() <= now.getTime() : false,
+    bookingUrl: buildBookingUrl({
+      origin: fare.origin,
+      destination: fare.destination,
+      departDate: request.checkIn,
+      returnDate: request.checkOut,
+      passengers: request.passengers,
+      marker: request.marker,
+    }),
+  };
+}
+
 function boundedEnv(name: string, fallback: number, max: number): number {
   const value = Number(process.env[name] ?? String(fallback));
   return Number.isFinite(value) && value > 0 && value <= max ? value : fallback;
@@ -355,23 +401,7 @@ tripsRouter.get("/quote", async (c) => {
   );
 
   const destinationAirport = DESTINATION_AIRPORTS["universal-orlando"];
-  let flight: {
-    origin: string;
-    destination: string;
-    departDate: string;
-    returnDate: string;
-    perPassengerCents: number;
-    subtotalCents: number;
-    currency: string;
-    airline: string | null;
-    transfers: number | null;
-    observedAt: string;
-    basis: "exact-date" | "nearby-date" | "route-baseline";
-    estimateDepartDate: string | null;
-    dateDifferenceDays: number | null;
-    upstreamExpired: boolean;
-    bookingUrl: string | null;
-  } | null = null;
+  let flight: TripFlightEstimate | null = null;
 
   if (query.origin) {
     const now = new Date();
@@ -399,33 +429,17 @@ tripsRouter.get("/quote", async (c) => {
     );
 
     if (selected) {
-      const fare = selected.row;
       const partySize = query.adults + query.children;
-      flight = {
-        origin: fare.origin,
-        destination: fare.destination,
-        departDate: fare.departDate,
-        returnDate: query.checkOut,
-        perPassengerCents: fare.priceCents,
-        subtotalCents: fare.priceCents * partySize,
-        currency: fare.currency,
-        airline: selected.basis === "route-baseline" ? null : fare.airline,
-        transfers: selected.basis === "route-baseline" ? null : fare.transfers,
-        observedAt: fare.observedAt.toISOString(),
-        basis: selected.basis,
-        estimateDepartDate:
-          selected.basis === "route-baseline" ? null : fare.departDate,
-        dateDifferenceDays: selected.dateDifferenceDays,
-        upstreamExpired: fare.expiresAt ? fare.expiresAt.getTime() <= now.getTime() : false,
-        bookingUrl: buildBookingUrl({
-          origin: fare.origin,
-          destination: fare.destination,
-          departDate: fare.departDate,
-          returnDate: query.checkOut,
+      flight = buildPlannerFlightEstimate(
+        selected,
+        {
+          checkIn: query.checkIn,
+          checkOut: query.checkOut,
           passengers: partySize,
           marker: readCredentials()?.marker ?? null,
-        }),
-      };
+        },
+        now
+      );
     }
   }
 

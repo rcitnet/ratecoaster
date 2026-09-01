@@ -1,5 +1,7 @@
 import type { HeroVariant, ParkHours, ParkState } from "@ratecoaster/shared";
 import { PARK_COLORS } from "@/lib/api";
+import { TripDateFields } from "@/components/TripDateFields";
+import { addIsoDays } from "@/lib/trip-form";
 
 export type HomeParkPulse = {
   park: { slug: string; name: string; timezone: string };
@@ -27,12 +29,6 @@ function orlandoToday(): string {
   }).formatToParts(new Date());
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "01";
   return `${part("year")}-${part("month")}-${part("day")}`;
-}
-
-function addIsoDays(value: string, days: number): string {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day! + days));
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 function Kicker() {
@@ -99,21 +95,11 @@ function PlannerForm() {
   const checkOut = addIsoDays(today, 17);
   return (
     <form action="/plan" method="get" className="hero-plan">
-      <label>
-        Check-in
-        <input className="field" type="date" name="checkIn" min={today} defaultValue={checkIn} required />
-      </label>
-      <label>
-        Check-out
-        <input
-          className="field"
-          type="date"
-          name="checkOut"
-          min={addIsoDays(today, 1)}
-          defaultValue={checkOut}
-          required
-        />
-      </label>
+      <TripDateFields
+        initialCheckIn={checkIn}
+        initialCheckOut={checkOut}
+        today={today}
+      />
       <label>
         Hotel rate
         <select className="field" name="rateCode" defaultValue="STANDARD">
