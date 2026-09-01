@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { properties } from "@ratecoaster/db/schema";
 import {
   DESTINATION_AIRPORTS,
@@ -76,7 +76,7 @@ export const flightPriceCollector: Collector = {
       return {
         ready: false,
         reason:
-          "TRAVELPAYOUTS_TOKEN is not set. Sign up at travelpayouts.com, join the Aviasales programme, and put the token in .env.",
+          "AVIASALES_API_TOKEN is not set. Add the Aviasales API token to .env.",
       };
     }
     return { ready: true };
@@ -84,7 +84,7 @@ export const flightPriceCollector: Collector = {
 
   async run(ctx: CollectorContext) {
     const creds = readCredentials();
-    if (!creds) throw new Error("TRAVELPAYOUTS_TOKEN is not set");
+    if (!creds) throw new Error("AVIASALES_API_TOKEN is not set");
 
     /*
      * Only price flights to destinations we actually track hotels for.
@@ -96,7 +96,15 @@ export const flightPriceCollector: Collector = {
     const rows = await ctx.db
       .select({ destination: properties.destination })
       .from(properties)
-      .where(eq(properties.active, true));
+      .where(
+        and(
+          eq(properties.active, true),
+          // The public flight-enabled planner currently prices Orlando only.
+          // Do not spend half the daily API budget filling destinations that
+          // have no corresponding planner experience yet.
+          eq(properties.destination, "universal-orlando")
+        )
+      );
 
     const destinations = [...new Set(rows.map((r) => r.destination))] as DestinationSlug[];
     if (destinations.length === 0) {

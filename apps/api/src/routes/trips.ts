@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import {
   properties,
+  flightQuoteCurrent,
   rateCurrent,
   roomTypes,
   ticketPriceCurrent,
@@ -12,10 +13,12 @@ import {
   TripQuote,
   TripQuoteQuery,
   APH_EPIC_TICKET_SLUG,
+  DESTINATION_AIRPORTS,
   type TripHotelOption,
   type TripRateCode,
   type TripTicketRecommendation,
 } from "@ratecoaster/shared";
+import { buildBookingUrl, readCredentials } from "../collectors/flights/travelpayouts.js";
 import { addDays, daysBetween, todayInTimezone } from "../collectors/framework/dates.js";
 import { gateDateWindow, tierOf } from "../lib/entitlements.js";
 
@@ -150,6 +153,20 @@ export function recommendTicket(
   return candidates[0] ?? null;
 }
 
+/** A grand total is only honest when every component the visitor requested exists. */
+export function completeTripTotal(input: {
+  hotelCents: number | null;
+  ticketCents: number | null;
+  flightRequested: boolean;
+  flightCents: number | null;
+}): number | null {
+  const components: Array<number | null> = [input.hotelCents, input.ticketCents];
+  if (input.flightRequested) components.push(input.flightCents);
+  return components.every((value): value is number => value !== null)
+    ? components.reduce((sum, value) => sum + value, 0)
+    : null;
+}
+
 tripsRouter.get("/quote", async (c) => {
   const parsed = TripQuoteQuery.safeParse(c.req.query());
   if (!parsed.success) {
@@ -263,6 +280,68 @@ tripsRouter.get("/quote", async (c) => {
     query.checkIn
   );
 
+  const destinationAirport = DESTINATION_AIRPORTS["universal-orlando"];
+  let flight: {
+    origin: string;
+    destination: string;
+    departDate: string;
+    returnDate: string;
+    perPassengerCents: number;
+    subtotalCents: number;
+    currency: string;
+    airline: string | null;
+    transfers: number | null;
+    observedAt: string;
+    bookingUrl: string | null;
+  } | null = null;
+
+  if (query.origin) {
+    const [fare] = await db
+      .select()
+      .from(flightQuoteCurrent)
+      .where(
+        and(
+          eq(flightQuoteCurrent.origin, query.origin),
+          eq(flightQuoteCurrent.destination, destinationAirport),
+          eq(flightQuoteCurrent.departDate, query.checkIn),
+          eq(flightQuoteCurrent.tripLengthDays, nights),
+          or(isNull(flightQuoteCurrent.expiresAt), gt(flightQuoteCurrent.expiresAt, new Date()))
+        )
+      )
+      .limit(1);
+
+    if (fare) {
+      const partySize = query.adults + query.children;
+      flight = {
+        origin: fare.origin,
+        destination: fare.destination,
+        departDate: fare.departDate,
+        returnDate: query.checkOut,
+        perPassengerCents: fare.priceCents,
+        subtotalCents: fare.priceCents * partySize,
+        currency: fare.currency,
+        airline: fare.airline,
+        transfers: fare.transfers,
+        observedAt: fare.observedAt.toISOString(),
+        bookingUrl: buildBookingUrl({
+          origin: fare.origin,
+          destination: fare.destination,
+          departDate: fare.departDate,
+          returnDate: query.checkOut,
+          passengers: partySize,
+          marker: readCredentials()?.marker ?? null,
+        }),
+      };
+    }
+  }
+
+  const combinedTotalCents = completeTripTotal({
+    hotelCents: hotel?.subtotalCents ?? null,
+    ticketCents: ticket?.subtotalCents ?? null,
+    flightRequested: Boolean(query.origin),
+    flightCents: flight?.subtotalCents ?? null,
+  });
+
   return c.json(
     TripQuote.parse({
       checkIn: query.checkIn,
@@ -272,17 +351,21 @@ tripsRouter.get("/quote", async (c) => {
       rooms: query.rooms,
       adults: query.adults,
       children: query.children,
+      origin: query.origin ?? null,
       rateCode: query.rateCode,
       hotel,
       hotelAlternatives: hotelOptions.slice(1, 7),
       ticket,
-      combinedTotalCents:
-        hotel && ticket ? hotel.subtotalCents + ticket.subtotalCents : null,
+      flight,
+      combinedTotalCents,
       assumptions: [
         "Hotel estimates use one room type for the entire stay and the tracked two-adult occupancy, multiplied by the number of rooms.",
         query.rateCode === "APH"
           ? "Annual Passholder estimates add only one day of Epic Universe admission; eligible admission at the other parks is assumed to be covered by the Annual Pass."
           : "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
+        query.origin
+          ? "Flight estimates use a recently cached Aviasales round-trip fare for the selected dates, multiplied by every traveler. Search results can change before booking."
+          : "Flights are excluded because no departure city was selected.",
         "Taxes and fees are included when the source supplies a total. Always confirm availability and the final price before booking.",
       ],
     })

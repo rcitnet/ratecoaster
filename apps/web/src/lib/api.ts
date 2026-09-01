@@ -163,6 +163,7 @@ export const TIER_LABELS: Record<string, string> = {
 /** Display names for affiliate merchants behind Book buttons. */
 export const MERCHANT_LABELS: Record<string, string> = {
   "undercover-tourist": "Undercover Tourist",
+  aviasales: "Aviasales",
 };
 
 export function merchantLabel(merchant: string | null | undefined): string {

@@ -33,8 +33,8 @@ sudo -u ratecoaster -H nano /home/ratecoaster/app/.env
 Set:
 
 ```
-TRAVELPAYOUTS_TOKEN=your_real_token_here
-TRAVELPAYOUTS_MARKER=your_marker_here
+AVIASALES_API_TOKEN=your_real_token_here
+TRAVELPAYOUTS_PARTNER_ID=your_partner_id_here
 ```
 
 Then restart the API:
@@ -134,8 +134,9 @@ the next run — but remember every origin multiplies the job.
 
 ## Troubleshooting
 
-**"TRAVELPAYOUTS_TOKEN is not set"** — either genuinely missing, or still a
-placeholder. Check with `sudo grep TRAVELPAYOUTS /home/ratecoaster/app/.env`.
+**"AVIASALES_API_TOKEN is not set"** — either genuinely missing, or still a
+placeholder. Reopen `.env` and confirm both flight settings are populated; do
+not print the token into a terminal transcript or support message.
 
 **Probe returns HTTP 401** — the token is wrong, or the Aviasales programme
 hasn't been approved yet. Check the dashboard.
@@ -147,5 +148,5 @@ probe and compare the raw body against `parseCalendar()`.
 `/status`: you need hotel rates *and* ticket prices *and* fares before a date can
 be totalled. Flights alone don't make a trip.
 
-**Booking links don't appear** — `TRAVELPAYOUTS_MARKER` isn't set. Deliberate:
+**Booking links don't appear** — `TRAVELPAYOUTS_PARTNER_ID` isn't set. Deliberate:
 an unattributed outbound click is traffic given away for nothing.

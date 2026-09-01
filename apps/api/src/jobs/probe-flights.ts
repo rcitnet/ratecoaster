@@ -25,10 +25,10 @@ async function main() {
   const creds = readCredentials();
   if (!creds) {
     console.error(
-      "TRAVELPAYOUTS_TOKEN is not set (or is still a placeholder).\n\n" +
+      "AVIASALES_API_TOKEN is not set (or is still a placeholder).\n\n" +
         "  1. Sign up at https://www.travelpayouts.com\n" +
         "  2. Join the Aviasales programme\n" +
-        "  3. Copy your API token into .env as TRAVELPAYOUTS_TOKEN=...\n"
+        "  3. Copy your API token into .env as AVIASALES_API_TOKEN=...\n"
     );
     process.exit(1);
   }
