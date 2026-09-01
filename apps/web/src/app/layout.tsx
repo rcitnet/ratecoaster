@@ -5,6 +5,7 @@ import { getMe } from "@/lib/api";
 import { MobileMenu } from "@/components/MobileMenu";
 import { AdSenseScript } from "@/components/AdSenseScript";
 import { Analytics } from "@/components/Analytics";
+import { TravelpayoutsDrive } from "@/components/TravelpayoutsDrive";
 import { analyticsConfig } from "@/lib/analytics";
 import {
   DEFAULT_DESCRIPTION,
@@ -93,6 +94,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <head>
+        <TravelpayoutsDrive />
         {/* Fredoka carries the playful energy in headlines; Inter keeps dense
             rate tables readable, which a rounded display face would not. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <main className="section legal-page">
       <p className="eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
-      <p className="muted">Effective August 19, 2026</p>
+      <p className="muted">Effective August 31, 2026</p>
 
       <p className="lede">
         RateCoaster helps travelers compare Universal hotel, admission, Express Pass, and attraction
@@ -75,6 +75,21 @@ export default function PrivacyPage() {
         not attach your account, IP address, or browser fingerprint to that click record. The
         affiliate network receives the link identifier so commissions can be attributed, and its
         own privacy policy applies after you leave RateCoaster.
+      </p>
+      <p>
+        RateCoaster uses Travelpayouts Drive on public content pages. Drive may analyze page content
+        and aggregated link interactions, convert eligible travel links into affiliate links, and
+        add or optimize travel-booking tools. It is not loaded on account, administration,
+        authentication, signup, or legal pages. Travelpayouts states that its Content Analytics does
+        not collect IP addresses or user-identifiable information. See the{" "}
+        <a
+          href="https://support.travelpayouts.com/hc/en-us/articles/360004121052-Privacy-Policy"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Travelpayouts privacy policy
+        </a>{" "}
+        for details.
       </p>
 
       <h2>How we use information</h2>
