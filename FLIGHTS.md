@@ -116,7 +116,13 @@ Three things follow, and they're built in rather than left to remember:
 
 - Every quote carries the upstream `expires_at`. Past it, the API marks the row
   `stale: true` instead of hiding it — an empty calendar reads as "no data",
-  which is a different and more damaging claim than "old data".
+  which is a different and more damaging claim than "old data". The exact-date
+  planner may retain an observation for 36 hours, labels an expired source
+  cache, and sends the visitor to Aviasales to check the live result.
+- When the cached feed has no exact date, the planner first uses the closest
+  same-length fare within 45 travel days and shows that fare's actual date. If
+  none exists, it uses the median of recently observed fares for the route as a
+  clearly labeled baseline rather than pretending it is date-specific.
 - The planner never totals a trip with a missing leg. A date with no fare shows
   a dash, not a hotel-and-tickets subtotal wearing a total's clothing.
 - Every page carrying affiliate links says so.
@@ -127,6 +133,8 @@ Three things follow, and they're built in rather than left to remember:
 |---|---|---|
 | `FLIGHT_TRIP_LENGTHS` | `3,4,5,6,7` | Nights offered by the planner. Each is a direct multiplier on job size. |
 | `FLIGHT_MONTHS_AHEAD` | `12` | Months to fill. 12 = the full 365-day catalogue. |
+| `FLIGHT_PLANNER_MAX_AGE_HOURS` | `36` | Maximum observation age for a planning estimate. |
+| `FLIGHT_PLANNER_NEARBY_DAYS` | `45` | Maximum date distance for a same-length nearby-date estimate. |
 
 Origins live in `packages/shared/src/schemas/flights.ts` (`ORIGINS`). Thirty US
 markets, chosen for Orlando leisure traffic. Add a city and it is picked up on

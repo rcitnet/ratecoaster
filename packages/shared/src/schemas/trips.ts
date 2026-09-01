@@ -58,6 +58,14 @@ export const TripFlightEstimate = z.object({
   airline: z.string().nullable(),
   transfers: z.number().int().nonnegative().nullable(),
   observedAt: z.string().datetime(),
+  /** How closely the cached source data matches the requested itinerary. */
+  basis: z.enum(["exact-date", "nearby-date", "route-baseline"]),
+  /** Source travel date for exact/nearby estimates; null for a route baseline. */
+  estimateDepartDate: IsoDate.nullable(),
+  /** Absolute distance from the requested date for a nearby estimate. */
+  dateDifferenceDays: z.number().int().nonnegative().nullable(),
+  /** The source's short-lived cache expired, although our observation is recent. */
+  upstreamExpired: z.boolean(),
   bookingUrl: z.string().url().nullable(),
 });
 export type TripFlightEstimate = z.infer<typeof TripFlightEstimate>;

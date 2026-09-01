@@ -457,6 +457,10 @@ demoApp.get("/v1/trips/quote", (c) => {
         airline: "B6",
         transfers: 0,
         observedAt: new Date().toISOString(),
+        basis: "exact-date" as const,
+        estimateDepartDate: query.checkIn,
+        dateDifferenceDays: 0,
+        upstreamExpired: false,
         bookingUrl: null,
       }
     : null;

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, asc, eq, gt, gte, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import {
   properties,
@@ -167,6 +167,80 @@ export function completeTripTotal(input: {
     : null;
 }
 
+export interface PlannerFareCandidate {
+  origin: string;
+  destination: string;
+  departDate: string;
+  tripLengthDays: number;
+  priceCents: number;
+  currency: string;
+  airline: string | null;
+  transfers: number | null;
+  expiresAt: Date | null;
+  observedAt: Date;
+}
+
+export interface PlannerFareSelection {
+  row: PlannerFareCandidate;
+  basis: "exact-date" | "nearby-date" | "route-baseline";
+  dateDifferenceDays: number | null;
+}
+
+/**
+ * Pick the most itinerary-specific recent observation available.
+ *
+ * Aviasales' data endpoint is sparse: many route/month searches return only a
+ * few dates. Requiring an exact row made the planner empty for almost every
+ * visitor. A nearby fare is still useful when its real date is disclosed; the
+ * route median is the final planning-only fallback and makes no date claim.
+ */
+export function selectPlannerFare(
+  rows: PlannerFareCandidate[],
+  requestedDate: string,
+  requestedNights: number,
+  nearbyWindowDays = 45
+): PlannerFareSelection | null {
+  const newestFirst = (a: PlannerFareCandidate, b: PlannerFareCandidate) =>
+    b.observedAt.getTime() - a.observedAt.getTime();
+
+  const exact = rows
+    .filter(
+      (row) => row.departDate === requestedDate && row.tripLengthDays === requestedNights
+    )
+    .sort(newestFirst)[0];
+  if (exact) return { row: exact, basis: "exact-date", dateDifferenceDays: 0 };
+
+  const nearby = rows
+    .filter((row) => row.tripLengthDays === requestedNights)
+    .map((row) => ({ row, distance: Math.abs(daysBetween(requestedDate, row.departDate)) }))
+    .filter(({ distance }) => distance <= nearbyWindowDays)
+    .sort(
+      (a, b) => a.distance - b.distance || newestFirst(a.row, b.row)
+    )[0];
+  if (nearby) {
+    return {
+      row: nearby.row,
+      basis: "nearby-date",
+      dateDifferenceDays: nearby.distance,
+    };
+  }
+
+  if (rows.length === 0) return null;
+  const byPrice = [...rows].sort(
+    (a, b) => a.priceCents - b.priceCents || newestFirst(a, b)
+  );
+  return {
+    row: byPrice[Math.floor((byPrice.length - 1) / 2)]!,
+    basis: "route-baseline",
+    dateDifferenceDays: null,
+  };
+}
+
+function boundedEnv(name: string, fallback: number, max: number): number {
+  const value = Number(process.env[name] ?? String(fallback));
+  return Number.isFinite(value) && value > 0 && value <= max ? value : fallback;
+}
+
 tripsRouter.get("/quote", async (c) => {
   const parsed = TripQuoteQuery.safeParse(c.req.query());
   if (!parsed.success) {
@@ -292,25 +366,40 @@ tripsRouter.get("/quote", async (c) => {
     airline: string | null;
     transfers: number | null;
     observedAt: string;
+    basis: "exact-date" | "nearby-date" | "route-baseline";
+    estimateDepartDate: string | null;
+    dateDifferenceDays: number | null;
+    upstreamExpired: boolean;
     bookingUrl: string | null;
   } | null = null;
 
   if (query.origin) {
-    const [fare] = await db
+    const now = new Date();
+    const maximumAgeHours = boundedEnv("FLIGHT_PLANNER_MAX_AGE_HOURS", 36, 168);
+    const nearbyWindowDays = boundedEnv("FLIGHT_PLANNER_NEARBY_DAYS", 45, 180);
+    const observedSince = new Date(now.getTime() - maximumAgeHours * 60 * 60 * 1_000);
+    const fareRows = await db
       .select()
       .from(flightQuoteCurrent)
       .where(
         and(
           eq(flightQuoteCurrent.origin, query.origin),
           eq(flightQuoteCurrent.destination, destinationAirport),
-          eq(flightQuoteCurrent.departDate, query.checkIn),
-          eq(flightQuoteCurrent.tripLengthDays, nights),
-          or(isNull(flightQuoteCurrent.expiresAt), gt(flightQuoteCurrent.expiresAt, new Date()))
+          gte(flightQuoteCurrent.observedAt, observedSince)
         )
       )
-      .limit(1);
+      .orderBy(desc(flightQuoteCurrent.observedAt))
+      .limit(400);
 
-    if (fare) {
+    const selected = selectPlannerFare(
+      fareRows,
+      query.checkIn,
+      nights,
+      nearbyWindowDays
+    );
+
+    if (selected) {
+      const fare = selected.row;
       const partySize = query.adults + query.children;
       flight = {
         origin: fare.origin,
@@ -320,9 +409,14 @@ tripsRouter.get("/quote", async (c) => {
         perPassengerCents: fare.priceCents,
         subtotalCents: fare.priceCents * partySize,
         currency: fare.currency,
-        airline: fare.airline,
-        transfers: fare.transfers,
+        airline: selected.basis === "route-baseline" ? null : fare.airline,
+        transfers: selected.basis === "route-baseline" ? null : fare.transfers,
         observedAt: fare.observedAt.toISOString(),
+        basis: selected.basis,
+        estimateDepartDate:
+          selected.basis === "route-baseline" ? null : fare.departDate,
+        dateDifferenceDays: selected.dateDifferenceDays,
+        upstreamExpired: fare.expiresAt ? fare.expiresAt.getTime() <= now.getTime() : false,
         bookingUrl: buildBookingUrl({
           origin: fare.origin,
           destination: fare.destination,
@@ -363,8 +457,14 @@ tripsRouter.get("/quote", async (c) => {
         query.rateCode === "APH"
           ? "Annual Passholder estimates add only one day of Epic Universe admission; eligible admission at the other parks is assumed to be covered by the Annual Pass."
           : "Ticket estimates assume the first park day is check-in day and favor the widest park access for the closest available duration.",
-        query.origin
-          ? "Flight estimates use a recently cached Aviasales round-trip fare for the selected dates, multiplied by every traveler. Search results can change before booking."
+        query.origin && flight?.basis === "exact-date"
+          ? "The airfare component uses a recently observed cached fare for the selected dates, multiplied by every traveler."
+          : query.origin && flight?.basis === "nearby-date"
+            ? "The airfare component uses the closest recently observed fare for the same route and trip length; its source date is shown beside the estimate."
+            : query.origin && flight?.basis === "route-baseline"
+              ? "The airfare component uses the median of recently observed fares for this route because Aviasales had no matching-date fare. It is a planning baseline, not a quote."
+              : query.origin
+                ? "No recently observed airfare baseline is available for this departure market yet."
           : "Flights are excluded because no departure city was selected.",
         "Taxes and fees are included when the source supplies a total. Always confirm availability and the final price before booking.",
       ],

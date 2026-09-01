@@ -13,7 +13,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata({
   title: "Price your Universal trip",
   description:
-    "Pick your dates and party, and see hotel and ticket costs totalled for that exact stay — including how the Annual Passholder rate compares with the standard one.",
+    "Pick your dates and party, then estimate airfare, hotel and ticket costs for one Universal Orlando trip.",
   path: "/plan",
 });
 
@@ -47,6 +47,12 @@ function durationCopy(ticket: NonNullable<TripQuote["ticket"]>, rateCode: TripQu
   }
   if (ticket.exactDurationMatch) return "Matches your trip length";
   return `${ticket.ticketDays}-day ticket is the closest tracked fit; ${ticket.uncoveredTripDays} trip day${ticket.uncoveredTripDays === 1 ? " is" : "s are"} not covered`;
+}
+
+function flightBadge(basis: NonNullable<TripQuote["flight"]>["basis"]): string {
+  if (basis === "exact-date") return "Exact-date cached airfare";
+  if (basis === "nearby-date") return "Nearby-date airfare estimate";
+  return "Recent route airfare baseline";
 }
 
 export default async function TripPlannerPage({
@@ -213,25 +219,43 @@ export default async function TripPlannerPage({
 
             {quote.origin ? (
               <article className="card">
-                <span className="badge badge-blue">Cached round-trip airfare</span>
+                <span className="badge badge-blue">
+                  {quote.flight ? flightBadge(quote.flight.basis) : "Cached round-trip airfare"}
+                </span>
                 {quote.flight ? (
                   <>
                     <h3>{quote.flight.origin} to {quote.flight.destination}</h3>
-                    <p className="muted">
-                      {quote.flight.airline ? `${quote.flight.airline} · ` : ""}
-                      {quote.flight.transfers === 0
-                        ? "Non-stop"
-                        : quote.flight.transfers === null
-                          ? "Stops not reported"
-                          : `${quote.flight.transfers} stop${quote.flight.transfers === 1 ? "" : "s"}`}
-                    </p>
+                    {quote.flight.basis !== "route-baseline" ? (
+                      <p className="muted">
+                        {quote.flight.airline ? `${quote.flight.airline} · ` : ""}
+                        {quote.flight.transfers === 0
+                          ? "Non-stop"
+                          : quote.flight.transfers === null
+                            ? "Stops not reported"
+                            : `${quote.flight.transfers} stop${quote.flight.transfers === 1 ? "" : "s"}`}
+                      </p>
+                    ) : (
+                      <p className="muted">
+                        Median of recently observed fares for this route; not specific to your dates or trip length.
+                      </p>
+                    )}
                     <div className="trip-price-line">
                       <strong>{centsToDisplay(quote.flight.subtotalCents, quote.flight.currency)}</strong>
                       <span>party airfare estimate</span>
                     </div>
                     <p className="tiny muted">
-                      From {centsToDisplay(quote.flight.perPassengerCents, quote.flight.currency)} per traveler · observed {relativeTime(quote.flight.observedAt)}
+                      From {centsToDisplay(quote.flight.perPassengerCents, quote.flight.currency)} per traveler
+                      {quote.flight.basis === "nearby-date" && quote.flight.estimateDepartDate
+                        ? ` · based on ${formatLongDate(quote.flight.estimateDepartDate)} (${quote.flight.dateDifferenceDays} day${quote.flight.dateDifferenceDays === 1 ? "" : "s"} away)`
+                        : ""}
+                      {quote.flight.basis === "exact-date" ? " · exact travel date" : ""}
+                      {` · observed ${relativeTime(quote.flight.observedAt)}`}
                     </p>
+                    {quote.flight.upstreamExpired ? (
+                      <p className="tiny muted">
+                        Aviasales&apos; short-lived source cache has expired. Use this as a planning estimate and check the live result before booking.
+                      </p>
+                    ) : null}
                     {quote.flight.bookingUrl ? (
                       <div>
                         <a
@@ -248,7 +272,7 @@ export default async function TripPlannerPage({
                   </>
                 ) : (
                   <p>
-                    No current cached fare is available for this exact route and trip length yet.
+                    No recently observed fare or route baseline is available for this departure market yet.
                     The hotel and ticket amounts remain visible, but they are not presented as a complete total.
                   </p>
                 )}
