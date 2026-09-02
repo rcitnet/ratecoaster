@@ -1,4 +1,5 @@
 import { pageMetadata } from "@/lib/seo";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = pageMetadata({
   title: "Privacy policy",
@@ -138,7 +139,7 @@ export default function PrivacyPage() {
         You may stop alerts, sign out, or revoke Google access through your Google Account controls. You
         may request access to, correction of, or deletion of your RateCoaster account and associated
         personal information by emailing{" "}
-        <a href="mailto:rcitnet@gmail.com">rcitnet@gmail.com</a>. We may need to verify your identity
+        <a href={CONTACT_MAILTO}>{CONTACT_EMAIL}</a>. We may need to verify your identity
         before completing a request. Revoking provider access does not itself delete your RateCoaster
         account, so contact us if you also want the account deleted.
       </p>
@@ -174,7 +175,7 @@ export default function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Questions or privacy requests may be sent to{" "}
-        <a href="mailto:rcitnet@gmail.com">rcitnet@gmail.com</a>.
+        <a href={CONTACT_MAILTO}>{CONTACT_EMAIL}</a>.
       </p>
     </main>
   );

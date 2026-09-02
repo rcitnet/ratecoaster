@@ -1,4 +1,5 @@
 import { pageMetadata } from "@/lib/seo";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata = pageMetadata({
   title: "Terms of service",
@@ -46,7 +47,7 @@ export default function TermsPage() {
       <p>
         You are responsible for activity under your account and for keeping access to your email and
         connected sign-in providers secure. Information you provide must be accurate and lawful. Notify us
-        promptly at <a href="mailto:rcitnet@gmail.com">rcitnet@gmail.com</a> if you believe your account
+        promptly at <a href={CONTACT_MAILTO}>{CONTACT_EMAIL}</a> if you believe your account
         has been compromised.
       </p>
 
@@ -121,7 +122,7 @@ export default function TermsPage() {
       <h2>Contact</h2>
       <p>
         Questions about these terms may be sent to{" "}
-        <a href="mailto:rcitnet@gmail.com">rcitnet@gmail.com</a>.
+        <a href={CONTACT_MAILTO}>{CONTACT_EMAIL}</a>.
       </p>
     </main>
   );

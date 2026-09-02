@@ -7,6 +7,7 @@ import { AdSenseScript } from "@/components/AdSenseScript";
 import { Analytics } from "@/components/Analytics";
 import { TravelpayoutsDrive } from "@/components/TravelpayoutsDrive";
 import { analyticsConfig } from "@/lib/analytics";
+import { CONTACT_MAILTO } from "@/lib/contact";
 import {
   DEFAULT_DESCRIPTION,
   jsonLd,
@@ -220,7 +221,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <br />
                   <a href="/terms">Terms of service</a>
                   <br />
-                  <a href="mailto:rcitnet@gmail.com">Contact</a>
+                  <a href={CONTACT_MAILTO}>Contact</a>
                 </p>
               </div>
             </div>
