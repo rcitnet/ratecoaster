@@ -846,7 +846,9 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .hero[data-hero="split"] { padding: 18px; }
   .hero-split { grid-template-columns: 1fr; gap: 14px; }
   .hero[data-hero="planner"] { padding: 18px; }
-  .hero-plan { grid-template-columns: 1fr 1fr; }
+  .hero-plan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-plan > * { min-width: 0; }
+  .hero-plan .field { min-width: 0; max-width: 100%; }
   .hero-plan .btn { grid-column: 1 / -1; width: 100%; }
   .hero[data-hero="tiles"] { padding: 12px 0 0; }
   .hero-tiles { grid-template-columns: 1fr; }
@@ -864,6 +866,11 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .trip-total-card { align-items: flex-start; flex-direction: column; padding: 24px; }
   .trip-grand-total { text-align: left; }
   .pricing-filter-form { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .hero-plan { grid-template-columns: minmax(0, 1fr); }
+  .hero-plan .btn { grid-column: auto; }
 }
 
 /* Affiliate Book button + FTC disclosure.
