@@ -8,7 +8,12 @@ import {
   TICKET_PRODUCTS,
 } from "@ratecoaster/db/src/seed-data.js";
 import { addDays, dateRange, daysBetween, prioritizeDates, todayInTimezone } from "./framework/dates.js";
-import { extractPath, extractOne, renderTemplate } from "./hotels/endpoint-config.js";
+import {
+  extractPath,
+  extractOne,
+  loadEndpointConfig,
+  renderTemplate,
+} from "./hotels/endpoint-config.js";
 import { parseOffers, checkRateCode } from "./hotels/index.js";
 import {
   selectAdapter,
@@ -553,6 +558,11 @@ describe("Universal Orlando Express commerce API", () => {
 });
 
 describe("endpoint config path extraction", () => {
+  test("rejects config names that could leave the endpoint directory", async () => {
+    await assert.rejects(loadEndpointConfig("../../package"), /invalid endpoint config name/);
+    await assert.rejects(loadEndpointConfig("operator/name"), /invalid endpoint config name/);
+  });
+
   const payload = {
     data: {
       appliedRatePlan: "APH",

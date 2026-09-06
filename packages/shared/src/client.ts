@@ -17,6 +17,7 @@ import {
   type TicketQuery,
 } from "./schemas/tickets.js";
 import { LiveWaitsResponse, WaitRollupPoint, type WaitQuery } from "./schemas/waits.js";
+import { CrowdCalendarResponse, type CrowdCalendarQuery } from "./schemas/crowds.js";
 import {
   FlightQuote,
   Origin,
@@ -234,6 +235,12 @@ export class RateCoasterClient {
       `/v1/waits/${encodeURIComponent(attractionSlug)}/typical`,
       z.array(WaitRollupPoint)
     );
+  }
+
+  crowdCalendar(query: CrowdCalendarQuery = {}) {
+    return this.request("/v1/crowds/calendar", CrowdCalendarResponse, {
+      query: query as Record<string, unknown>,
+    });
   }
 
   // ---- Trip planning ----

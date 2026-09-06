@@ -2,12 +2,14 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { secureHeaders } from "hono/secure-headers";
 import { desc } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import { collectorRuns } from "@ratecoaster/db/schema";
 import { dealsRouter, propertiesRouter, ratesRouter } from "./routes/rates.js";
 import { expressRouter, ticketsRouter } from "./routes/tickets.js";
 import { waitsRouter } from "./routes/waits.js";
+import { crowdsRouter } from "./routes/crowds.js";
 import { flightsRouter } from "./routes/flights.js";
 import { plannerRouter } from "./routes/planner.js";
 import { outboundRouter } from "./routes/outbound.js";
@@ -15,10 +17,24 @@ import { watchesRouter } from "./routes/watches.js";
 import { tripsRouter } from "./routes/trips.js";
 import { siteRouter } from "./routes/site.js";
 import { COLLECTORS } from "./jobs/registry.js";
+import { rateLimitByIp } from "./lib/rate-limit.js";
 
 const app = new Hono();
 
 app.use("*", logger());
+app.use(
+  "*",
+  secureHeaders({
+    referrerPolicy: "strict-origin-when-cross-origin",
+    permissionsPolicy: {
+      camera: [],
+      geolocation: [],
+      microphone: [],
+      payment: [],
+      usb: [],
+    },
+  })
+);
 app.use(
   "*",
   cors({
@@ -118,9 +134,29 @@ if (!DEMO) {
   // are indistinguishable from a typo to anyone probing the public domain.
   const { adminRouter } = await import("./routes/admin.js");
   const { requireAdmin } = await import("./lib/admin.js");
+  app.use("/v1/admin", requireAdmin);
   app.use("/v1/admin/*", requireAdmin);
   app.route("/v1/admin", adminRouter);
 }
+
+// Public price reads are intentionally generous for normal browsing, while
+// putting a firm ceiling on scripts that would otherwise occupy the small DB
+// connection pool indefinitely.
+app.use(
+  "/v1/trips/quote",
+  rateLimitByIp({ namespace: "trip-quote", limit: 30, windowMs: 60_000 })
+);
+const ratesReadLimit = rateLimitByIp({
+  namespace: "rates-read",
+  limit: 120,
+  windowMs: 60_000,
+});
+app.use("/v1/rates", ratesReadLimit);
+app.use("/v1/rates/*", ratesReadLimit);
+app.use(
+  "/v1/crowds/*",
+  rateLimitByIp({ namespace: "crowd-calendar", limit: 30, windowMs: 60_000 })
+);
 
 app.route("/v1/site", siteRouter);
 app.route("/v1/properties", propertiesRouter);
@@ -129,6 +165,7 @@ app.route("/v1/deals", dealsRouter);
 app.route("/v1/tickets", ticketsRouter);
 app.route("/v1/express-pass", expressRouter);
 app.route("/v1/waits", waitsRouter);
+app.route("/v1/crowds", crowdsRouter);
 app.route("/v1/trips", tripsRouter);
 app.route("/v1/flights", flightsRouter);
 app.route("/v1/planner", plannerRouter);

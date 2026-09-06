@@ -77,6 +77,7 @@ export const EndpointConfig = z.object({
 export type EndpointConfig = z.infer<typeof EndpointConfig>;
 
 const cache = new Map<string, EndpointConfig | null>();
+const ENDPOINT_CONFIG_NAME = /^[a-zA-Z0-9_-]{1,100}$/;
 
 /**
  * Loads `config/endpoints/<name>.json`. Returns null when the file is absent,
@@ -85,6 +86,9 @@ const cache = new Map<string, EndpointConfig | null>();
  * collector live.
  */
 export async function loadEndpointConfig(name: string): Promise<EndpointConfig | null> {
+  if (!ENDPOINT_CONFIG_NAME.test(name)) {
+    throw new Error(`invalid endpoint config name: ${JSON.stringify(name)}`);
+  }
   if (cache.has(name)) return cache.get(name) ?? null;
 
   const path = join(process.cwd(), "config", "endpoints", `${name}.json`);
