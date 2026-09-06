@@ -621,12 +621,13 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 .crowd-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 30px 0 20px; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
 .crowd-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .crowd-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid transparent; }
-.crowd-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; }
-.crowd-month { padding: 20px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); }
-.crowd-month h2 { margin: 0 0 16px; font-size: 23px; }
+.crowd-calendar { padding: 28px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); }
+.crowd-calendar-head { display: grid; grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr); align-items: center; gap: 16px; margin-bottom: 22px; }
+.crowd-calendar-head h2 { margin: 0; font-size: 27px; text-align: center; }
+.crowd-calendar-head > :last-child { justify-self: end; }
 .crowd-weekdays, .crowd-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .crowd-weekdays { margin-bottom: 5px; color: var(--ink-mute); font-size: 11px; font-weight: 700; text-align: center; text-transform: uppercase; }
-.crowd-day { min-height: 76px; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 5px 2px; border: 1px solid var(--line); border-radius: 10px; text-align: center; }
+.crowd-day { min-height: 100px; display: grid; align-content: center; justify-items: center; gap: 3px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 10px; text-align: center; }
 .crowd-date { color: var(--ink-soft); font-size: 12px; }
 .crowd-day strong { font-size: 11px; line-height: 1.1; }
 .crowd-score { color: var(--ink-mute); font-size: 10px; }
@@ -891,8 +892,10 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .trip-total-card { align-items: flex-start; flex-direction: column; padding: 24px; }
   .trip-grand-total { text-align: left; }
   .pricing-filter-form { grid-template-columns: 1fr; }
-  .crowd-months { grid-template-columns: 1fr; }
-  .crowd-month { padding: 14px 10px; }
+  .crowd-calendar { padding: 16px 10px; }
+  .crowd-calendar-head { grid-template-columns: 1fr auto 1fr; gap: 8px; margin-bottom: 16px; }
+  .crowd-calendar-head h2 { font-size: 20px; }
+  .crowd-calendar-head .btn { padding: 6px 8px; font-size: 12px; }
   .crowd-day { min-height: 64px; }
   .crowd-day strong { font-size: 10px; }
 }
