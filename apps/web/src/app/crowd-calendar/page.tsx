@@ -43,28 +43,71 @@ function dateNumber(date: string): string {
   return String(utcDate(date).getUTCDate());
 }
 
+function todayInOrlando(): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function isMonth(value: string | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) return false;
+  const [year, month] = value.split("-").map(Number);
+  return month! >= 1 && month! <= 12 && year! >= 2020;
+}
+
+function addMonths(month: string, amount: number): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, monthNumber! - 1 + amount, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function lastDayOfMonth(month: string): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, monthNumber!, 0));
+  return date.toISOString().slice(0, 10);
+}
+
+function calendarHref(park: string, month: string): string {
+  return `/crowd-calendar?${new URLSearchParams({ park, month })}`;
+}
+
 export default async function CrowdCalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ park?: string }>;
+  searchParams: Promise<{ park?: string; month?: string }>;
 }) {
-  const requested = (await searchParams).park;
+  const params = await searchParams;
+  const requested = params.park;
   const selectedPark = PARKS.some((park) => park.slug === requested)
     ? requested!
     : "universal-studios-florida";
+  const today = todayInOrlando();
+  const currentMonth = today.slice(0, 7);
+  // The server still enforces the one-year catalogue boundary; this only keeps
+  // hand-edited URLs from landing on a blank, impossible month.
+  const lastMonth = addMonths(currentMonth, 12);
+  const selectedMonth = isMonth(params.month) && params.month >= currentMonth && params.month <= lastMonth
+    ? params.month
+    : currentMonth;
+  const requestedFrom = selectedMonth === currentMonth ? today : `${selectedMonth}-01`;
   const client = await getClient();
-  const data = await safe(client.crowdCalendar({ parkSlug: selectedPark }), null);
+  const data = await safe(client.crowdCalendar({
+    parkSlug: selectedPark,
+    from: requestedFrom,
+    to: lastDayOfMonth(selectedMonth),
+  }), null);
   const days = data?.days ?? [];
-  const months = new Map<string, typeof days>();
-  for (const day of days) {
-    const key = monthLabel(day.date);
-    const current = months.get(key) ?? [];
-    current.push(day);
-    months.set(key, current);
-  }
   const quietDays = days.filter((day) => day.level === "very-low" || day.level === "low");
   const busyDays = days.filter((day) => day.level === "high" || day.level === "very-high");
   const quietest = [...days].sort((a, b) => a.score - b.score)[0];
+  const firstDay = utcDate(`${selectedMonth}-01`).getUTCDay();
+  const canGoBack = selectedMonth > currentMonth;
+  const canGoForward = selectedMonth < (data?.gate.visibleThrough?.slice(0, 7) ?? lastMonth);
 
   return (
     <main className="section">
@@ -80,7 +123,7 @@ export default async function CrowdCalendarPage({
         {PARKS.map((park) => (
           <a
             key={park.slug}
-            href={`/crowd-calendar?park=${park.slug}`}
+            href={calendarHref(park.slug, selectedMonth)}
             className={`chip ${selectedPark === park.slug ? "on" : ""}`}
           >
             <span
@@ -97,17 +140,17 @@ export default async function CrowdCalendarPage({
         <>
           <section className="grid grid-3" style={{ marginTop: 28 }}>
             <div className="card" style={{ background: "var(--teal-tint)", borderColor: "transparent" }}>
-              <div className="tiny" style={{ fontWeight: 700, color: "#077368" }}>LIGHTER DAYS AHEAD</div>
+              <div className="tiny" style={{ fontWeight: 700, color: "#077368" }}>LIGHTER DAYS THIS MONTH</div>
               <div className="cal-price" style={{ color: "#077368", fontSize: 32 }}>{quietDays.length}</div>
               <div className="tiny muted">low or very low outlook</div>
             </div>
             <div className="card" style={{ background: "var(--coral-tint)", borderColor: "transparent" }}>
-              <div className="tiny" style={{ fontWeight: 700, color: "#b03514" }}>BUSIER DAYS AHEAD</div>
+              <div className="tiny" style={{ fontWeight: 700, color: "#b03514" }}>BUSIER DAYS THIS MONTH</div>
               <div className="cal-price" style={{ color: "#b03514", fontSize: 32 }}>{busyDays.length}</div>
               <div className="tiny muted">high or very high outlook</div>
             </div>
             <div className="card" style={{ background: "var(--blue-tint)", borderColor: "transparent" }}>
-              <div className="tiny" style={{ fontWeight: 700, color: "var(--blue-dark)" }}>QUIETEST NEXT DATE</div>
+              <div className="tiny" style={{ fontWeight: 700, color: "var(--blue-dark)" }}>QUIETEST DATE THIS MONTH</div>
               <div className="cal-price" style={{ color: "var(--blue-dark)", fontSize: 26 }}>
                 {quietest ? `${dayOfWeekLabel(quietest.date)} ${dateNumber(quietest.date)}` : "—"}
               </div>
@@ -124,32 +167,37 @@ export default async function CrowdCalendarPage({
             ))}
           </div>
 
-          <section className="crowd-months" aria-label={`${data.park.name} crowd calendar`}>
-            {[...months.entries()].map(([month, monthDays]) => {
-              const firstDay = utcDate(monthDays[0]!.date).getUTCDay();
-              return (
-                <section className="crowd-month" key={month}>
-                  <h2>{month}</h2>
-                  <div className="crowd-weekdays" aria-hidden="true">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
-                  </div>
-                  <div className="crowd-grid">
-                    {Array.from({ length: firstDay }, (_, index) => <span key={`blank-${index}`} />)}
-                    {monthDays.map((day) => (
-                      <div
-                        key={day.date}
-                        className={`crowd-day crowd-${day.level}`}
-                        title={`${day.date}: ${LEVEL_LABELS[day.level]} crowd outlook (${day.score}/10)`}
-                      >
-                        <span className="crowd-date">{dateNumber(day.date)}</span>
-                        <strong>{LEVEL_LABELS[day.level]}</strong>
-                        <span className="crowd-score">{day.score}/10</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+          <section className="crowd-calendar" aria-label={`${data.park.name} crowd calendar`}>
+            <div className="crowd-calendar-head">
+              {canGoBack ? (
+                <a className="btn btn-ghost btn-sm" href={calendarHref(selectedPark, addMonths(selectedMonth, -1))}>
+                  ← Previous month
+                </a>
+              ) : <span />}
+              <h2>{monthLabel(`${selectedMonth}-01`)}</h2>
+              {canGoForward ? (
+                <a className="btn btn-ghost btn-sm" href={calendarHref(selectedPark, addMonths(selectedMonth, 1))}>
+                  Next month →
+                </a>
+              ) : <span />}
+            </div>
+            <div className="crowd-weekdays" aria-hidden="true">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
+            </div>
+            <div className="crowd-grid">
+              {Array.from({ length: firstDay }, (_, index) => <span key={`blank-${index}`} />)}
+              {days.map((day) => (
+                <div
+                  key={day.date}
+                  className={`crowd-day crowd-${day.level}`}
+                  title={`${day.date}: ${LEVEL_LABELS[day.level]} crowd outlook (${day.score}/10)`}
+                >
+                  <span className="crowd-date">{dateNumber(day.date)}</span>
+                  <strong>{LEVEL_LABELS[day.level]}</strong>
+                  <span className="crowd-score">{day.score}/10</span>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section className="notice" style={{ marginTop: 34 }}>
