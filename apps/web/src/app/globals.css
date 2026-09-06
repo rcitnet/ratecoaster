@@ -631,11 +631,16 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 .crowd-date { color: var(--ink-soft); font-size: 12px; }
 .crowd-day strong { font-size: 11px; line-height: 1.1; }
 .crowd-score { color: var(--ink-mute); font-size: 10px; }
-.crowd-very-low { border-color: #a8e9df; background: #e8fbf7; color: #077368; }
-.crowd-low { border-color: #b9d3ff; background: var(--blue-tint); color: var(--blue-dark); }
-.crowd-moderate { border-color: #f2d574; background: var(--yellow-tint); color: #7a5410; }
-.crowd-high { border-color: #ffb99f; background: var(--coral-tint); color: #b03514; }
-.crowd-very-high { border-color: #f0a8d1; background: var(--magenta-tint); color: #a50f64; }
+.crowd-very-low { border-color: #0a9689; background: var(--teal); color: #fff; }
+.crowd-low { border-color: var(--blue-dark); background: var(--blue); color: #fff; }
+.crowd-moderate { border-color: #e7aa16; background: var(--yellow); color: var(--ink); }
+.crowd-high { border-color: #e7502d; background: var(--coral); color: #fff; }
+.crowd-very-high { border-color: #c61673; background: var(--magenta); color: #fff; }
+.crowd-day.crowd-very-low .crowd-date, .crowd-day.crowd-very-low .crowd-score,
+.crowd-day.crowd-low .crowd-date, .crowd-day.crowd-low .crowd-score,
+.crowd-day.crowd-high .crowd-date, .crowd-day.crowd-high .crowd-score,
+.crowd-day.crowd-very-high .crowd-date, .crowd-day.crowd-very-high .crowd-score { color: rgba(255, 255, 255, 0.82); }
+.crowd-day.crowd-moderate .crowd-date, .crowd-day.crowd-moderate .crowd-score { color: rgba(22, 18, 60, 0.7); }
 .crowd-swatch.crowd-very-low { background: #0fb5a5; }
 .crowd-swatch.crowd-low { background: #7192ff; }
 .crowd-swatch.crowd-moderate { background: #ffc53d; }
