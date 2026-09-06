@@ -13,7 +13,7 @@ import {
   waitCurrent,
 } from "@ratecoaster/db/schema";
 import { HeroVariant, Tier } from "@ratecoaster/shared";
-import { audit } from "../lib/admin.js";
+import { audit, requireAdmin } from "../lib/admin.js";
 import { getAllCollectorSettings, setCollectorSetting } from "../lib/settings.js";
 import { getHomepageSettingsMeta, setHomepageHeroVariant } from "../lib/site-settings.js";
 import { COLLECTORS } from "../jobs/registry.js";
@@ -22,6 +22,11 @@ import { universalOrlandoTicketCredentialsConfigured } from "../collectors/ticke
 import { adminSocialRouter } from "./admin-social.js";
 
 export const adminRouter = new Hono();
+
+// Keep the authorization boundary with the router as well as at its current
+// mount point. A future mount or exact root handler cannot accidentally turn
+// an administrative route public.
+adminRouter.use("*", requireAdmin);
 
 adminRouter.route("/social", adminSocialRouter);
 

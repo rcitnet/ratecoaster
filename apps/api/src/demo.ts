@@ -11,11 +11,13 @@ import {
 } from "./collectors/waits/providers.js";
 import { addDays, daysBetween, dayOfWeek, todayInTimezone } from "./collectors/framework/dates.js";
 import { eligibleTicketRows, recommendTicket, type TicketQuoteRow } from "./routes/trips.js";
+import { buildCrowdCalendar } from "./lib/crowds.js";
 
 /**
  * DEMO MODE — no database required.
  *
- * Wait times here are REAL: fetched live from ThemeParks.wiki on each request.
+ * Wait times here are REAL: fetched live from ThemeParks.wiki and cached very
+ * briefly so several visitors cannot multiply into an upstream request burst.
  * Hotel, ticket, and Express pricing is SYNTHETIC, generated below, and every
  * response carries a `demo: true` flag so it can never be mistaken for
  * collected data. The point is to let you see and click the actual UI before
@@ -29,6 +31,31 @@ const DEMO_ATTRIBUTION = {
   text: "Hotel, ticket and Express prices on this page are SAMPLE DATA, not collected rates",
   url: "https://ratecoaster.net/demo",
 };
+
+type DemoWaits = Awaited<ReturnType<typeof fetchThemeParksWiki>>;
+const DEMO_WAIT_TTL_MS = 30_000;
+const demoWaitCache = new Map<
+  string,
+  { expiresAt: number; request: Promise<DemoWaits> }
+>();
+
+async function cachedDemoWaits(parkId: string): Promise<DemoWaits> {
+  const now = Date.now();
+  const cached = demoWaitCache.get(parkId);
+  if (cached && cached.expiresAt > now) return cached.request;
+
+  const request = fetchThemeParksWiki(parkId);
+  const entry = { expiresAt: now + DEMO_WAIT_TTL_MS, request };
+  demoWaitCache.set(parkId, entry);
+  try {
+    return await request;
+  } catch (error) {
+    // Do not retain a failed promise for the remainder of the TTL. A later
+    // visitor should be allowed to recover from a transient upstream error.
+    if (demoWaitCache.get(parkId) === entry) demoWaitCache.delete(parkId);
+    throw error;
+  }
+}
 
 /** Deterministic hash so the same date always yields the same sample price. */
 function seed(...parts: (string | number)[]): number {
@@ -581,6 +608,56 @@ demoApp.get("/v1/express-pass", (c) => {
   return c.json(out);
 });
 
+/** A demand-based Universal Orlando crowd outlook, using demo price signals. */
+demoApp.get("/v1/crowds/calendar", (c) => {
+  const parkSlug = c.req.query("parkSlug") ?? "universal-studios-florida";
+  const park = PARKS.find(
+    (candidate) => candidate.slug === parkSlug && candidate.destination === "universal-orlando"
+  );
+  if (!park) {
+    return c.json({ error: { code: "not_found", message: "no Universal Orlando park with that name" } }, 404);
+  }
+
+  const gate = gateDateWindow(tierOf(c), c.req.query("from"), c.req.query("to"), park.timezone);
+  const ticketByDate = new Map<string, { value: number; available: boolean }>();
+  const expressByDate = new Map<string, { value: number; available: boolean }>();
+  const hotelByDate = new Map<string, number>();
+  for (let i = 0; i < gate.info.visibleDays; i++) {
+    const date = addDays(gate.from, i);
+    const dow = dayOfWeek(date);
+    const weekend = dow === 5 || dow === 6 ? 1.22 : dow === 0 ? 1.1 : 1;
+    const month = Number(date.slice(5, 7));
+    const seasonal = month === 12 || month === 7 || month === 3 ? 1.18 : month === 9 ? 0.86 : 1;
+    ticketByDate.set(date, {
+      value: Math.round(18900 * weekend * seasonal * (0.94 + seed("crowd-ticket", date) * 0.12)),
+      available: seed("crowd-ticket-availability", date) > 0.015,
+    });
+    expressByDate.set(date, {
+      value: Math.round(9900 * weekend * seasonal * (0.9 + seed("crowd-express", park.slug, date) * 0.32)),
+      available: seed("crowd-express-availability", park.slug, date) > 0.025,
+    });
+    hotelByDate.set(
+      date,
+      Math.round(16800 * weekend * seasonal * (0.94 + seed("crowd-hotel", date) * 0.2))
+    );
+  }
+
+  return c.json({
+    park: {
+      id: `demo-${park.slug}`,
+      destination: park.destination,
+      slug: park.slug,
+      name: park.name,
+      timezone: park.timezone,
+      queueTimesId: park.queueTimesId,
+      themeParksWikiId: park.themeParksWikiId,
+    },
+    days: buildCrowdCalendar({ from: gate.from, to: gate.to, ticketByDate, expressByDate, hotelByDate }),
+    updatedAt: new Date().toISOString(),
+    gate: gate.info,
+  });
+});
+
 /**
  * The one endpoint serving genuinely real data in demo mode. Hits
  * ThemeParks.wiki live, so what you see is what the parks are posting now.
@@ -596,7 +673,7 @@ demoApp.get("/v1/waits/live", async (c) => {
     targets.map(async (park) => {
       let waits: Awaited<ReturnType<typeof fetchThemeParksWiki>> = [];
       try {
-        waits = await fetchThemeParksWiki(park.themeParksWikiId!);
+        waits = await cachedDemoWaits(park.themeParksWikiId!);
       } catch (err) {
         console.error(`[demo] ${park.slug} wait fetch failed:`, err);
       }

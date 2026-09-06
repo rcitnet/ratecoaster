@@ -6,7 +6,29 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 export default {
   reactStrictMode: true,
+  poweredByHeader: false,
   transpilePackages: ["@ratecoaster/shared"],
+
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-DNS-Prefetch-Control", value: "off" },
+          { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+          { key: "X-XSS-Protection", value: "0" },
+          { key: "Origin-Agent-Cluster", value: "?1" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+          },
+        ],
+      },
+    ];
+  },
 
   /*
    * Pin the workspace root. Next infers it by walking up looking for lockfiles,

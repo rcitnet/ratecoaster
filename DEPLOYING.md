@@ -771,7 +771,7 @@ Free accounts are the heart of this site, and they don't work without email.
 
    ```
    RESEND_API_KEY=re_your_actual_key
-   EMAIL_FROM="RateCoaster <hello@ratecoaster.net>"
+   EMAIL_FROM="RateCoaster <thrills@ratecoaster.net>"
    ```
 
    > The quotes around `EMAIL_FROM` are required. `.env` is read with
@@ -1015,8 +1015,8 @@ A value needs quoting. `.env` is sourced as a shell script, so `<`, `>`, `(`,
 
 ```bash
 cd /home/ratecoaster/app
-sed -i 's|^EMAIL_FROM=.*|EMAIL_FROM="RateCoaster <hello@ratecoaster.net>"|' .env
-sed -i 's|^COLLECTOR_USER_AGENT=.*|COLLECTOR_USER_AGENT="RateCoasterBot/1.0 (+https://ratecoaster.net/bot; hello@ratecoaster.net)"|' .env
+sed -i 's|^EMAIL_FROM=.*|EMAIL_FROM="RateCoaster <thrills@ratecoaster.net>"|' .env
+sed -i 's|^COLLECTOR_USER_AGENT=.*|COLLECTOR_USER_AGENT="RateCoasterBot/1.0 (+https://ratecoaster.net/bot; thrills@ratecoaster.net)"|' .env
 bash -n .env && echo "ENV OK"
 ```
 

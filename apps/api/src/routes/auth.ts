@@ -14,6 +14,11 @@ import {
 import { tierOf } from "../lib/entitlements.js";
 import { emailConfigured, sendMagicLinkEmail } from "../lib/email.js";
 import {
+  enforceRateLimit,
+  opaqueRateLimitKey,
+  rateLimitByIp,
+} from "../lib/rate-limit.js";
+import {
   buildGoogleAuthorizeUrl,
   createGoogleOAuthState,
   exchangeGoogleCode,
@@ -23,6 +28,20 @@ import {
 } from "../lib/google-oauth.js";
 
 export const authRouter = new Hono();
+
+const MAGIC_LINK_WINDOW_MS = 15 * 60 * 1_000;
+
+// An IP limit stops cheap distributed email spraying; the second per-address
+// check below stops several IPs from turning one person's inbox into a target.
+authRouter.use(
+  "/magic-link",
+  rateLimitByIp({
+    namespace: "magic-link",
+    limit: 5,
+    windowMs: MAGIC_LINK_WINDOW_MS,
+    message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
+  })
+);
 
 const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 /*
@@ -68,9 +87,9 @@ authRouter.get("/me", (c) => {
 /**
  * POST /v1/auth/magic-link
  *
- * Always responds 200, whether or not the address belongs to an existing
- * account. Returning "no such user" would turn this endpoint into an email
- * enumeration oracle for anyone who wants to know who has signed up.
+ * Accepted requests respond identically whether or not the address belongs to
+ * an existing account. Returning "no such user" would turn this endpoint into
+ * an email enumeration oracle for anyone who wants to know who has signed up.
  */
 authRouter.post("/magic-link", async (c) => {
   const body = await c.req.json().catch(() => ({}));
@@ -78,6 +97,17 @@ authRouter.post("/magic-link", async (c) => {
   if (!parsed.success) {
     return c.json({ error: { code: "invalid_email", message: "Enter a valid email address." } }, 400);
   }
+
+  const emailLimit = enforceRateLimit(
+    c,
+    opaqueRateLimitKey("magic-link-email", parsed.data.email),
+    {
+      limit: 3,
+      windowMs: MAGIC_LINK_WINDOW_MS,
+      message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
+    }
+  );
+  if (emailLimit) return emailLimit;
 
   const { token, email, expiresInMinutes } = await createMagicLink(
     parsed.data.email,
@@ -129,8 +159,6 @@ authRouter.post("/magic-link", async (c) => {
   return c.json({
     ok: true,
     message: "Check your email for a sign-in link.",
-    // Dev-only convenience so the flow is testable without a mail provider.
-    devLink: link,
   });
 });
 

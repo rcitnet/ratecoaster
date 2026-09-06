@@ -21,6 +21,7 @@ import { test } from "node:test";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "../../..");
 const apiIndex = join(repoRoot, "apps/api/src/index.ts");
+const authRoutes = join(repoRoot, "apps/api/src/routes/auth.ts");
 const webApp = join(repoRoot, "apps/web/src/app");
 
 function mountedRoutes(): string[] {
@@ -85,6 +86,17 @@ test("the routes this project depends on are actually mounted", () => {
   ]) {
     assert.ok(routes.includes(required), `${required} is not mounted in apps/api/src/index.ts`);
   }
+});
+
+test("HTTP auth responses never contain a redeemable development link", () => {
+  const source = readFileSync(authRoutes, "utf8");
+  assert.doesNotMatch(source, /devLink\s*:/);
+});
+
+test("the admin router protects itself when mounted independently", async () => {
+  const { adminRouter } = await import("./routes/admin.js");
+  const response = await adminRouter.request("/overview");
+  assert.equal(response.status, 404);
 });
 
 /**

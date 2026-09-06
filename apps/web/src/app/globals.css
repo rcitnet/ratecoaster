@@ -616,6 +616,31 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 .cal-high .cal-price { color: #b03514; }
 .cal-best { border-color: var(--magenta); box-shadow: 0 0 0 3px var(--magenta-tint); }
 
+/* ---------- crowd calendar ---------- */
+
+.crowd-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 30px 0 20px; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+.crowd-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.crowd-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid transparent; }
+.crowd-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; }
+.crowd-month { padding: 20px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); }
+.crowd-month h2 { margin: 0 0 16px; font-size: 23px; }
+.crowd-weekdays, .crowd-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.crowd-weekdays { margin-bottom: 5px; color: var(--ink-mute); font-size: 11px; font-weight: 700; text-align: center; text-transform: uppercase; }
+.crowd-day { min-height: 76px; display: grid; align-content: center; justify-items: center; gap: 2px; padding: 5px 2px; border: 1px solid var(--line); border-radius: 10px; text-align: center; }
+.crowd-date { color: var(--ink-soft); font-size: 12px; }
+.crowd-day strong { font-size: 11px; line-height: 1.1; }
+.crowd-score { color: var(--ink-mute); font-size: 10px; }
+.crowd-very-low { border-color: #a8e9df; background: #e8fbf7; color: #077368; }
+.crowd-low { border-color: #b9d3ff; background: var(--blue-tint); color: var(--blue-dark); }
+.crowd-moderate { border-color: #f2d574; background: var(--yellow-tint); color: #7a5410; }
+.crowd-high { border-color: #ffb99f; background: var(--coral-tint); color: #b03514; }
+.crowd-very-high { border-color: #f0a8d1; background: var(--magenta-tint); color: #a50f64; }
+.crowd-swatch.crowd-very-low { background: #0fb5a5; }
+.crowd-swatch.crowd-low { background: #7192ff; }
+.crowd-swatch.crowd-moderate { background: #ffc53d; }
+.crowd-swatch.crowd-high { background: #ff6a45; }
+.crowd-swatch.crowd-very-high { background: #e6218c; }
+
 /* ---------- wait times ---------- */
 
 .wait-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
@@ -866,6 +891,10 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .trip-total-card { align-items: flex-start; flex-direction: column; padding: 24px; }
   .trip-grand-total { text-align: left; }
   .pricing-filter-form { grid-template-columns: 1fr; }
+  .crowd-months { grid-template-columns: 1fr; }
+  .crowd-month { padding: 14px 10px; }
+  .crowd-day { min-height: 64px; }
+  .crowd-day strong { font-size: 10px; }
 }
 
 @media (max-width: 520px) {

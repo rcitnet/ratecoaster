@@ -132,9 +132,14 @@ export default async function DealsPage() {
               Average posted standby wait for operating attractions, broken out by park.
             </p>
           </div>
-          <a href="/waits" className="btn btn-ghost">
-            See every attraction
-          </a>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a href="/crowd-calendar" className="btn btn-blue">
+              Crowd calendar
+            </a>
+            <a href="/waits" className="btn btn-ghost">
+              See every attraction
+            </a>
+          </div>
         </div>
 
         {parkSummaries.length === 0 ? (

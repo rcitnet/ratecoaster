@@ -81,6 +81,7 @@ const NAV = [
   { href: "/tickets", label: "Tickets" },
   { href: "/express-pass", label: "Express Pass" },
   { href: "/waits", label: "Wait times" },
+  { href: "/crowd-calendar", label: "Crowd calendar" },
   { href: "/guides", label: "Guides" },
 ];
 
@@ -208,6 +209,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <a href="/express-pass">Express Pass</a>
                   <br />
                   <a href="/waits">Live wait times</a>
+                  <br />
+                  <a href="/crowd-calendar">Crowd calendar</a>
                   <br />
                   <a href="/guides">Planning guides</a>
                 </p>

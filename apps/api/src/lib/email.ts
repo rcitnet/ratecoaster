@@ -16,6 +16,43 @@ export interface SendResult {
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+      default: return character;
+    }
+  });
+}
+
+/** Accept only HTTP(S) links on the configured first-party origin. */
+export function trustedEmailUrl(value: string, expectedBase: string | undefined): string | null {
+  if (!expectedBase) return null;
+  try {
+    const url = new URL(value);
+    const base = new URL(expectedBase);
+    if (!/^https?:$/.test(url.protocol) || !/^https?:$/.test(base.protocol)) return null;
+    if (url.username || url.password) return null;
+    return url.origin === base.origin ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function publicApiBase(): string | undefined {
+  return process.env.PUBLIC_API_URL ??
+    (process.env.NODE_ENV === "production" ? undefined : process.env.API_BASE_URL ?? "http://localhost:8787");
+}
+
+function webBase(): string | undefined {
+  return process.env.WEB_ORIGIN ??
+    (process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000");
+}
+
 /**
  * Values that mean "not filled in yet".
  *
@@ -53,6 +90,10 @@ export async function sendMagicLinkEmail(to: string, link: string): Promise<Send
   if (!apiKey || !from) {
     return { sent: false, reason: "RESEND_API_KEY or EMAIL_FROM is not set" };
   }
+  const safeLink = trustedEmailUrl(link, publicApiBase());
+  if (!safeLink) {
+    return { sent: false, reason: "magic link does not use the configured public API origin" };
+  }
 
   const res = await fetch(RESEND_ENDPOINT, {
     method: "POST",
@@ -64,10 +105,10 @@ export async function sendMagicLinkEmail(to: string, link: string): Promise<Send
       from,
       to,
       subject: `Your ${siteName} sign-in link`,
-      html: magicLinkHtml(link, siteName),
+      html: magicLinkHtml(safeLink, siteName),
       // A plain-text alternative meaningfully improves deliverability, and some
       // corporate mail clients strip HTML entirely.
-      text: `Sign in to ${siteName}\n\n${link}\n\nThis link works once and expires in 15 minutes.\nIf you didn't ask for it, you can ignore this email.`,
+      text: `Sign in to ${siteName}\n\n${safeLink}\n\nThis link works once and expires in 15 minutes.\nIf you didn't ask for it, you can ignore this email.`,
     }),
   });
 
@@ -108,9 +149,14 @@ export async function sendPriceDropEmail(input: PriceDropEmail): Promise<SendRes
     return { sent: false, reason: "RESEND_API_KEY or EMAIL_FROM is not set" };
   }
 
+  const safeUrl = trustedEmailUrl(input.url, webBase());
+  if (!safeUrl) {
+    return { sent: false, reason: "alert link does not use the configured website origin" };
+  }
+
   const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
   const saving = input.previousCents !== null ? input.previousCents - input.currentCents : null;
-  const accountUrl = new URL("/account", input.url).toString();
+  const accountUrl = new URL("/account", safeUrl).toString();
 
   const subject =
     saving && saving > 0
@@ -124,12 +170,12 @@ export async function sendPriceDropEmail(input: PriceDropEmail): Promise<SendRes
       from,
       to: input.to,
       subject,
-      html: priceDropHtml(input, siteName, saving),
+      html: priceDropHtml(input, siteName, saving, safeUrl, accountUrl),
       text:
         `${input.hotelName}\n${input.checkIn} to ${input.checkOut} · ${input.rateLabel}\n\n` +
         `Now ${money(input.currentCents)} for the stay` +
         (saving && saving > 0 ? `, down ${money(saving)}.` : ".") +
-        `\n\n${input.url}\n\n` +
+        `\n\n${safeUrl}\n\n` +
         `Prices are observations, not quotes — confirm on the official site before booking.\n` +
         `Manage or stop these alerts: ${accountUrl}\n`,
     }),
@@ -142,9 +188,21 @@ export async function sendPriceDropEmail(input: PriceDropEmail): Promise<SendRes
   return { sent: true };
 }
 
-function priceDropHtml(input: PriceDropEmail, siteName: string, saving: number | null): string {
+export function priceDropHtml(
+  input: PriceDropEmail,
+  siteName: string,
+  saving: number | null,
+  safeUrl: string,
+  accountUrl: string
+): string {
   const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-  const accountUrl = `${input.url.split("/hotels")[0]}/account`;
+  const escapedSiteName = escapeHtml(siteName);
+  const escapedHotelName = escapeHtml(input.hotelName);
+  const escapedCheckIn = escapeHtml(input.checkIn);
+  const escapedCheckOut = escapeHtml(input.checkOut);
+  const escapedRateLabel = escapeHtml(input.rateLabel);
+  const escapedUrl = escapeHtml(safeUrl);
+  const escapedAccountUrl = escapeHtml(accountUrl);
 
   return `<!doctype html>
 <html>
@@ -154,13 +212,13 @@ function priceDropHtml(input: PriceDropEmail, siteName: string, saving: number |
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td>
-            <div style="font-size:22px;font-weight:700;color:#16123c;margin-bottom:20px;">${siteName}</div>
+            <div style="font-size:22px;font-weight:700;color:#16123c;margin-bottom:20px;">${escapedSiteName}</div>
             <div style="font-size:20px;font-weight:600;color:#16123c;margin-bottom:6px;">
               ${saving && saving > 0 ? `The price dropped ${money(saving)}` : "Your watched dates moved"}
             </div>
             <div style="font-size:15px;color:#4a4470;line-height:1.6;margin-bottom:22px;">
-              ${input.hotelName}<br />
-              ${input.checkIn} to ${input.checkOut} · ${input.rateLabel}
+              ${escapedHotelName}<br />
+              ${escapedCheckIn} to ${escapedCheckOut} · ${escapedRateLabel}
             </div>
             <div style="background:#e8fbf7;border-radius:12px;padding:18px;margin-bottom:24px;">
               <div style="font-size:13px;font-weight:700;color:#077368;letter-spacing:0.5px;">NOW</div>
@@ -171,7 +229,7 @@ function priceDropHtml(input: PriceDropEmail, siteName: string, saving: number |
                   : `<div style="font-size:13px;color:#4a4470;">for the whole stay</div>`
               }
             </div>
-            <a href="${input.url}"
+            <a href="${escapedUrl}"
                style="display:inline-block;background:#e6218c;color:#ffffff;text-decoration:none;
                       padding:14px 28px;border-radius:999px;font-weight:600;font-size:16px;">
               See the dates
@@ -179,7 +237,7 @@ function priceDropHtml(input: PriceDropEmail, siteName: string, saving: number |
             <div style="font-size:13px;color:#7d76a3;line-height:1.6;margin-top:26px;">
               Prices here are observations, not held quotes — always confirm on the official site
               before booking.<br /><br />
-              <a href="${accountUrl}" style="color:#7d76a3;">Manage or stop these alerts</a>
+              <a href="${escapedAccountUrl}" style="color:#7d76a3;">Manage or stop these alerts</a>
             </div>
           </td></tr>
         </table>
@@ -189,7 +247,9 @@ function priceDropHtml(input: PriceDropEmail, siteName: string, saving: number |
 </html>`;
 }
 
-function magicLinkHtml(link: string, siteName: string): string {
+export function magicLinkHtml(link: string, siteName: string): string {
+  const escapedLink = escapeHtml(link);
+  const escapedSiteName = escapeHtml(siteName);
   // Inline styles and a table layout, because email clients support neither
   // external stylesheets nor modern CSS reliably. This looks dated on purpose.
   return `<!doctype html>
@@ -203,7 +263,7 @@ function magicLinkHtml(link: string, siteName: string): string {
             <tr>
               <td>
                 <div style="font-size:22px;font-weight:700;color:#16123c;margin-bottom:20px;">
-                  ${siteName}
+                  ${escapedSiteName}
                 </div>
                 <div style="font-size:20px;font-weight:600;color:#16123c;margin-bottom:10px;">
                   Here's your sign-in link
@@ -211,7 +271,7 @@ function magicLinkHtml(link: string, siteName: string): string {
                 <div style="font-size:15px;color:#4a4470;line-height:1.6;margin-bottom:26px;">
                   Click below and you're in — the whole 365-day rate calendar unlocks.
                 </div>
-                <a href="${link}"
+                <a href="${escapedLink}"
                    style="display:inline-block;background:#e6218c;color:#ffffff;text-decoration:none;
                           padding:14px 28px;border-radius:999px;font-weight:600;font-size:16px;">
                   Sign in

@@ -9,7 +9,7 @@
     "har:import": "tsx src/collectors/hotels/har-import.ts",
     "verify:endpoint": "tsx src/jobs/verify-endpoint.ts",
     "rollup": "tsx src/jobs/rollup.ts",
-    "test": "node --import tsx --test src/collectors/collectors.test.ts src/collectors/waits/providers.test.ts src/collectors/parks/hours.test.ts src/lib/google-oauth.test.ts src/collectors/flights/flights.test.ts src/routes/trips.test.ts src/lib/trip-cost.test.ts src/lib/alerts.test.ts src/social/content.test.ts src/claims.test.ts",
+    "test": "node --import tsx --test src/collectors/collectors.test.ts src/collectors/waits/providers.test.ts src/collectors/parks/hours.test.ts src/lib/google-oauth.test.ts src/collectors/flights/flights.test.ts src/routes/trips.test.ts src/lib/trip-cost.test.ts src/lib/alerts.test.ts src/lib/crowds.test.ts src/lib/email.test.ts src/lib/rate-limit.test.ts src/social/content.test.ts src/claims.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit",
     "smoke:waits": "tsx src/jobs/smoke-waits.ts",
@@ -25,7 +25,7 @@
     "@ratecoaster/shared": "*",
     "@hono/node-server": "^1.13.7",
     "hono": "^4.6.14",
-    "drizzle-orm": "^0.38.3",
+    "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5",
     "zod": "^3.24.1"
   },
