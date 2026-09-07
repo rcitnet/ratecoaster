@@ -194,5 +194,44 @@ waitsRouter.get("/:slug/typical", async (c) => {
     .where(eq(waitRollups.attractionId, attraction.id))
     .orderBy(asc(waitRollups.hour));
 
-  return c.json(rows);
+  /*
+   * Rollups are stored as a weekday/hour matrix so the live board can compare
+   * a Tuesday at 2pm with other Tuesdays at 2pm. The ride detail chart needs
+   * a simpler answer: one readable, typical day. Weight each weekday bucket by
+   * its sample count and fold it into a single point per hour. Returning the
+   * raw rows here used to make seven overlapping points share every x-value.
+   */
+  const byHour = new Map<number, {
+    weightedAverage: number;
+    weightedP50: number;
+    weightedP90: number;
+    sampleCount: number;
+  }>();
+
+  for (const row of rows) {
+    const bucket = byHour.get(row.hour) ?? {
+      weightedAverage: 0,
+      weightedP50: 0,
+      weightedP90: 0,
+      sampleCount: 0,
+    };
+    const weight = row.sampleCount;
+    if (row.avgMinutes !== null) bucket.weightedAverage += row.avgMinutes * weight;
+    if (row.p50Minutes !== null) bucket.weightedP50 += row.p50Minutes * weight;
+    if (row.p90Minutes !== null) bucket.weightedP90 += row.p90Minutes * weight;
+    bucket.sampleCount += weight;
+    byHour.set(row.hour, bucket);
+  }
+
+  return c.json(
+    [...byHour.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([hour, bucket]) => ({
+        hour,
+        avgMinutes: bucket.sampleCount ? bucket.weightedAverage / bucket.sampleCount : null,
+        p50Minutes: bucket.sampleCount ? Math.round(bucket.weightedP50 / bucket.sampleCount) : null,
+        p90Minutes: bucket.sampleCount ? Math.round(bucket.weightedP90 / bucket.sampleCount) : null,
+        sampleCount: bucket.sampleCount,
+      }))
+  );
 });
