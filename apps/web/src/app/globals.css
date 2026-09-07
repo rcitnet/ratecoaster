@@ -725,18 +725,8 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 .ride-detail-grid h2 { margin-top: 0; font-size: 24px; }
 .wait-history-chart { margin: 18px -4px 0; overflow-x: auto; }
 .wait-history-chart svg { min-width: 540px; display: block; }
-.ride-park-map { height: 270px; position: relative; overflow: hidden; margin: 18px 0; border: 1px solid #cfd4ea; border-radius: var(--r-md); background: radial-gradient(ellipse at 50% 50%, #f3e8ff 0 18%, transparent 19%), linear-gradient(135deg, #d9f5ef, #e8ecff 54%, #fff1d9); }
-.ride-park-map::before, .ride-park-map::after { position: absolute; border: 2px dashed rgba(51, 85, 238, 0.25); border-radius: 48%; content: ""; transform: rotate(-18deg); }
-.ride-park-map::before { width: 92%; height: 55%; left: 4%; top: 22%; }
-.ride-park-map::after { width: 55%; height: 88%; left: 22%; top: 6%; transform: rotate(25deg); }
-.ride-map-path { position: absolute; z-index: 1; width: 120%; height: 18px; background: rgba(255,255,255,0.78); border: 1px solid rgba(125,118,163,0.22); border-radius: 50%; transform: rotate(25deg); }
-.ride-map-path.path-one { left: -12%; top: 44%; }
-.ride-map-path.path-two { left: -8%; top: 62%; transform: rotate(-30deg); }
-.ride-map-land { position: absolute; z-index: 2; top: 14px; left: 16px; max-width: 65%; padding: 6px 10px; border-radius: var(--r-pill); background: rgba(255,255,255,0.88); color: var(--ink-soft); font-size: 12px; font-weight: 700; }
-.ride-map-pin { position: absolute; z-index: 3; display: grid; justify-items: center; width: 132px; transform: translate(-50%, -100%); color: var(--magenta); text-align: center; }
-.ride-map-pin span { display: grid; place-items: center; width: 30px; height: 30px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; background: var(--magenta); box-shadow: 0 3px 10px rgba(22,18,60,0.2); color: #fff; font-size: 14px; transform: rotate(-45deg); }
-.ride-map-pin span::first-letter { transform: rotate(45deg); }
-.ride-map-pin b { margin-top: 10px; padding: 4px 7px; border-radius: 6px; background: var(--ink); color: #fff; font-size: 11px; line-height: 1.15; }
+.ride-park-map { height: 270px; overflow: hidden; margin: 18px 0; border: 1px solid #cfd4ea; border-radius: var(--r-md); background: var(--line-soft); }
+.ride-park-map iframe { display: block; width: 100%; height: 100%; border: 0; }
 
 @media (max-width: 760px) {
   .ride-detail-hero { grid-template-columns: 82px minmax(0, 1fr); gap: 16px; }

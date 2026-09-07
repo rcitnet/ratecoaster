@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { RideImage } from "@/components/RideImage";
 import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
 import { rideImage } from "@/lib/ride-images";
-import { rideLandPosition } from "@/lib/ride-location";
 import { pageMetadata, breadcrumbSchema, jsonLd } from "@/lib/seo";
 import type { WaitRollupPoint } from "@ratecoaster/shared";
 
@@ -99,8 +98,8 @@ export default async function RideWaitPage({ params }: { params: Promise<{ slug:
 
   const history = await safe(client.waitRollup(found.attractionSlug), []);
   const hasHistory = history.filter((point) => point.p50Minutes !== null && point.sampleCount > 0).length >= 2;
-  const position = rideLandPosition(found.park.slug, found.land);
   const mapQuery = encodeURIComponent(`${found.attractionName}, ${found.park.name}`);
+  const mapEmbedUrl = `https://www.google.com/maps?output=embed&q=${mapQuery}&z=18&t=k`;
 
   return (
     <main className="section ride-detail-page">
@@ -149,15 +148,15 @@ export default async function RideWaitPage({ params }: { params: Promise<{ slug:
 
         <section className="card">
           <h2>Where to find it</h2>
-          <p className="tiny muted">{found.land ? `This ride is in ${found.land}.` : "This ride is shown at its approximate place in the park."}</p>
-          <div className={`ride-park-map park-map-${found.park.slug}`}>
-            <span className="ride-map-path path-one" aria-hidden="true" />
-            <span className="ride-map-path path-two" aria-hidden="true" />
-            <span className="ride-map-land">{found.land ?? found.park.name}</span>
-            <span className="ride-map-pin" style={{ left: position.left, top: position.top }} aria-label={`${found.attractionName} location`}>
-              <span>●</span>
-              <b>{found.attractionName}</b>
-            </span>
+          <p className="tiny muted">{found.land ? `Located in ${found.land}.` : "Use the map to find this ride in the park."}</p>
+          <div className="ride-park-map">
+            <iframe
+              src={mapEmbedUrl}
+              title={`Map showing ${found.attractionName}`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
           </div>
           <a className="btn btn-blue btn-sm" href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`} target="_blank" rel="noreferrer">
             Open in Google Maps ↗
