@@ -172,7 +172,12 @@ export default async function WaitsPage({
               {[...waits]
                 .sort((a, b) => (b.waitMinutes ?? -1) - (a.waitMinutes ?? -1))
                 .map((w) => (
-                  <div className="wait-card" key={w.attractionSlug}>
+                  <a
+                    className="wait-card"
+                    key={w.attractionSlug}
+                    href={`/waits/${encodeURIComponent(w.attractionSlug)}`}
+                    aria-label={`See wait history and park map for ${w.attractionName}`}
+                  >
                     <RideImage src={rideImage(park.slug, w.attractionName)} />
                     <div className="wait-details">
                       <div className="wait-name">{w.attractionName}</div>
@@ -191,7 +196,7 @@ export default async function WaitsPage({
                         <span style={{ fontSize: 13 }}>m</span>
                       ) : null}
                     </div>
-                  </div>
+                  </a>
                 ))}
             </div>
           </section>
