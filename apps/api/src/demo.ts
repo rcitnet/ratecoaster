@@ -4,7 +4,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { ENTITLEMENTS, TripQuote, TripQuoteQuery, type Tier } from "@ratecoaster/shared";
 import { PARKS, PROPERTIES, TICKET_PRODUCTS } from "@ratecoaster/db/src/seed-data.js";
 import { gateDateWindow, tierOf } from "./lib/entitlements.js";
-import { fetchThemeParksWiki } from "./collectors/waits/providers.js";
+import { fetchThemeParksWiki, isRetiredAttraction } from "./collectors/waits/providers.js";
 import {
   QUEUE_TIMES_ATTRIBUTION,
   THEMEPARKS_WIKI_ATTRIBUTION,
@@ -677,7 +677,9 @@ demoApp.get("/v1/waits/live", async (c) => {
       } catch (err) {
         console.error(`[demo] ${park.slug} wait fetch failed:`, err);
       }
-      const filtered = ridesOnly ? waits.filter((w) => w.kind === "ride") : waits;
+      const filtered = waits.filter(
+        (w) => !isRetiredAttraction(park.slug, w.name) && (!ridesOnly || w.kind === "ride")
+      );
       return {
         park: {
           id: `demo-${park.slug}`,
