@@ -5,6 +5,7 @@ import { attractions, parkHours, parks, waitCurrent, waitRollups } from "@rateco
 import {
   QUEUE_TIMES_ATTRIBUTION,
   THEMEPARKS_WIKI_ATTRIBUTION,
+  isRetiredAttraction,
 } from "../collectors/waits/providers.js";
 
 export const waitsRouter = new Hono();
@@ -137,7 +138,7 @@ waitsRouter.get("/live", async (c) => {
         queueTimesId: park.queueTimesId,
         themeParksWikiId: park.themeParksWikiId,
       },
-      waits: rows.map((r) => ({
+      waits: rows.filter((r) => !isRetiredAttraction(park.slug, r.attractionName)).map((r) => ({
         attractionId: r.attractionId,
         attractionSlug: r.attractionSlug,
         attractionName: r.attractionName,

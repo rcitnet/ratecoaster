@@ -2,6 +2,8 @@ import { deriveParkState, formatParkHours, parkStateMessage } from "@ratecoaster
 import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { pageMetadata } from "@/lib/seo";
+import { rideImage } from "@/lib/ride-images";
+import { RideImage } from "@/components/RideImage";
 
 export const metadata = pageMetadata({
   title: "Live Universal ride wait times",
@@ -171,7 +173,8 @@ export default async function WaitsPage({
                 .sort((a, b) => (b.waitMinutes ?? -1) - (a.waitMinutes ?? -1))
                 .map((w) => (
                   <div className="wait-card" key={w.attractionSlug}>
-                    <div style={{ minWidth: 0 }}>
+                    <RideImage src={rideImage(park.slug, w.attractionName)} />
+                    <div className="wait-details">
                       <div className="wait-name">{w.attractionName}</div>
                       <div className="wait-land">
                         {w.land ?? "—"}

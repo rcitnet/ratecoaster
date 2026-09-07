@@ -204,6 +204,14 @@ export function normalizeName(name: string): string {
     .trim();
 }
 
+/** Permanently retired rides can linger in upstream feeds as "closed". */
+export function isRetiredAttraction(parkSlug: string, name: string): boolean {
+  return (
+    parkSlug === "universal-studios-florida" &&
+    normalizeName(name.replace(/&/g, "and")) === "fast and furious supercharged"
+  );
+}
+
 /** Deterministic, readable slug used as the public identifier for an attraction. */
 export function slugify(name: string): string {
   return normalizeName(name).replace(/\s+/g, "-").slice(0, 80);

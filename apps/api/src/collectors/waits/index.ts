@@ -4,6 +4,7 @@ import type { Collector, CollectorContext } from "../framework/types.js";
 import {
   fetchQueueTimes,
   fetchThemeParksWiki,
+  isRetiredAttraction,
   slugify,
   type NormalizedWait,
 } from "./providers.js";
@@ -105,6 +106,7 @@ async function ingestParkWaits(
 
   for (const w of waits) {
     stats.parsedCount++;
+    if (isRetiredAttraction(parkSlug, w.name)) continue;
 
     // Match on the provider's stable external id first, falling back to a slug
     // derived from the name. The fallback matters when switching providers:

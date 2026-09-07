@@ -1,10 +1,29 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseQueueTimes, parseThemeParksWiki } from "./providers.js";
+import { isRetiredAttraction, parseQueueTimes, parseThemeParksWiki } from "./providers.js";
 import {
   QUEUE_TIMES_EPIC_UNIVERSE,
   THEMEPARKS_WIKI_HOLLYWOOD,
 } from "./__fixtures__/live-payloads.js";
+
+describe("retired attractions", () => {
+  test("excludes Florida's Supercharged across provider spelling variants", () => {
+    for (const name of [
+      "Fast & Furious - Supercharged™",
+      "Fast & Furious – Supercharged",
+      "Fast and Furious: Supercharged",
+      "FAST & FURIOUS SUPERCHARGED®",
+    ]) {
+      assert.equal(isRetiredAttraction("universal-studios-florida", name), true, name);
+    }
+  });
+
+  test("preserves Hollywood attractions and other closed Florida rides", () => {
+    assert.equal(isRetiredAttraction("universal-studios-hollywood", "Fast & Furious - Supercharged™"), false);
+    assert.equal(isRetiredAttraction("universal-studios-hollywood", "Fast & Furious: Hollywood Drift"), false);
+    assert.equal(isRetiredAttraction("universal-studios-florida", "Revenge of the Mummy™"), false);
+  });
+});
 
 describe("Queue-Times parser (real Epic Universe payload)", () => {
   const waits = parseQueueTimes(QUEUE_TIMES_EPIC_UNIVERSE);
