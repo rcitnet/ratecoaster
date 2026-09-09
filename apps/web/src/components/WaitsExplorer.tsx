@@ -89,27 +89,6 @@ const SORTERS: Record<SortOption, (left: LiveWait, right: LiveWait) => number> =
   "name-desc": (left, right) => compareNames(right, left),
 };
 
-function FilterChip({
-  label,
-  selected,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`chip ${selected ? "on" : ""}`}
-      aria-pressed={selected}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
 export function WaitsExplorer({
   data,
   initialParkSlug,
@@ -123,7 +102,6 @@ export function WaitsExplorer({
   const [parkSlug, setParkSlug] = useState<string | null>(validInitialPark);
   const [attractionKind, setAttractionKind] = useState<AttractionKind | null>("ride");
   const [rideType, setRideType] = useState<string | null>(null);
-  const [interest, setInterest] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("wait-asc");
   const [query, setQuery] = useState("");
 
@@ -151,14 +129,6 @@ export function WaitsExplorer({
     return [...values].map(([key, label]) => ({ key, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [parkAttractions]);
 
-  const availableInterests = useMemo(() => {
-    const values = new Map<string, string>();
-    for (const attraction of parkAttractions) {
-      for (const item of attraction.interests) values.set(item.key, item.label);
-    }
-    return [...values].map(([key, label]) => ({ key, label })).sort((a, b) => a.label.localeCompare(b.label));
-  }, [parkAttractions]);
-
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const filtered = useMemo(
     () =>
@@ -168,10 +138,6 @@ export function WaitsExplorer({
           (attraction) =>
             !rideType || attraction.attractionTypes.some((type) => type.key === rideType)
         )
-        .filter(
-          (attraction) =>
-            !interest || attraction.interests.some((item) => item.key === interest)
-        )
         .filter((attraction) => {
           if (!normalizedQuery) return true;
           const searchable = [
@@ -179,14 +145,13 @@ export function WaitsExplorer({
             attraction.land ?? "",
             KIND_LABELS[attraction.kind],
             ...attraction.attractionTypes.map((type) => type.label),
-            ...attraction.interests.map((item) => item.label),
           ]
             .join(" ")
             .toLocaleLowerCase();
           return searchable.includes(normalizedQuery);
         })
         .sort(SORTERS[sort]),
-    [attractionKind, interest, normalizedQuery, parkAttractions, rideType, sort]
+    [attractionKind, normalizedQuery, parkAttractions, rideType, sort]
   );
 
   const filteredIds = useMemo(
@@ -208,103 +173,102 @@ export function WaitsExplorer({
   function choosePark(nextPark: string | null) {
     setParkSlug(nextPark);
     setRideType(null);
-    setInterest(null);
     const url = nextPark ? `/waits?park=${encodeURIComponent(nextPark)}` : "/waits";
     window.history.replaceState(null, "", url);
   }
 
+  function clearFilters() {
+    setParkSlug(null);
+    setAttractionKind("ride");
+    setRideType(null);
+    setSort("wait-asc");
+    setQuery("");
+    window.history.replaceState(null, "", "/waits");
+  }
+
+  const hasCustomFilters = Boolean(
+    parkSlug || attractionKind !== "ride" || rideType || sort !== "wait-asc" || query
+  );
+
   return (
     <>
-      <div className="waits-filters" aria-label="Attraction filters">
-        <label className="waits-search-label" htmlFor="waits-search">
-          Search attractions
-        </label>
-        <input
-          id="waits-search"
-          className="waits-search"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search rides, shows, lands, or categories"
-        />
+      <div className="waits-toolbar" aria-label="Attraction filters">
+        <div className="waits-filter-grid">
+          <label className="waits-field waits-field-search" htmlFor="waits-search">
+            <span>Search</span>
+            <input
+              id="waits-search"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ride, show, or land"
+            />
+          </label>
 
-        <div className="waits-control-group">
-          <div className="waits-control-label">Park</div>
-          <div className="chips waits-control-chips">
-            <FilterChip label="All parks" selected={!parkSlug} onClick={() => choosePark(null)} />
-            {data.parks.map(({ park }) => (
-              <button
-                type="button"
-                key={park.id}
-                className={`chip ${parkSlug === park.slug ? "on" : ""}`}
-                aria-pressed={parkSlug === park.slug}
-                onClick={() => choosePark(park.slug)}
-              >
-                <span
-                  className="chip-dot"
-                  style={{ background: PARK_COLORS[park.slug] ?? "#3355ee" }}
-                  aria-hidden="true"
-                />
-                {park.name}
-              </button>
-            ))}
-          </div>
-        </div>
+          <label className="waits-field" htmlFor="waits-park">
+            <span>Park</span>
+            <select
+              id="waits-park"
+              value={parkSlug ?? ""}
+              onChange={(event) => choosePark(event.target.value || null)}
+            >
+              <option value="">All parks</option>
+              {data.parks.map(({ park }) => (
+                <option key={park.id} value={park.slug}>{park.name}</option>
+              ))}
+            </select>
+          </label>
 
-        <div className="waits-filter-columns">
-          <div className="waits-control-group">
-            <div className="waits-control-label">Sort</div>
-            <div className="chips waits-control-chips">
+          <label className="waits-field" htmlFor="waits-sort">
+            <span>Sort by</span>
+            <select
+              id="waits-sort"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as SortOption)}
+            >
               {SORT_OPTIONS.map((option) => (
-                <FilterChip
-                  key={option.value}
-                  label={option.label}
-                  selected={sort === option.value}
-                  onClick={() => setSort(option.value)}
-                />
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
 
-          <div className="waits-control-group">
-            <div className="waits-control-label">Attraction category</div>
-            <div className="chips waits-control-chips">
-              <FilterChip label="All categories" selected={!attractionKind} onClick={() => setAttractionKind(null)} />
+          <label className="waits-field" htmlFor="waits-category">
+            <span>Category</span>
+            <select
+              id="waits-category"
+              value={attractionKind ?? ""}
+              onChange={(event) => setAttractionKind((event.target.value || null) as AttractionKind | null)}
+            >
+              <option value="">All categories</option>
               {availableKinds.map((kind) => (
-                <FilterChip
-                  key={kind}
-                  label={KIND_LABELS[kind]}
-                  selected={attractionKind === kind}
-                  onClick={() => setAttractionKind(kind)}
-                />
+                <option key={kind} value={kind}>{KIND_LABELS[kind]}</option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
+
+          {availableRideTypes.length > 0 ? (
+            <label className="waits-field" htmlFor="waits-ride-type">
+              <span>Ride type</span>
+              <select
+                id="waits-ride-type"
+                value={rideType ?? ""}
+                onChange={(event) => setRideType(event.target.value || null)}
+              >
+                <option value="">All ride types</option>
+                {availableRideTypes.map((type) => (
+                  <option key={type.key} value={type.key}>{type.label}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
 
-        {availableRideTypes.length > 0 ? (
-          <div className="waits-control-group">
-            <div className="waits-control-label">Official ride type</div>
-            <div className="chips waits-control-chips">
-              <FilterChip label="All ride types" selected={!rideType} onClick={() => setRideType(null)} />
-              {availableRideTypes.map((type) => (
-                <FilterChip key={type.key} label={type.label} selected={rideType === type.key} onClick={() => setRideType(type.key)} />
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {availableInterests.length > 0 ? (
-          <div className="waits-control-group">
-            <div className="waits-control-label">Official interest</div>
-            <div className="chips waits-control-chips">
-              <FilterChip label="All interests" selected={!interest} onClick={() => setInterest(null)} />
-              {availableInterests.map((item) => (
-                <FilterChip key={item.key} label={item.label} selected={interest === item.key} onClick={() => setInterest(item.key)} />
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <div className="waits-toolbar-foot">
+          <span className="tiny muted">Filters update the list instantly.</span>
+          {hasCustomFilters ? (
+            <button type="button" className="waits-clear" onClick={clearFilters}>Reset filters</button>
+          ) : null}
+        </div>
       </div>
 
       <div className="waits-results-head">
@@ -313,28 +277,23 @@ export function WaitsExplorer({
       </div>
 
       {allOpen.length > 0 ? (
-        <div className="grid grid-4 waits-summary">
-          <div className="card" style={{ background: "var(--teal-tint)", borderColor: "transparent" }}>
-            <div className="tiny" style={{ color: "#077368", fontWeight: 700 }}>OPEN NOW</div>
-            <div className="cal-price" style={{ fontSize: 30, color: "#077368" }}>{allOpen.length}</div>
+        <div className="waits-summary">
+          <div className="waits-stat">
+            <span>Open now</span>
+            <strong>{allOpen.length}</strong>
           </div>
-          <div className="card" style={{ background: "var(--blue-tint)", borderColor: "transparent" }}>
-            <div className="tiny" style={{ color: "var(--blue-dark)", fontWeight: 700 }}>AVERAGE WAIT</div>
-            <div className="cal-price" style={{ fontSize: 30, color: "var(--blue-dark)" }}>
-              {Math.round(allOpen.reduce((sum, wait) => sum + (wait.waitMinutes ?? 0), 0) / allOpen.length)}m
-            </div>
+          <div className="waits-stat">
+            <span>Average wait</span>
+            <strong>{Math.round(allOpen.reduce((sum, wait) => sum + (wait.waitMinutes ?? 0), 0) / allOpen.length)}m</strong>
           </div>
-          <div className="card" style={{ background: "var(--coral-tint)", borderColor: "transparent" }}>
-            <div className="tiny" style={{ color: "#b03514", fontWeight: 700 }}>LONGEST RIGHT NOW</div>
-            <div className="cal-price" style={{ fontSize: 30, color: "#b03514" }}>{busiest?.waitMinutes}m</div>
-            <div className="tiny muted" style={{ marginTop: 2 }}>{busiest?.attractionName}</div>
+          <div className="waits-stat waits-stat-wide">
+            <span>Longest right now</span>
+            <strong>{busiest?.waitMinutes}m</strong>
+            <small>{busiest?.attractionName}</small>
           </div>
-          <div className="card" style={{ background: "var(--yellow-tint)", borderColor: "transparent" }}>
-            <div className="tiny" style={{ color: "#7a5410", fontWeight: 700 }}>WALK-ONS</div>
-            <div className="cal-price" style={{ fontSize: 30, color: "#7a5410" }}>
-              {allOpen.filter((wait) => (wait.waitMinutes ?? 99) <= 15).length}
-            </div>
-            <div className="tiny muted" style={{ marginTop: 2 }}>15 minutes or less</div>
+          <div className="waits-stat">
+            <span>15 min or less</span>
+            <strong>{allOpen.filter((wait) => (wait.waitMinutes ?? 99) <= 15).length}</strong>
           </div>
         </div>
       ) : null}
