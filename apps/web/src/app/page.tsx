@@ -16,6 +16,8 @@ import {
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { HomeHero } from "@/components/HomeHero";
+import { BusiestRides } from "@/components/BusiestRides";
+import { busiestRides } from "@/lib/busiest-rides";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -93,6 +95,7 @@ export default async function DealsPage() {
           a.nightlyCents - b.nightlyCents
       )[0],
   })).filter(({ propertyCount }) => propertyCount > 0);
+  const busiest = busiestRides(waits.parks);
 
   return (
     <main>
@@ -148,61 +151,67 @@ export default async function DealsPage() {
             collection finishes.
           </div>
         ) : (
-          <div className="grid grid-4">
-            {parkSummaries.map(({ park, average, state, hours, openCount, walkOnCount, shortest }) => {
-              const color = PARK_COLORS[park.slug] ?? "var(--blue)";
-              const status = parkStateMessage(state, openCount, walkOnCount, hours, park.timezone);
-              const todaysHours = formatParkHours(hours, park.timezone);
-              return (
-                <a
-                  href={`/waits?park=${park.slug}`}
-                  className="card card-hover"
-                  key={park.slug}
-                  style={{ borderTop: `5px solid ${color}` }}
-                >
-                  <div className="tiny muted" style={{ fontWeight: 700, minHeight: 42 }}>
-                    {park.name.toUpperCase()}
-                  </div>
-                  {/*
-                    A big dash beside the words "min average" is what made a
-                    closed park look broken — it reads as a failed number rather
-                    than an absent one. When there is no average, the status
-                    line below carries the whole message instead.
-                  */}
-                  {average === null ? (
-                    <div
-                      className="display"
-                      style={{ fontSize: 26, color: "var(--ink-mute)", marginTop: 10 }}
-                    >
-                      {state === "closed" ? "Closed" : "No waits posted"}
+          <div className="home-pulse-layout">
+            <div className="home-park-grid">
+              {parkSummaries.map(({ park, average, state, hours, openCount, walkOnCount, shortest }) => {
+                const color = PARK_COLORS[park.slug] ?? "var(--blue)";
+                const status = parkStateMessage(state, openCount, walkOnCount, hours, park.timezone);
+                const todaysHours = formatParkHours(hours, park.timezone);
+                return (
+                  <a
+                    href={`/waits?park=${park.slug}`}
+                    className="card card-hover"
+                    key={park.slug}
+                    style={{ borderTop: `5px solid ${color}` }}
+                  >
+                    <div className="tiny muted" style={{ fontWeight: 700, minHeight: 42 }}>
+                      {park.name.toUpperCase()}
                     </div>
-                  ) : (
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginTop: 8 }}>
-                      <span className="display" style={{ fontSize: 42, color }}>
-                        {average}
-                      </span>
-                      <span className="tiny muted">min average</span>
+                    {/*
+                      A big dash beside the words "min average" is what made a
+                      closed park look broken — it reads as a failed number rather
+                      than an absent one. When there is no average, the status
+                      line below carries the whole message instead.
+                    */}
+                    {average === null || state === "closed" ? (
+                      <div
+                        className="display"
+                        style={{ fontSize: 26, color: "var(--ink-mute)", marginTop: 10 }}
+                      >
+                        {state === "closed" ? "Closed" : "No waits posted"}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginTop: 8 }}>
+                        <span className="display" style={{ fontSize: 42, color }}>
+                          {average}
+                        </span>
+                        <span className="tiny muted">min average</span>
+                      </div>
+                    )}
+                    <div className="tiny muted" style={{ marginTop: 10 }}>
+                      {status}
                     </div>
-                  )}
-                  <div className="tiny muted" style={{ marginTop: 10 }}>
-                    {status}
-                  </div>
-                  {todaysHours ? (
-                    <div className="tiny muted" style={{ marginTop: 6, opacity: 0.8 }}>
-                      Today: {todaysHours}
-                    </div>
-                  ) : null}
-                  {shortest ? (
-                    <div
-                      className="tiny"
-                      style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}
-                    >
-                      <b>Shortest posted:</b> {shortest.attractionName} · {shortest.waitMinutes}m
-                    </div>
-                  ) : null}
-                </a>
-              );
-            })}
+                    {todaysHours ? (
+                      <div className="tiny muted" style={{ marginTop: 6, opacity: 0.8 }}>
+                        Today: {todaysHours}
+                      </div>
+                    ) : null}
+                    {shortest && state !== "closed" ? (
+                      <div
+                        className="tiny"
+                        style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}
+                      >
+                        <b>Shortest posted:</b> {shortest.attractionName} · {shortest.waitMinutes}m
+                      </div>
+                    ) : null}
+                  </a>
+                );
+              })}
+            </div>
+            <BusiestRides
+              rides={busiest}
+              allClosed={parkSummaries.every(({ state }) => state === "closed")}
+            />
           </div>
         )}
 
