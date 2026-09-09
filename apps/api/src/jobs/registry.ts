@@ -4,6 +4,7 @@ import { expressPassCollector, ticketPriceCollector } from "../collectors/ticket
 import { undercoverTouristTicketFeed } from "../collectors/tickets/feed.js";
 import { flightPriceCollector } from "../collectors/flights/index.js";
 import { parkHoursCollector } from "../collectors/parks/hours.js";
+import { universalAttractionCatalogCollector } from "../collectors/waits/universal-catalog.js";
 import type { Collector } from "../collectors/framework/types.js";
 
 /**
@@ -16,6 +17,7 @@ import type { Collector } from "../collectors/framework/types.js";
  */
 export const COLLECTORS: Collector[] = [
   waitTimesCollector,
+  universalAttractionCatalogCollector,
   parkHoursCollector,
   hotelRateCollector,
   ticketPriceCollector,

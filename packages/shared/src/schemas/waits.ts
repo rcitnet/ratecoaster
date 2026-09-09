@@ -25,6 +25,13 @@ export type AttractionStatus = z.infer<typeof AttractionStatus>;
 export const AttractionKind = z.enum(["ride", "show", "meet-and-greet", "other"]);
 export type AttractionKind = z.infer<typeof AttractionKind>;
 
+/** A classification published in Universal Orlando's official attraction catalog. */
+export const AttractionTag = z.object({
+  key: z.string(),
+  label: z.string(),
+});
+export type AttractionTag = z.infer<typeof AttractionTag>;
+
 export const Attraction = z.object({
   id: z.string(),
   parkId: z.string(),
@@ -33,6 +40,16 @@ export const Attraction = z.object({
   kind: AttractionKind,
   land: z.string().nullable(),
   externalId: z.string().nullable(),
+  attractionTypes: z.array(AttractionTag).default([]),
+  interests: z.array(AttractionTag).default([]),
+  ageGroups: z.array(AttractionTag).default([]),
+  heightRequirements: z.array(AttractionTag).default([]),
+  accessibility: z.array(AttractionTag).default([]),
+  expressPass: z.boolean().nullable().default(null),
+  latitude: z.number().nullable().default(null),
+  longitude: z.number().nullable().default(null),
+  officialUrl: z.string().url().nullable().default(null),
+  officialImageUrl: z.string().url().nullable().default(null),
 });
 export type Attraction = z.infer<typeof Attraction>;
 
@@ -64,6 +81,17 @@ export const LiveWait = z.object({
   parkName: z.string(),
   land: z.string().nullable(),
   kind: AttractionKind,
+  /** Official Universal classifications such as Thrill or Kid Friendly. */
+  attractionTypes: z.array(AttractionTag).default([]),
+  interests: z.array(AttractionTag).default([]),
+  ageGroups: z.array(AttractionTag).default([]),
+  heightRequirements: z.array(AttractionTag).default([]),
+  accessibility: z.array(AttractionTag).default([]),
+  expressPass: z.boolean().nullable().default(null),
+  latitude: z.number().nullable().default(null),
+  longitude: z.number().nullable().default(null),
+  officialUrl: z.string().url().nullable().default(null),
+  officialImageUrl: z.string().url().nullable().default(null),
   waitMinutes: z.number().int().nonnegative().nullable(),
   singleRiderMinutes: z.number().int().nonnegative().nullable(),
   status: AttractionStatus,
