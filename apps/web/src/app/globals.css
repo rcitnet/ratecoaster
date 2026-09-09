@@ -51,6 +51,12 @@
   --r-md: 16px;
   --r-lg: 24px;
   --r-pill: 999px;
+
+  /* The content used to stop at 1180px, leaving an oversized empty frame on
+     desktop displays. Keep a generous edge on smaller screens, then let the
+     site use the width people actually have available. */
+  --site-max: 1540px;
+  --site-gutter: clamp(20px, 3.5vw, 64px);
 }
 
 * { box-sizing: border-box; }
@@ -86,7 +92,7 @@ p { margin: 0 0 1rem; }
 .tiny { font-size: 13px; }
 .center { text-align: center; }
 
-.shell { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.shell { max-width: var(--site-max); margin: 0 auto; padding-inline: var(--site-gutter); }
 .section { padding: 56px 0; }
 .section-tight { padding: 32px 0; }
 
@@ -101,9 +107,9 @@ p { margin: 0 0 1rem; }
   border-bottom: 1px solid var(--line);
 }
 .masthead-inner {
-  max-width: 1180px;
+  max-width: var(--site-max);
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: 12px var(--site-gutter);
   display: flex;
   align-items: center;
   gap: 20px;
