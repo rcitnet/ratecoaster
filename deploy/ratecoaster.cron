@@ -15,6 +15,10 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # is generous; it is what lets the site tell a closed park from a quiet one.
 8 3,15 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only park-hours >> /home/ratecoaster/logs/hours.log 2>&1
 
+# Official Universal attraction classifications, imagery and map coordinates — daily.
+# This is one catalog request, so checking more frequently would only reread the same publication.
+24 2 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only attraction-metadata >> /home/ratecoaster/logs/attraction-metadata.log 2>&1
+
 # Hotel rates — every 6 hours, offset off the hour to avoid stampeding.
 17 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only hotel-rates >> /home/ratecoaster/logs/hotels.log 2>&1
 
