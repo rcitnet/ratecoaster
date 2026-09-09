@@ -365,6 +365,33 @@ export const attractions = pgTable(
     kind: attractionKindEnum("kind").notNull().default("ride"),
     land: text("land"),
     externalId: text("external_id"),
+    /** Taxonomy published by Universal Orlando's official attraction catalog. */
+    attractionTypes: jsonb("attraction_types")
+      .$type<Array<{ key: string; label: string }>>()
+      .notNull()
+      .default([]),
+    interests: jsonb("interests")
+      .$type<Array<{ key: string; label: string }>>()
+      .notNull()
+      .default([]),
+    ageGroups: jsonb("age_groups")
+      .$type<Array<{ key: string; label: string }>>()
+      .notNull()
+      .default([]),
+    heightRequirements: jsonb("height_requirements")
+      .$type<Array<{ key: string; label: string }>>()
+      .notNull()
+      .default([]),
+    accessibility: jsonb("accessibility")
+      .$type<Array<{ key: string; label: string }>>()
+      .notNull()
+      .default([]),
+    expressPass: boolean("express_pass"),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    officialUrl: text("official_url"),
+    officialImageUrl: text("official_image_url"),
+    metadataUpdatedAt: timestamp("metadata_updated_at", { withTimezone: true }),
     active: boolean("active").notNull().default(true),
   },
   (t) => [

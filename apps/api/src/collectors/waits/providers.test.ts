@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { isRetiredAttraction, parseQueueTimes, parseThemeParksWiki } from "./providers.js";
+import { parseUniversalAttractionCatalog } from "./universal-catalog.js";
 import {
   QUEUE_TIMES_EPIC_UNIVERSE,
   THEMEPARKS_WIKI_HOLLYWOOD,
@@ -101,5 +102,89 @@ describe("ThemeParks.wiki parser (real Hollywood payload)", () => {
     assert.ok(raptor);
     assert.equal(raptor.waitMinutes, null);
     assert.equal(raptor.status, "operating");
+  });
+});
+
+describe("Universal Orlando official attraction catalog", () => {
+  const catalog = parseUniversalAttractionCatalog({
+    PublishedOn: "2026-09-08T15:05:27.936",
+    Tiles: [
+      {
+        Content: {
+          Heading: "Honu of the Honu ika Moana™",
+          Accessibility: [
+            { Key: "child-swap", Description: "Child Swap" },
+          ],
+          TileImage: {
+            DesktopTabletImage: "/uor/en/us/files/Images/honu-c.jpg",
+          },
+        },
+        Meta: {
+          AttractionExperiences: [
+            { Key: "rides-attractions", Description: "Rides And Attractions" },
+          ],
+          AttractionLocations: [{ Key: "vb", Description: "Universal Volcano Bay" }],
+          AttractionInterests: [
+            { Key: "fun-for-little-ones", Description: "Fun For Little Ones" },
+          ],
+          AreasToExplore: [{ Key: "volcano-bay", Description: "Universal's Volcano Bay" }],
+          AttractionType: [
+            { Key: "multi-person-family", Description: "Multi-Person/Family" },
+            { Key: "water-ride", Description: "Water Ride" },
+          ],
+          HeightRequirements: [
+            { Key: "atleast-48-or-121.9-cm", Description: 'Minimum Height 48" (121.9 cm)' },
+          ],
+          Age: [{ Key: "kids-under-7", Description: "Kids (Under 7)" }],
+          ExpressPass: [{ Key: "Yes", Description: "Yes" }],
+          MapLatitude: "28.462759",
+          MapLongitude: "-81.474116",
+        },
+        PageUrl: "/uor/en/us/things-to-do/rides-attractions/honu/index.html",
+      },
+      {
+        Content: { Heading: "A Restaurant", Accessibility: [], TileImage: null },
+        Meta: {
+          AttractionExperiences: [{ Key: "dining", Description: "Dining" }],
+          AttractionLocations: [{ Key: "usf", Description: "Universal Studios Florida" }],
+          AttractionInterests: [],
+          AreasToExplore: [],
+          AttractionType: [],
+          HeightRequirements: [],
+          Age: [],
+          ExpressPass: [],
+          MapLatitude: null,
+          MapLongitude: null,
+        },
+        PageUrl: null,
+      },
+    ],
+  });
+
+  test("keeps only rides and preserves Universal's exact classifications", () => {
+    assert.equal(catalog.length, 1);
+    assert.deepEqual(catalog[0]?.attractionTypes, [
+      { key: "multi-person-family", label: "Multi-Person/Family" },
+      { key: "water-ride", label: "Water Ride" },
+    ]);
+    assert.deepEqual(catalog[0]?.interests, [
+      { key: "fun-for-little-ones", label: "Fun For Little Ones" },
+    ]);
+    assert.equal(catalog[0]?.expressPass, true);
+  });
+
+  test("maps official coordinates, accessibility, images, and URLs", () => {
+    assert.equal(catalog[0]?.parkSlug, "volcano-bay");
+    assert.equal(catalog[0]?.latitude, 28.462759);
+    assert.equal(catalog[0]?.longitude, -81.474116);
+    assert.deepEqual(catalog[0]?.accessibility, [{ key: "child-swap", label: "Child Swap" }]);
+    assert.equal(
+      catalog[0]?.officialImageUrl,
+      "https://www.universalorlando.com/contentdata/uor/en/us/files/Images/honu-c.jpg"
+    );
+    assert.equal(
+      catalog[0]?.officialUrl,
+      "https://www.universalorlando.com/web/en/us/things-to-do/rides-attractions/honu/index.html"
+    );
   });
 });
