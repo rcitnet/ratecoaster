@@ -175,7 +175,6 @@ export default async function RideWaitPage({ params }: { params: Promise<{ slug:
         </section>
 
         {(found.attractionTypes.length > 0 ||
-          found.interests.length > 0 ||
           found.ageGroups.length > 0 ||
           found.heightRequirements.length > 0 ||
           found.accessibility.length > 0 ||
@@ -189,9 +188,6 @@ export default async function RideWaitPage({ params }: { params: Promise<{ slug:
             <div className="ride-detail-tags">
               {found.attractionTypes.length > 0 ? (
                 <TagGroup label="Attraction type" tags={found.attractionTypes.map((tag) => tag.label)} />
-              ) : null}
-              {found.interests.length > 0 ? (
-                <TagGroup label="Good for" tags={found.interests.map((tag) => tag.label)} />
               ) : null}
               {found.ageGroups.length > 0 ? (
                 <TagGroup label="Age groups" tags={found.ageGroups.map((tag) => tag.label)} />
