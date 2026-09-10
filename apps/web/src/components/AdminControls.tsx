@@ -343,13 +343,16 @@ export function SocialDeliveryControls({
   fullText: string;
 }) {
   const { busy, msg, run } = useAction();
-  const intent = `https://x.com/intent/tweet?text=${encodeURIComponent(fullText)}`;
+  // X's legacy Web Intent route now redirects to the home timeline. The
+  // compose route opens the authenticated post dialog and accepts the draft
+  // text through the query string.
+  const intent = `https://x.com/compose/post?text=${encodeURIComponent(fullText)}`;
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       {platform === "x" && status === "pending" ? (
         <>
           <a className="btn btn-primary btn-sm" href={intent} target="_blank" rel="noopener noreferrer">
-            Review on X
+            Open X composer
           </a>
           <button
             className="btn btn-ghost btn-sm"
