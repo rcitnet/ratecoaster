@@ -19,7 +19,6 @@ export function buildWaitPost(input: {
   waits: ShortWait[];
   observedAt: Date;
   timezone: string;
-  dataSource: string;
   hourKey: string;
   siteUrl: string;
   expiresAt: Date;
@@ -34,7 +33,7 @@ export function buildWaitPost(input: {
   const body = [
     `🎢 ${compact(input.parkName, 28)} shortest now:`,
     ...lines,
-    `${time} • Data: ${input.dataSource}`,
+    time,
   ].join("\n");
 
   return {

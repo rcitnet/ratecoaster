@@ -16,7 +16,6 @@ test("wait posts remain short enough for Bluesky and stable across cron retries"
     ],
     observedAt,
     timezone: "America/New_York",
-    dataSource: "ThemeParks.wiki + Queue-Times.com",
     hourKey: "2026-08-25T13",
     siteUrl: "https://www.ratecoaster.net",
     expiresAt,
@@ -25,8 +24,9 @@ test("wait posts remain short enough for Bluesky and stable across cron retries"
   const second = buildWaitPost(input);
   assert.equal(first.fingerprint, second.fingerprint);
   assert.ok(Array.from(renderSocialText(first)).length <= 300);
-  assert.match(first.body, /ThemeParks\.wiki \+ Queue-Times\.com/);
+  assert.doesNotMatch(first.body, /data:|themeparks|queue-times/i);
   assert.match(first.url, /\?park=universal-studios-florida$/);
+  assert.equal((renderSocialText(first).match(/https?:\/\//g) ?? []).length, 1);
 });
 
 test("hotel deal posts label the rate and avoid unsupported savings claims", () => {

@@ -2,7 +2,6 @@ import { and, asc, desc, eq, gt, gte } from "drizzle-orm";
 import type { Db } from "@ratecoaster/db";
 import {
   attractions,
-  collectorRuns,
   parkHours,
   parks,
   properties,
@@ -36,13 +35,6 @@ function zonedParts(now: Date, timezone: string): { date: string; hour: number; 
 }
 
 async function waitCandidate(db: Db, now: Date): Promise<SocialCandidate | null> {
-  const [latestRun] = await db
-    .select({ notes: collectorRuns.notes })
-    .from(collectorRuns)
-    .where(eq(collectorRuns.collector, "wait-times"))
-    .orderBy(desc(collectorRuns.startedAt))
-    .limit(1);
-  const providerNotes = latestRun?.notes ?? {};
   const parkRows = await db
     .select({ id: parks.id, slug: parks.slug, name: parks.name, timezone: parks.timezone })
     .from(parks)
@@ -52,7 +44,6 @@ async function waitCandidate(db: Db, now: Date): Promise<SocialCandidate | null>
   const eligible: Array<{
     park: (typeof parkRows)[number];
     hourKey: string;
-    dataSource: string;
     waits: Array<{ name: string; minutes: number; observedAt: Date }>;
   }> = [];
 
@@ -94,15 +85,8 @@ async function waitCandidate(db: Db, now: Date): Promise<SocialCandidate | null>
     const complete = waits
       .filter((row): row is typeof row & { minutes: number } => row.minutes !== null)
       .slice(0, 3);
-    const provider = providerNotes[`${park.slug}.provider`];
-    const dataSource =
-      provider === "queue-times"
-        ? "Queue-Times.com"
-        : provider === "themeparks"
-          ? "ThemeParks.wiki"
-          : "ThemeParks.wiki + Queue-Times.com";
     if (complete.length >= 3) {
-      eligible.push({ park, hourKey: local.hourKey, dataSource, waits: complete });
+      eligible.push({ park, hourKey: local.hourKey, waits: complete });
     }
   }
 
@@ -117,7 +101,6 @@ async function waitCandidate(db: Db, now: Date): Promise<SocialCandidate | null>
     waits: chosen.waits.map((wait) => ({ name: wait.name, minutes: wait.minutes })),
     observedAt,
     timezone: chosen.park.timezone,
-    dataSource: chosen.dataSource,
     hourKey: chosen.hourKey,
     siteUrl: SITE_URL,
     expiresAt: new Date(now.getTime() + 50 * 60_000),
