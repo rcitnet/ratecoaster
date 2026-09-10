@@ -9,12 +9,21 @@ import {
   getSocialSettings,
   SOCIAL_PLATFORMS,
   socialPlatformConfigured,
+  socialImageUrl,
   type SocialPlatform,
 } from "../social/settings.js";
 
 export const adminSocialRouter = new Hono();
 
 function platformDetail(platform: SocialPlatform): string {
+  if (platform === "facebook" || platform === "instagram") {
+    const expiry = process.env[`${platform.toUpperCase()}_TOKEN_EXPIRES_AT`]?.trim();
+    if (expiry && !(new Date(expiry).getTime() > Date.now())) return "Token expiration is invalid or has passed. Replace the token and expiration before enabling.";
+    if (!socialPlatformConfigured(platform)) return platform === "facebook"
+      ? "Set FACEBOOK_PAGE_ID and FACEBOOK_PAGE_ACCESS_TOKEN, and check META_GRAPH_API_VERSION. Publishes to a Page."
+      : "Set INSTAGRAM_USER_ID, INSTAGRAM_ACCESS_TOKEN and SOCIAL_PUBLIC_API_URL; check META_GRAPH_API_VERSION. Requires a professional account with Instagram Login.";
+    return `${platform === "facebook" ? "Facebook Page credentials configured." : "Instagram Login credentials configured. Each post includes a generated JPEG card."}${expiry ? ` Token expires ${new Date(expiry).toISOString()}.` : ""}`;
+  }
   if (platform === "x") return "Human approval through the official X composer; no credentials needed.";
   if (platform === "threads" && process.env.THREADS_TOKEN_EXPIRES_AT) {
     const expires = new Date(process.env.THREADS_TOKEN_EXPIRES_AT);
@@ -73,6 +82,7 @@ adminSocialRouter.get("/", async (c) => {
       createdAt: row.createdAt.toISOString(),
       publishedAt: row.publishedAt?.toISOString() ?? null,
       fullText: row.url ? `${row.body}\n\n${row.url}` : row.body,
+      imageUrl: row.platform === "instagram" && socialPlatformConfigured("instagram") ? socialImageUrl(row.postId) : null,
     })),
   });
 });

@@ -110,7 +110,7 @@ else
 fi
 
 c_do "Installing helpers (git, btop, ncdu, unattended-upgrades)"
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git btop ncdu unattended-upgrades
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git btop ncdu unattended-upgrades fontconfig fonts-dejavu-core
 c_ok "helpers installed"
 
 # ── 2. swap ──────────────────────────────────────────────────────────────────

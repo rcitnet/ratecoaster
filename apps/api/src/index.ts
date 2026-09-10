@@ -16,6 +16,7 @@ import { outboundRouter } from "./routes/outbound.js";
 import { watchesRouter } from "./routes/watches.js";
 import { tripsRouter } from "./routes/trips.js";
 import { siteRouter } from "./routes/site.js";
+import { socialMediaRouter } from "./routes/social-media.js";
 import { COLLECTORS } from "./jobs/registry.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 
@@ -159,6 +160,7 @@ app.use(
 );
 
 app.route("/v1/site", siteRouter);
+app.route("/v1/social", socialMediaRouter);
 app.route("/v1/properties", propertiesRouter);
 app.route("/v1/rates", ratesRouter);
 app.route("/v1/deals", dealsRouter);

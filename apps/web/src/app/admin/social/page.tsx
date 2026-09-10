@@ -2,7 +2,7 @@ import { SocialDeliveryControls, SocialRunControls, SocialSettingControls } from
 import { getSocial } from "@/lib/admin";
 import { relativeTime } from "@/lib/api";
 
-const PLATFORM_LABELS = { threads: "Threads", bluesky: "Bluesky", x: "X" } as const;
+const PLATFORM_LABELS = { threads: "Threads", bluesky: "Bluesky", facebook: "Facebook", instagram: "Instagram", x: "X" } as const;
 
 export default async function AdminSocialPage() {
   const data = await getSocial();
@@ -12,7 +12,8 @@ export default async function AdminSocialPage() {
         <div>
           <h2>Social publishing</h2>
           <p className="muted" style={{ marginTop: 6, maxWidth: 760 }}>
-            Threads and Bluesky can publish through their official APIs. X stays human-approved:
+            Threads, Bluesky, Facebook Pages and Instagram can publish automatically. Instagram includes
+            a generated image card. X stays human-approved:
             RateCoaster prepares the post, then opens the official composer for you to confirm.
           </p>
         </div>
@@ -56,6 +57,7 @@ export default async function AdminSocialPage() {
                 {delivery.fullText}
               </pre>
               {delivery.lastError ? <p className="tiny" style={{ color: "#b03514" }}>{delivery.lastError}</p> : null}
+              {delivery.imageUrl ? <p className="tiny"><a href={delivery.imageUrl} target="_blank" rel="noopener noreferrer">Preview Instagram image ↗</a></p> : null}
               {delivery.externalUrl ? <p className="tiny"><a href={delivery.externalUrl} target="_blank" rel="noopener noreferrer">View published post ↗</a></p> : null}
               {delivery.deliveryId && delivery.platform && delivery.status ? (
                 <SocialDeliveryControls

@@ -27,6 +27,11 @@ echo "==> Pulling latest code"
 run_as_app "git pull --ff-only"
 
 echo "==> Installing dependencies"
+# Sharp's SVG renderer needs fonts even on a headless server for social cards.
+if ! dpkg-query -W -f='${Status}' fonts-dejavu-core 2>/dev/null | grep -q 'install ok installed' || ! command -v fc-cache >/dev/null; then
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fontconfig fonts-dejavu-core
+fi
 # --include=dev is REQUIRED. NODE_ENV=production makes npm skip
 # devDependencies, and this project needs TypeScript, tsx and drizzle-kit at
 # build and run time. Without this the build fails with confusing

@@ -71,7 +71,7 @@ export interface AdminOverview {
 }
 
 export interface AdminSocialSetting {
-  platform: "threads" | "bluesky" | "x";
+  platform: "threads" | "bluesky" | "facebook" | "instagram" | "x";
   enabled: boolean;
   dryRun: boolean;
   configured: boolean;
@@ -85,11 +85,12 @@ export interface AdminSocialDelivery {
   body: string;
   url: string | null;
   fullText: string;
+  imageUrl: string | null;
   sourceObservedAt: string | null;
   expiresAt: string;
   createdAt: string;
   deliveryId: string | null;
-  platform: "threads" | "bluesky" | "x" | null;
+  platform: "threads" | "bluesky" | "facebook" | "instagram" | "x" | null;
   status: "pending" | "claimed" | "published" | "failed" | "cancelled" | null;
   attempts: number | null;
   lastError: string | null;

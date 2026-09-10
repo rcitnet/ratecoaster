@@ -105,7 +105,87 @@ async function publishBluesky(text: string, linkUrl: string): Promise<PublishRes
 export async function publishToPlatform(
   platform: Exclude<SocialPlatform, "x">,
   text: string,
-  linkUrl: string
+  linkUrl: string,
+  imageUrl?: string
 ): Promise<PublishResult> {
-  return platform === "threads" ? publishThreads(text) : publishBluesky(text, linkUrl);
+  switch (platform) {
+    case "threads": return publishThreads(text);
+    case "bluesky": return publishBluesky(text, linkUrl);
+    case "facebook": return publishFacebook(text, linkUrl);
+    case "instagram": return publishInstagram(text, imageUrl);
+    default: throw new Error(`Unsupported automatic social platform: ${platform}`);
+  }
+}
+
+async function metaRequest(
+  host: "graph.facebook.com" | "graph.instagram.com",
+  path: string,
+  token: string,
+  fields: Record<string, string>,
+  method: "GET" | "POST" = "POST"
+): Promise<Record<string, unknown>> {
+  const version = process.env.META_GRAPH_API_VERSION?.trim() || "v25.0";
+  if (!/^v\d+\.0$/.test(version)) throw new Error("Invalid META_GRAPH_API_VERSION");
+  const url = new URL(`https://${host}/${version}/${path}`);
+  if (method === "GET") url.search = new URLSearchParams(fields).toString();
+  const response = await fetch(url, {
+    method,
+    headers: { authorization: `Bearer ${token}` },
+    body: method === "POST" ? new URLSearchParams(fields) : undefined,
+    signal: AbortSignal.timeout(30_000),
+  });
+  const data = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok || data.error) {
+    // Meta errors can echo request data. Never persist raw responses or tokens.
+    const error = data.error as { code?: unknown; error_subcode?: unknown } | undefined;
+    const code = typeof error?.code === "number" ? `, code ${error.code}` : "";
+    const subcode = typeof error?.error_subcode === "number" ? `, subcode ${error.error_subcode}` : "";
+    throw new Error(`Meta ${path.split("/").at(-1)} failed (HTTP ${response.status}${code}${subcode}). Check account permissions, token validity and media readiness.`);
+  }
+  return data;
+}
+
+function metaId(data: Record<string, unknown>, label: string): string {
+  if (typeof data.id !== "string" || !/^\d+(?:_\d+)?$/.test(data.id)) {
+    throw new Error(`${label} response did not contain a valid id`);
+  }
+  return data.id;
+}
+
+async function publishFacebook(text: string, linkUrl: string): Promise<PublishResult> {
+  if (Array.from(text).length > 63_206) throw new Error("Facebook post is too long");
+  const pageId = encodeURIComponent(required("FACEBOOK_PAGE_ID"));
+  const posted = await metaRequest("graph.facebook.com", `${pageId}/feed`, required("FACEBOOK_PAGE_ACCESS_TOKEN"), {
+    message: text, link: linkUrl,
+  });
+  const id = metaId(posted, "Facebook publish");
+  return { externalPostId: id, externalUrl: `https://www.facebook.com/${id}` };
+}
+
+async function publishInstagram(text: string, imageUrl?: string): Promise<PublishResult> {
+  if (Array.from(text).length > 2200) throw new Error("Instagram caption exceeds 2200 characters");
+  if (!imageUrl || new URL(imageUrl).protocol !== "https:") throw new Error("Instagram requires a public HTTPS JPEG image URL");
+  const userId = encodeURIComponent(required("INSTAGRAM_USER_ID"));
+  const token = required("INSTAGRAM_ACCESS_TOKEN");
+  const container = await metaRequest("graph.instagram.com", `${userId}/media`, token, {
+    image_url: imageUrl, caption: text,
+  });
+  const creationId = metaId(container, "Instagram create");
+  // Wait for Meta to fetch/process the JPEG. Never recreate or republish after
+  // an ambiguous result; the queue surfaces the failure for manual inspection.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const status = await metaRequest("graph.instagram.com", creationId, token, { fields: "status_code" }, "GET");
+    if (status.status_code === "FINISHED") {
+      const posted = await metaRequest("graph.instagram.com", `${userId}/media_publish`, token, { creation_id: creationId });
+      const id = metaId(posted, "Instagram publish");
+      // A permalink lookup failure must not turn a successful post into a retry.
+      const media = await metaRequest("graph.instagram.com", id, token, { fields: "permalink" }, "GET").catch(() => ({}));
+      const permalink = "permalink" in media ? media.permalink : null;
+      const externalUrl = typeof permalink === "string" && /^https:\/\/(www\.)?instagram\.com\//.test(permalink) ? permalink : null;
+      return { externalPostId: id, externalUrl };
+    }
+    if (status.status_code !== "IN_PROGRESS") throw new Error(`Instagram container ${creationId} is not publishable; inspect it before retrying.`);
+    if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+  throw new Error(`Instagram container ${creationId} is still processing; inspect it before retrying.`);
 }

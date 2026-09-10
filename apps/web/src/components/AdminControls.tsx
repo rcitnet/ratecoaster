@@ -249,7 +249,7 @@ export function SocialSettingControls({
   configured,
   automatic,
 }: {
-  platform: "threads" | "bluesky" | "x";
+  platform: "threads" | "bluesky" | "facebook" | "instagram" | "x";
   enabled: boolean;
   dryRun: boolean;
   configured: boolean;
@@ -338,7 +338,7 @@ export function SocialDeliveryControls({
   fullText,
 }: {
   id: string;
-  platform: "threads" | "bluesky" | "x";
+  platform: "threads" | "bluesky" | "facebook" | "instagram" | "x";
   status: "pending" | "claimed" | "published" | "failed" | "cancelled";
   fullText: string;
 }) {

@@ -4,7 +4,7 @@ import { socialDeliveries, socialPosts } from "@ratecoaster/db/schema";
 import { generateSocialCandidates } from "./candidates.js";
 import { renderSocialText } from "./content.js";
 import { publishToPlatform } from "./platforms.js";
-import { getSocialSettings, socialPlatformConfigured, type SocialPlatform } from "./settings.js";
+import { AUTOMATIC_SOCIAL_PLATFORMS, getSocialSettings, socialImageUrl, socialPlatformConfigured } from "./settings.js";
 
 export type SocialRunResult = {
   generated: number;
@@ -85,7 +85,7 @@ export async function runSocialPublisher(options: {
 
   if (!options.send) return result;
 
-  const automatic = (["threads", "bluesky"] as const).filter((platform) => {
+  const automatic = AUTOMATIC_SOCIAL_PLATFORMS.filter((platform) => {
     const setting = settings.get(platform);
     return setting?.enabled && !setting.dryRun && socialPlatformConfigured(platform);
   });
@@ -94,6 +94,7 @@ export async function runSocialPublisher(options: {
   const deliveries = await db
     .select({
       id: socialDeliveries.id,
+      postId: socialPosts.id,
       platform: socialDeliveries.platform,
       body: socialPosts.body,
       url: socialPosts.url,
@@ -126,9 +127,10 @@ export async function runSocialPublisher(options: {
 
     try {
       const posted = await publishToPlatform(
-        delivery.platform as Exclude<SocialPlatform, "x">,
+        delivery.platform,
         renderSocialText({ body: delivery.body, url: delivery.url }),
-        delivery.url
+        delivery.url,
+        delivery.platform === "instagram" ? socialImageUrl(delivery.postId) : undefined
       );
       await db
         .update(socialDeliveries)

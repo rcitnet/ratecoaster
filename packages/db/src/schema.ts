@@ -72,7 +72,7 @@ export const attractionStatusEnum = pgEnum("attraction_status", [
 
 export const flightSourceEnum = pgEnum("flight_source", ["travelpayouts", "manual"]);
 
-export const socialPlatformEnum = pgEnum("social_platform", ["threads", "bluesky", "x"]);
+export const socialPlatformEnum = pgEnum("social_platform", ["threads", "bluesky", "x", "facebook", "instagram"]);
 export const socialDeliveryStatusEnum = pgEnum("social_delivery_status", [
   "pending",
   "claimed",
@@ -770,9 +770,9 @@ export const alertEvents = pgTable(
  * ------------------------------------------------------------------ */
 
 /**
- * Safe-by-default switches for the three brand accounts.
+ * Safe-by-default switches for the brand accounts.
  *
- * X is intentionally always human-approved. For Threads and Bluesky, turning
+ * X is intentionally always human-approved. For the automatic platforms, turning
  * off dry-run permits the scheduled publisher to send queued posts using the
  * official APIs. Credentials remain in the server environment, never here.
  */
