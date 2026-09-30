@@ -2,22 +2,16 @@ import {
   centsToDisplay,
   DEFAULT_HOMEPAGE_SETTINGS,
   deriveParkState,
-  formatParkHours,
-  parkStateMessage,
 } from "@ratecoaster/shared";
 import {
   formatLongDate,
   getClient,
-  PARK_COLORS,
   relativeTime,
   safe,
-  TIER_COLORS,
-  TIER_LABELS,
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { HomeHero } from "@/components/HomeHero";
-import { BusiestRides } from "@/components/BusiestRides";
-import { busiestRides } from "@/lib/busiest-rides";
+import { HomeDeals, HomeParkCards } from "@/components/HomeCollections";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -94,295 +88,80 @@ export default async function DealsPage() {
             (b.percentileOfHistory ?? Number.MAX_SAFE_INTEGER) ||
           a.nightlyCents - b.nightlyCents
       )[0],
-  })).filter(({ propertyCount }) => propertyCount > 0);
-  const busiest = busiestRides(waits.parks);
+  })).filter(({ propertyCount, deal }) => propertyCount > 0 || deal);
+  const picks = dealsByTier.flatMap(({ deal }) => deal ? [deal] : []);
+  const featured = picks[0];
+  // Closed parks may still have OPERATING attractions in upstream feeds.
+  const shortestNow = parkSummaries
+    .filter(({ state, shortest }) => state === "open" && shortest?.waitMinutes != null)
+    .sort((a, b) => (a.shortest!.waitMinutes ?? Infinity) - (b.shortest!.waitMinutes ?? Infinity))[0];
 
   return (
-    <main>
+    <main className="home-refresh">
       <HomeHero
         variant={homepage.heroVariant}
-        stats={{
-          hotelCount: properties.length,
-          parkCount: parkSummaries.length,
-          ticketCount: ticketProducts.length,
-          expressHotelCount: withExpress,
-        }}
+        stats={{ hotelCount: properties.length, parkCount: parkSummaries.length,
+          ticketCount: ticketProducts.length, expressHotelCount: withExpress }}
         parks={parkSummaries}
       />
 
-      <AdSlot
-        placement="home-after-park-pulse"
-        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME}
-      />
-
-      <section className="section" style={{ paddingBottom: 12 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "end",
-            justifyContent: "space-between",
-            gap: 18,
-            flexWrap: "wrap",
-            marginBottom: 24,
-          }}
-        >
-          <div>
-            <span className="badge badge-deal" style={{ marginBottom: 10 }}>
-              Live now
-            </span>
-            <h2>Orlando park pulse</h2>
-            <p className="lede" style={{ marginTop: 8 }}>
-              Average posted standby wait for operating attractions, broken out by park.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a href="/crowd-calendar" className="btn btn-blue">
-              Crowd calendar
-            </a>
-            <a href="/waits" className="btn btn-ghost">
-              See every attraction
-            </a>
-          </div>
+      <section className="refresh-section" id="discover">
+        <div className="refresh-section-head">
+          <div><div className="refresh-eyebrow">Your daily dose of possibility</div><h2>Worth checking today</h2></div>
+          <span className="refresh-trust">A few useful places to start</span>
         </div>
-
-        {parkSummaries.length === 0 ? (
-          <div className="notice">
-            <b>Live park waits are refreshing.</b> The park pulse will appear as soon as the next
-            collection finishes.
-          </div>
-        ) : (
-          <div className="home-pulse-layout">
-            <div className="home-park-grid">
-              {parkSummaries.map(({ park, average, state, hours, openCount, walkOnCount, shortest }) => {
-                const color = PARK_COLORS[park.slug] ?? "var(--blue)";
-                const status = parkStateMessage(state, openCount, walkOnCount, hours, park.timezone);
-                const todaysHours = formatParkHours(hours, park.timezone);
-                return (
-                  <a
-                    href={`/waits?park=${park.slug}`}
-                    className="card card-hover"
-                    key={park.slug}
-                    style={{ borderTop: `5px solid ${color}` }}
-                  >
-                    <div className="tiny muted" style={{ fontWeight: 700, minHeight: 42 }}>
-                      {park.name.toUpperCase()}
-                    </div>
-                    {/*
-                      A big dash beside the words "min average" is what made a
-                      closed park look broken — it reads as a failed number rather
-                      than an absent one. When there is no average, the status
-                      line below carries the whole message instead.
-                    */}
-                    {average === null || state === "closed" ? (
-                      <div
-                        className="display"
-                        style={{ fontSize: 26, color: "var(--ink-mute)", marginTop: 10 }}
-                      >
-                        {state === "closed" ? "Closed" : "No waits posted"}
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 7, marginTop: 8 }}>
-                        <span className="display" style={{ fontSize: 42, color }}>
-                          {average}
-                        </span>
-                        <span className="tiny muted">min average</span>
-                      </div>
-                    )}
-                    <div className="tiny muted" style={{ marginTop: 10 }}>
-                      {status}
-                    </div>
-                    {todaysHours ? (
-                      <div className="tiny muted" style={{ marginTop: 6, opacity: 0.8 }}>
-                        Today: {todaysHours}
-                      </div>
-                    ) : null}
-                    {shortest && state !== "closed" ? (
-                      <div
-                        className="tiny"
-                        style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}
-                      >
-                        <b>Shortest posted:</b> {shortest.attractionName} · {shortest.waitMinutes}m
-                      </div>
-                    ) : null}
-                  </a>
-                );
-              })}
-            </div>
-            <BusiestRides
-              rides={busiest}
-              allClosed={parkSummaries.every(({ state }) => state === "closed")}
-            />
-          </div>
-        )}
-
-        {parkSummaries.length > 0 ? (
-          <p className="tiny muted" style={{ marginTop: 14 }}>
-            Updated {relativeTime(waits.fetchedAt)}. Average excludes closed and unavailable
-            attractions.
-            {waits.attribution.map((credit) => (
-              <span key={credit.source}>
-                {" "}·{" "}
-                <a href={credit.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
-                  {credit.text}
-                </a>
-              </span>
-            ))}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="section" id="hotel-deals">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "end",
-            justifyContent: "space-between",
-            gap: 18,
-            flexWrap: "wrap",
-            marginBottom: 24,
-          }}
-        >
-          <div>
-            <h2>Today&apos;s best deal in every Orlando hotel category</h2>
-            <p className="lede" style={{ marginTop: 8 }}>
-              Premier should not compete with Value on raw price. Each pick is the strongest
-              current passholder rate against that hotel&apos;s own observed history.
-            </p>
-          </div>
-          <a href="/hotels" className="btn btn-ghost">
-            Compare all hotel rates
+        <div className="refresh-insights">
+          <a className="refresh-insight" href={featured ? `/hotels/${featured.propertySlug}?${new URLSearchParams({ rateCode: featured.rateCode, stayDate: featured.stayDate })}` : "/hotels"}>
+            <span className="refresh-insight-icon" aria-hidden="true">↘</span>
+            <h3>{featured ? "A great stay, a better find" : "Find your kind of stay"}</h3>
+            <p>{featured ? `${featured.propertyName} from ${centsToDisplay(featured.nightlyCents)} per night on ${formatLongDate(featured.stayDate)}, before taxes and fees.${featured.isEstimated ? " Estimated rate." : ""}` : "Compare Orlando hotels, included perks, and public and passholder rate calendars."}</p>
+            <span className="refresh-text-link">{featured ? "See the featured deal" : "Explore the hotels"} <span aria-hidden="true">→</span></span>
           </a>
-        </div>
-
-        {deals.length === 0 ? (
-          <div className="notice">
-            <b>We&apos;re still gathering hotel rates.</b> Live ride wait times are up and
-            running now — <a href="/waits"><b>take a look</b></a> while we finish.
-          </div>
-        ) : (
-          <div className="grid grid-4">
-            {dealsByTier.map(({ tier, propertyCount, deal }) => {
-              if (!deal) {
-                return (
-                  <article className="card deal" key={tier}>
-                    <div
-                      className="deal-band"
-                      style={{ background: TIER_COLORS[tier] ?? "var(--blue)" }}
-                    >
-                      <span className="deal-tier">{TIER_LABELS[tier] ?? tier}</span>
-                    </div>
-                    <div className="deal-body">
-                      <div className="deal-name">Rates are being collected</div>
-                      <div className="deal-when" style={{ marginTop: 8 }}>
-                        Watching {propertyCount} {propertyCount === 1 ? "hotel" : "hotels"} in this
-                        category.
-                      </div>
-                    </div>
-                  </article>
-                );
-              }
-
-              const atLow = (deal.percentileOfHistory ?? 100) < 5;
-              return (
-                <a key={`${deal.propertySlug}-${deal.stayDate}`} href={`/hotels/${deal.propertySlug}`}>
-                  <article className="card card-hover deal">
-                    <div
-                      className="deal-band"
-                      style={{ background: TIER_COLORS[deal.tier] ?? TIER_COLORS.value }}
-                    >
-                      <span className="deal-tier">{TIER_LABELS[deal.tier] ?? deal.tier}</span>
-                    </div>
-
-                    <div className="deal-body">
-                      <div className="deal-name">{deal.propertyName}</div>
-                      <div className="deal-when">{formatLongDate(deal.stayDate)}</div>
-
-                      <div className="deal-price-row">
-                        <span className="deal-price">{centsToDisplay(deal.nightlyCents)}</span>
-                        <span className="deal-per">/ night</span>
-                      </div>
-
-                      <div className="deal-perks">
-                        <span className="badge badge-deal">Best in category</span>
-                        {atLow ? <span className="badge badge-hot">Lowest ever seen</span> : null}
-                        {deal.includesExpressPass ? (
-                          <span className="badge badge-express">Free Express Unlimited</span>
-                        ) : null}
-                        <span className="badge badge-blue">Passholder rate</span>
-                      </div>
-                    </div>
-                  </article>
-                </a>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="section-tight">
-        <div
-          className="card"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 24,
-            flexWrap: "wrap",
-            padding: "28px 30px",
-            background: "linear-gradient(135deg, var(--blue-tint), var(--purple-tint))",
-            borderColor: "transparent",
-          }}
-        >
-          <div style={{ maxWidth: 700 }}>
-            <span className="badge badge-purple" style={{ marginBottom: 10 }}>
-              New: Orlando tickets
-            </span>
-            <h2>See the real total before picking your park dates.</h2>
-            <p className="lede" style={{ marginTop: 8, marginBottom: 0 }}>
-              Compare adult and child prices for Universal Studios, Islands of Adventure, Epic
-              Universe, Volcano Bay, and multi-day Park-to-Park tickets across the full year.
-            </p>
-          </div>
-          <a href="/tickets" className="btn btn-blue btn-lg">
-            Explore ticket calendars
+          <a className="refresh-insight" href={shortestNow ? `/waits?park=${shortestNow.park.slug}` : "/waits"}>
+            <span className="refresh-insight-icon" aria-hidden="true">◷</span>
+            <h3>{shortestNow ? "Your next short line" : "Your next park adventure"}</h3>
+            <p>{shortestNow ? `${shortestNow.shortest!.attractionName} is posting ${shortestNow.shortest!.waitMinutes} minutes at ${shortestNow.park.name}. Updated ${relativeTime(waits.fetchedAt)}.` : "Check park hours and posted attraction waits before choosing where to head next."}</p>
+            <span className="refresh-text-link">Explore the park pulse <span aria-hidden="true">→</span></span>
+          </a>
+          <a className="refresh-insight" href="/plan">
+            <span className="refresh-insight-icon" aria-hidden="true">▦</span>
+            <h3>A little flexibility goes a long way</h3>
+            <p>Bring your dates and compare hotel, ticket, and Express options for your whole party.</p>
+            <span className="refresh-text-link">Find your dates <span aria-hidden="true">→</span></span>
           </a>
         </div>
       </section>
 
-      <section className="section">
-        <h2>Why families use this</h2>
-        <div className="grid grid-3" style={{ marginTop: 20 }}>
-          <div className="card">
-            <span className="badge badge-deal" style={{ marginBottom: 10 }}>
-              Honest pricing
-            </span>
-            <h3>Real passholder rates</h3>
-            <p className="muted" style={{ margin: "8px 0 0", fontSize: 15 }}>
-              Every passholder saving we show is one you can actually book. If the discount
-              doesn&apos;t apply on a date, we won&apos;t pretend it does.
-            </p>
+      <section className="refresh-section" id="hotel-deals"><HomeDeals deals={picks} /></section>
+
+      <section className="refresh-section" id="park-pulse">
+        <div className="refresh-pulse">
+          <div className="refresh-section-head">
+            <div><div className="refresh-eyebrow"><span className="status-dot dot-ok" />Orlando park pulse</div><h2>Less waiting starts here.</h2></div>
+            <div className="refresh-head-actions"><a href="/crowd-calendar" className="refresh-text-link">Crowd calendar</a><a href="/waits" className="btn btn-ghost btn-sm">Every attraction <span aria-hidden="true">→</span></a></div>
           </div>
-          <div className="card">
-            <span className="badge badge-purple" style={{ marginBottom: 10 }}>
-              Know when to book
-            </span>
-            <h3>See the full price history</h3>
-            <p className="muted" style={{ margin: "8px 0 0", fontSize: 15 }}>
-              Find out whether today&apos;s price is a genuine low or simply the new normal —
-              before you put down a deposit.
-            </p>
-          </div>
-          <div className="card">
-            <span className="badge badge-coral" style={{ marginBottom: 10 }}>
-              Worth more than the room
-            </span>
-            <h3>Express Pass, counted</h3>
-            <p className="muted" style={{ margin: "8px 0 0", fontSize: 15 }}>
-              Premier hotels include Express Unlimited for everyone in your room. For a family of
-              four in peak season that perk can be worth more per night than the room itself.
-            </p>
-          </div>
+          <HomeParkCards parks={parkSummaries} />
+          {parkSummaries.length > 0 && <p className="refresh-trust">
+            Updated {relativeTime(waits.fetchedAt)}. Average excludes closed and unavailable attractions.
+            {waits.attribution.map((credit) => <span key={credit.source}> · <a href={credit.url} target="_blank" rel="noreferrer">{credit.text}</a></span>)}
+          </p>}
         </div>
+      </section>
+
+      <AdSlot placement="home-after-park-pulse" slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME} />
+
+      <section className="refresh-section">
+        <div className="refresh-section-head"><div><h2>Make the most of every park day.</h2><p>A few more ways to plan with confidence.</p></div></div>
+        <div className="refresh-guides">
+          <a href="/tickets"><span className="refresh-eyebrow">Choose your park days</span><h3>See the ticket price calendar</h3><p>Compare adult, child, and Park-to-Park prices across the year.</p><span className="refresh-text-link">Explore tickets <span aria-hidden="true">→</span></span></a>
+          <a href="/express-pass"><span className="refresh-eyebrow">Spend where it matters</span><h3>Is Express worth it for your trip?</h3><p>Compare Express prices and hotels that include Express Unlimited.</p><span className="refresh-text-link">Compare Express <span aria-hidden="true">→</span></span></a>
+          <a href="/guides"><span className="refresh-eyebrow">A head start on the fun</span><h3>Get to know your next adventure</h3><p>Practical guides to Universal hotels, parks, and planning.</p><span className="refresh-text-link">Read the guides <span aria-hidden="true">→</span></span></a>
+        </div>
+      </section>
+
+      <section className="refresh-closing">
+        <div><div className="refresh-eyebrow">Make it your kind of trip</div><h2>The excitement starts with a plan.</h2><p>Bring your dates. We’ll help you see the bigger picture.</p></div>
+        <a href="/plan" className="btn btn-primary">Start planning <span aria-hidden="true">→</span></a>
       </section>
     </main>
   );

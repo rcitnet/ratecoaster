@@ -3,6 +3,7 @@ import Image from "next/image";
 import "./globals.css";
 import { getMe } from "@/lib/api";
 import { MobileMenu } from "@/components/MobileMenu";
+import { PrimaryNavigation } from "@/components/PrimaryNavigation";
 import { AdSenseScript } from "@/components/AdSenseScript";
 import { Analytics } from "@/components/Analytics";
 import { TravelpayoutsDrive } from "@/components/TravelpayoutsDrive";
@@ -134,15 +135,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 priority
               />
             </a>
-            <nav className="nav" aria-label="Primary navigation">
-              {NAV.map((item) => (
-                <a key={item.href} href={item.href}>
-                  {item.label}
-                </a>
-              ))}
-            </nav>
+            <PrimaryNavigation items={NAV} />
             <span className="spacer" />
             <div className="desktop-actions">
+              <a href="/plan" className="btn btn-primary btn-sm">Plan my trip <span aria-hidden="true">↗</span></a>
               {signedIn ? (
                 <>
                   {isAdmin ? (
@@ -159,7 +155,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </a>
                 </>
               ) : (
-                <a href="/join" className="btn btn-primary btn-sm">
+                <a href="/join" className="btn btn-ghost btn-sm">
                   Sign up free
                 </a>
               )}

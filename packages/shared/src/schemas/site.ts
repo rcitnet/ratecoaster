@@ -31,8 +31,8 @@ export const DEFAULT_HOMEPAGE_SETTINGS: HomepageSettings = {
 export const HERO_VARIANT_OPTIONS = [
   {
     id: "current",
-    label: "Original",
-    summary: "Large dark card with headline, three buttons, and stats. What shipped first.",
+    label: "Photo-led adventure",
+    summary: "Warm, open layout with park photography and two paths: plan a trip or check live waits.",
   },
   {
     id: "compact",

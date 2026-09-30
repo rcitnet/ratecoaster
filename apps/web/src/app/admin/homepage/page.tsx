@@ -6,6 +6,14 @@ import { relativeTime } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
 function Thumb({ id }: { id: string }) {
+  if (id === "current") {
+    return (
+      <div className="hero-thumb" aria-hidden="true" style={{ background: "#fcfaf7", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div><div className="hero-thumb-title" style={{ background: "#d51b78" }} /><div className="hero-thumb-line" style={{ marginTop: 8, background: "#e8e3ec" }} /></div>
+        <div style={{ borderRadius: 10, background: "center / cover url('/rides/islands-of-adventure/jurassic-world-velocicoaster.webp')" }} />
+      </div>
+    );
+  }
   if (id === "tiles") {
     return (
       <div className="hero-thumb" data-thumb="tiles" aria-hidden="true">
@@ -83,7 +91,7 @@ export default async function AdminHomepage() {
         </p>
       ) : (
         <p className="tiny muted" style={{ marginTop: 10 }}>
-          No switch recorded yet — the original layout is showing.
+          No switch recorded yet — the photo-led adventure layout is showing.
         </p>
       )}
 

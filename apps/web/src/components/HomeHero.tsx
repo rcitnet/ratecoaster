@@ -1,4 +1,5 @@
 import type { HeroVariant, ParkHours, ParkState } from "@ratecoaster/shared";
+import Image from "next/image";
 import { PARK_COLORS } from "@/lib/api";
 import { TripDateFields } from "@/components/TripDateFields";
 import { addIsoDays } from "@/lib/trip-form";
@@ -140,6 +141,38 @@ export function HomeHero({
   stats: HomeHeroStats;
   parks: HomeParkPulse[];
 }) {
+  if (variant === "current") {
+    return (
+      <section className="refresh-hero">
+        <div>
+          <div className="refresh-eyebrow">Less guesswork. More adventure.</div>
+          <h1>Your next great trip.<br /><em>At a better price.</em></h1>
+          <p className="refresh-intro">
+            Find a hotel you’ll love, dates worth booking, and shorter lines at Universal Orlando.
+            All in one place.
+          </p>
+          <div className="refresh-actions">
+            <a href="/plan" className="btn btn-primary">Find my trip <span aria-hidden="true">→</span></a>
+            <a href="#park-pulse" className="btn btn-ghost">Check today’s waits</a>
+          </div>
+          <p className="refresh-trust">Free to explore · Public &amp; passholder rates</p>
+        </div>
+        <div className="refresh-visual">
+          <div className="refresh-hero-photo">
+            <Image src="/brand/home-adventure.webp"
+              alt="Jurassic World VelociCoaster at Islands of Adventure" fill priority
+              sizes="(max-width: 700px) 90vw, 48vw" />
+          </div>
+          <a className="refresh-photo-label" href="/waits?park=islands-of-adventure">Islands of Adventure <span aria-hidden="true">↗</span></a>
+          <a className="refresh-floating" href="#park-pulse">
+            <span>A little planning goes a long way</span>
+            <strong>More thrills. <b>Less waiting.</b></strong>
+            <span>Find your next ride in the park pulse <span aria-hidden="true">↓</span></span>
+          </a>
+        </div>
+      </section>
+    );
+  }
   if (variant === "slim") {
     return (
       <section className="hero" data-hero="slim">
