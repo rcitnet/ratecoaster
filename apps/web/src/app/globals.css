@@ -1042,7 +1042,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
   .pricing-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (min-width: 701px) and (max-width: 1100px) {
+@media (min-width: 701px) and (max-width: 1279px) {
   .masthead-inner {
     flex-wrap: wrap;
     gap: 8px 16px;
@@ -1202,17 +1202,18 @@ body:has(.home-refresh) { background: #fcfaf7; }
 .refresh-closing { display: flex; align-items: center; justify-content: space-between; gap: 24px; background: #efeafa; border-radius: 20px; padding: 32px; margin: 26px 0 36px; }
 .refresh-closing h2 { margin-top: 8px; }
 .refresh-closing p { margin: 8px 0 0; color: var(--ink-mute); font-size: 14px; }
-.refresh-navigation { margin-left: auto; }
+.refresh-navigation { margin-left: 8px; gap: 2px; flex-shrink: 0; }
+.refresh-navigation a { padding-inline: 10px; }
 .shell:has(> .home-refresh) { max-width: 1320px; }
 .refresh-navigation a[aria-current="page"] { background: #efebfa; color: #5a3bc4; }
-.refresh-nav-more { position: relative; }
-.refresh-nav-more > button { border: 0; background: transparent; padding: 7px 14px; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink-soft); cursor: pointer; border-radius: 12px; }
-.refresh-nav-dropdown { position: absolute; right: 0; top: calc(100% + 12px); width: 210px; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: white; box-shadow: var(--shadow-lg); display: grid; gap: 4px; }
-.refresh-nav-dropdown a { min-height: 44px; border-radius: 8px; }
-@media (min-width: 1101px) and (max-width: 1379px) {
-  .masthead-inner { gap: 16px; }
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .masthead-inner { gap: 12px; }
   .brand-logo { width: 225px; }
-  .refresh-navigation a, .refresh-nav-more > button { padding-inline: 12px; font-size: 14px; }
+  .refresh-navigation a { padding-inline: 8px; font-size: 14px; }
+}
+@media (min-width: 701px) and (max-width: 1279px) {
+  .refresh-navigation { margin-left: 0; gap: 0; }
+  .refresh-navigation a { padding-inline: clamp(4px, 1vw, 10px); }
 }
 @media (min-width: 1001px) {
   .refresh-deals:has(> :nth-child(4)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
