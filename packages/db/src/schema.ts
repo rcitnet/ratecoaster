@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   doublePrecision,
   index,
@@ -13,6 +14,33 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import type { CrowdCalendarDay, Park } from "@ratecoaster/shared";
+
+/** Permanent park/date estimates. No catalogue FK: retiring a listing must not erase history. */
+export const crowdDailyHistory = pgTable("crowd_daily_history", {
+  parkSlug: text("park_slug").notNull(),
+  date: date("date").notNull(),
+  park: jsonb("park").$type<Park>().notNull(),
+  estimate: jsonb("estimate").$type<CrowdCalendarDay>().notNull(),
+  sources: jsonb("sources").$type<Record<string, { value: number; available?: boolean; observedAt: string }>>().notNull(),
+  modelVersion: text("model_version").notNull(),
+  reconstructed: boolean("reconstructed").notNull().default(false),
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+}, (t) => [
+  uniqueIndex("crowd_daily_history_park_date_uq").on(t.parkSlug, t.date),
+  check("crowd_daily_history_has_signal", sql`jsonb_array_length(${t.estimate}->'signals') > 0`),
+]);
+
+export type CrowdArchiveIssue = { kind: "missing-data" | "stale-signals" | "archive-late"; message: string; dates?: string[] };
+export const crowdArchiveHealth = pgTable("crowd_archive_health", {
+  parkSlug: text("park_slug").primaryKey(),
+  parkName: text("park_name").notNull(),
+  checkedAt: timestamp("checked_at", { withTimezone: true }).notNull(),
+  issues: jsonb("issues").$type<CrowdArchiveIssue[]>().notNull(),
+});
 
 /* ------------------------------------------------------------------ *
  * Enums

@@ -1,5 +1,6 @@
 import { getOverview, getAudit } from "@/lib/admin";
 import { relativeTime } from "@/lib/api";
+import { CrowdArchiveStatus } from "@/components/CrowdArchiveStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export default async function AdminOverview() {
 
   return (
     <>
+      <CrowdArchiveStatus compact />
       <div className="grid grid-4">
         <div className="card" style={{ background: "var(--blue-tint)", borderColor: "transparent" }}>
           <div className="tiny" style={{ fontWeight: 700, color: "var(--blue-dark)" }}>RATE ROWS</div>

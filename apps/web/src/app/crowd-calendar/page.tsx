@@ -147,7 +147,7 @@ export default async function CrowdCalendarPage({
         <label>Jump to a month<input type="month" name="month" defaultValue={selectedMonth} max={lastMonth} required /></label>
         <button type="submit" className="btn btn-ghost btn-sm">Go to month</button>
       </form>
-      <p className="tiny muted">Browse previous months to explore archived demand estimates. Past scores use the pricing signals collected for those dates; they are not measured attendance. Dates without archived signals show “No data.”</p>
+      <p className="tiny muted">Past crowd estimates are saved permanently. Older dates may be reconstructed from retained pricing signals; these are demand estimates, not measured attendance. Dates we never collected show “No data.”</p>
 
       {data && days.length > 0 ? (
         <>
@@ -208,7 +208,7 @@ export default async function CrowdCalendarPage({
                 <div
                   key={day.date}
                   className={`crowd-day crowd-${day.level}`}
-                  title={`${day.date}: ${LEVEL_LABELS[day.level]} ${day.date < today ? "historical demand estimate" : "crowd outlook"} (${day.score}/10)`}
+                  title={`${day.date}: ${LEVEL_LABELS[day.level]} ${day.date < today ? day.reconstructed ? "reconstructed historical demand estimate" : "saved historical demand estimate" : "crowd outlook"} (${day.score}/10)`}
                 >
                   <span className="crowd-date">{dateNumber(day.date)}</span>
                   <strong>{LEVEL_LABELS[day.level]}</strong>

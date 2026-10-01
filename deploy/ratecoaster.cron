@@ -51,5 +51,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # Nightly: fold wait samples into hourly averages and prune the raw rows.
 30 3 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api rollup >> /home/ratecoaster/logs/rollup.log 2>&1
 
+# Hourly: preserve dated crowd estimates and flag missing/stale signals in admin.
+# Run after the pricing jobs; past estimates are immutable and never pruned.
+54 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/flock -n /home/ratecoaster/crowd-archive.lock /usr/bin/npm run -w @ratecoaster/api crowds:archive >> /home/ratecoaster/logs/crowd-archive.log 2>&1
+
 # Keep the log files from growing forever.
 0 5 * * 0 find /home/ratecoaster/logs -name '*.log' -size +50M -delete

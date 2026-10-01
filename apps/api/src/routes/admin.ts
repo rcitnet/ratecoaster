@@ -20,6 +20,7 @@ import { COLLECTORS } from "../jobs/registry.js";
 import { runCollector } from "../collectors/framework/runner.js";
 import { universalOrlandoTicketCredentialsConfigured } from "../collectors/tickets/universal-orlando-commerce.js";
 import { adminSocialRouter } from "./admin-social.js";
+import { getCrowdArchiveStatus } from "../lib/crowd-archive.js";
 
 export const adminRouter = new Hono();
 
@@ -29,6 +30,7 @@ export const adminRouter = new Hono();
 adminRouter.use("*", requireAdmin);
 
 adminRouter.route("/social", adminSocialRouter);
+adminRouter.get("/crowd-archive", async (c) => c.json(await getCrowdArchiveStatus()));
 
 /* ------------------------------------------------------------------ *
  * Homepage presentation

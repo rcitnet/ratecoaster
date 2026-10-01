@@ -1,4 +1,5 @@
 import { apiFetch, relativeTime } from "@/lib/api";
+import { CrowdArchiveStatus } from "@/components/CrowdArchiveStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default async function AdminStatus() {
 
   return (
     <>
+      <CrowdArchiveStatus />
       <div className="notice">
         <b>Every collector, and when it last produced anything.</b> A feed that has gone quiet
         looks identical to a healthy one on the public site — this is where it shows.

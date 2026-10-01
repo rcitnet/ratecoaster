@@ -14,6 +14,10 @@ export const CrowdCalendarDay = z.object({
   /** How many independent published demand signals were available for this day. */
   confidence: z.enum(["low", "medium", "high"]),
   signals: z.array(z.enum(["ticket", "express", "hotel"])),
+  /** A saved estimate, retained independently of the source catalogue. */
+  archived: z.boolean().optional(),
+  /** Reconstructed from retained pricing rather than saved on the visit date. */
+  reconstructed: z.boolean().optional(),
 });
 export type CrowdCalendarDay = z.infer<typeof CrowdCalendarDay>;
 
