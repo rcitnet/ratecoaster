@@ -4,6 +4,7 @@ import { WatchDateButton } from "@/components/WatchDateButton";
 import { AdSlot } from "@/components/AdSlot";
 import { BookButton } from "@/components/BookButton";
 import { CompareButton } from "@/components/CompareButton";
+import { PageIntro } from "@/components/PageIntro";
 
 import { pageMetadata } from "@/lib/seo";
 
@@ -50,12 +51,15 @@ export default async function TicketsPage({
   const swing = cheapest && dearest ? dearest.displayCents - cheapest.displayCents : 0;
 
   return (
-    <main className="section">
-      <h1>Ticket prices by date</h1>
+    <main className="section page-refresh calendar-refresh">
+      <PageIntro eyebrow="Choose your park days" title="More fun. Better dates." action={{ href: "/plan", label: "Add tickets to your trip plan" }}>
       <p className="lede" style={{ marginTop: 12 }}>
         Universal prices admission by date — the same ticket costs noticeably more on a December
         Saturday than a September Tuesday. Green days are the cheapest.
       </p>
+      </PageIntro>
+
+      <div className="refresh-section-head"><div><h2>Find your ticket.</h2><p>Select a park ticket and guest age to compare the calendar.</p></div></div>
 
       <div className="chips">
         {products.map((p) => (
@@ -152,7 +156,8 @@ export default async function TicketsPage({
             </div>
           ) : null}
 
-          <div className="cal">
+          <div className="refresh-section-head calendar-section-head"><div><p className="refresh-eyebrow">Your dates, at a glance</p><h2>Ticket prices by date</h2></div><span className="calendar-key"><i /> Lower priced <i className="calendar-key-high" /> Higher priced</span></div>
+          <div className="cal" aria-label="Ticket prices by date">
             {calendarDays.map((day) => (
               <div key={day.validDate}
                    className={`cal-day ${day.band === "low" ? "cal-low" : day.band === "high" ? "cal-high" : ""} ${day.isWindowLow ? "cal-best" : ""}`}>

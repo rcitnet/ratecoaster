@@ -107,7 +107,7 @@ export default async function RideWaitPage({ params }: { params: Promise<{ slug:
   const mapEmbedUrl = `https://www.google.com/maps?output=embed&q=${mapQuery}&z=18&t=k`;
 
   return (
-    <main className="section ride-detail-page">
+    <main className="section ride-detail-page page-refresh">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

@@ -9,7 +9,7 @@ export const metadata = pageMetadata({
 
 export default function PrivacyPage() {
   return (
-    <main className="section legal-page">
+    <main className="section legal-page page-refresh">
       <p className="eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
       <p className="muted">Effective August 31, 2026</p>

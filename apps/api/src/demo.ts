@@ -11,7 +11,7 @@ import {
 } from "./collectors/waits/providers.js";
 import { addDays, daysBetween, dayOfWeek, todayInTimezone } from "./collectors/framework/dates.js";
 import { eligibleTicketRows, recommendTicket, type TicketQuoteRow } from "./routes/trips.js";
-import { buildCrowdCalendar } from "./lib/crowds.js";
+import { buildCrowdCalendar, crowdDateWindow } from "./lib/crowds.js";
 
 /**
  * DEMO MODE — no database required.
@@ -618,7 +618,7 @@ demoApp.get("/v1/crowds/calendar", (c) => {
     return c.json({ error: { code: "not_found", message: "no Universal Orlando park with that name" } }, 404);
   }
 
-  const gate = gateDateWindow(tierOf(c), c.req.query("from"), c.req.query("to"), park.timezone);
+  const gate = crowdDateWindow(tierOf(c), c.req.query("from"), c.req.query("to"), park.timezone);
   const ticketByDate = new Map<string, { value: number; available: boolean }>();
   const expressByDate = new Map<string, { value: number; available: boolean }>();
   const hotelByDate = new Map<string, number>();

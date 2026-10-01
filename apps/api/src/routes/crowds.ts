@@ -3,8 +3,9 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import { parks, properties, rateCurrent, ticketPriceCurrent, ticketProducts } from "@ratecoaster/db/schema";
 import { CrowdCalendarQuery } from "@ratecoaster/shared";
-import { gateDateWindow, tierOf } from "../lib/entitlements.js";
-import { buildCrowdCalendar } from "../lib/crowds.js";
+import { tierOf } from "../lib/entitlements.js";
+import { todayInTimezone } from "../collectors/framework/dates.js";
+import { buildCrowdCalendar, crowdDateWindow } from "../lib/crowds.js";
 
 export const crowdsRouter = new Hono();
 
@@ -60,7 +61,7 @@ crowdsRouter.get("/calendar", async (c) => {
     return c.json({ error: { code: "not_found", message: "no Universal Orlando park with that name" } }, 404);
   }
 
-  const gate = gateDateWindow(tierOf(c), parsed.data.from, parsed.data.to, park.timezone);
+  const gate = crowdDateWindow(tierOf(c), parsed.data.from, parsed.data.to, park.timezone);
   const { from, to } = gate;
   const ticketProductSlug = TICKET_PRODUCT_FOR_PARK[park.slug];
 
@@ -212,7 +213,7 @@ crowdsRouter.get("/calendar", async (c) => {
       queueTimesId: park.queueTimesId,
       themeParksWikiId: park.themeParksWikiId,
     },
-    days: buildCrowdCalendar({ from, to, ticketByDate, expressByDate, hotelByDate }),
+    days: buildCrowdCalendar({ from, to, ticketByDate, expressByDate, hotelByDate, historyBefore: todayInTimezone(park.timezone) }),
     updatedAt: latest?.toISOString() ?? null,
     gate: gate.info,
   });

@@ -1,4 +1,17 @@
-import { dateRange, dayOfWeek, daysBetween } from "../collectors/framework/dates.js";
+import { addDays, dateRange, dayOfWeek, daysBetween } from "../collectors/framework/dates.js";
+import type { Tier } from "@ratecoaster/shared";
+import { gateDateWindow } from "./entitlements.js";
+
+/** History stays public; only the future is limited to the collected horizon. */
+export function crowdDateWindow(tier: Tier, from: string | undefined, to: string | undefined, timezone: string) {
+  const window = gateDateWindow(tier, from, to, timezone);
+  if (from && from < window.from) window.from = from;
+  // A request can start in any year, but each response is at most one year.
+  const rangeEnd = addDays(window.from, 365);
+  if (window.to > rangeEnd) window.to = rangeEnd;
+  window.info.visibleDays = Math.max(0, daysBetween(window.from, window.to) + 1);
+  return window;
+}
 
 export type CrowdSignal = "ticket" | "express" | "hotel";
 export type CrowdLevel = "very-low" | "low" | "moderate" | "high" | "very-high";
@@ -9,6 +22,8 @@ export interface CrowdInputs {
   ticketByDate: ReadonlyMap<string, { value: number; available: boolean }>;
   expressByDate: ReadonlyMap<string, { value: number; available: boolean }>;
   hotelByDate: ReadonlyMap<string, number>;
+  /** Past days need a recorded signal; weekdays alone are not historical data. */
+  historyBefore?: string;
 }
 
 export interface CrowdDay {
@@ -66,7 +81,7 @@ export function buildCrowdCalendar(input: CrowdInputs): CrowdDay[] {
     .map((value) => value.value);
   const hotelValues = [...input.hotelByDate.values()];
 
-  return dates.map((date) => {
+  return dates.flatMap((date) => {
     const ticket = input.ticketByDate.get(date);
     const express = input.expressByDate.get(date);
     const hotel = input.hotelByDate.get(date);
@@ -94,16 +109,18 @@ export function buildCrowdCalendar(input: CrowdInputs): CrowdDay[] {
       parts.push({ value: normalized(hotel, hotelValues), weight: 0.17 });
     }
 
+    if (input.historyBefore && date < input.historyBefore && signals.length === 0) return [];
+
     const totalWeight = parts.reduce((total, part) => total + part.weight, 0);
     const pressure = parts.reduce((total, part) => total + part.value * part.weight, 0) / totalWeight;
     const score = Math.max(1, Math.min(10, Math.round((1 + pressure * 9) * 10) / 10));
 
-    return {
+    return [{
       date,
       score,
       level: crowdLevel(score),
       confidence: signals.length >= 3 ? "high" : signals.length >= 2 ? "medium" : "low",
       signals,
-    };
+    }];
   });
 }

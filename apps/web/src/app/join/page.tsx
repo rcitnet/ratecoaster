@@ -19,8 +19,8 @@ export default async function JoinPage({
   const next = params.next?.startsWith("/") && !params.next.startsWith("//") ? params.next : "/";
 
   return (
-    <main className="section">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 44, alignItems: "start" }}>
+    <main className="section page-refresh">
+      <div className="auth-grid">
         <div>
           <span className="badge badge-hot" style={{ marginBottom: 14 }}>
             Free account

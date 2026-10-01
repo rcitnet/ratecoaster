@@ -11,6 +11,8 @@ import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
 import { breadcrumbSchema, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 import { WatchButton } from "@/components/WatchButton";
+import { PageIntro } from "@/components/PageIntro";
+import hotelImages from "@/lib/hotel-images.json";
 
 export const revalidate = 60;
 
@@ -107,7 +109,7 @@ export default async function PropertyPage({
   const property = properties.find((p) => p.slug === slug);
   if (!property) {
     return (
-      <main className="section">
+      <main className="section page-refresh">
         <h1>Hotel not found</h1>
         <p className="lede">We don&apos;t track a hotel with that name yet.</p>
         <a href="/hotels" className="btn btn-primary">See all hotels</a>
@@ -187,7 +189,7 @@ export default async function PropertyPage({
   };
 
   return (
-    <main className="section">
+    <main className="section page-refresh hotel-detail-refresh">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(hotelSchema) }}
@@ -205,7 +207,11 @@ export default async function PropertyPage({
         }}
       />
       <a href="/hotels" className="tiny muted">← All hotels</a>
-      <h1 style={{ marginTop: 10 }}>{property.name}</h1>
+      <PageIntro eyebrow={`${TIER_LABELS[property.tier] ?? property.tier} · Your next great stay`} title={property.name}
+        image={Object.hasOwn(hotelImages, slug) ? { src: `/hotels/${slug}.webp`, alt: property.name, label: "Hotel photography · Loews Hotels" } : undefined}
+        action={{ href: "#upcoming-nights", label: "Explore upcoming nights" }}>
+        <p className="lede">Find dates worth booking, compare room types, and follow the price of your next stay.</p>
+      </PageIntro>
 
       <WatchButton
         propertyId={property.id}
@@ -239,7 +245,7 @@ export default async function PropertyPage({
         >
           <input type="hidden" name="rateCode" value={rateCode} />
           {selectedDate ? <input type="hidden" name="stayDate" value={selectedDate} /> : null}
-          <label style={{ minWidth: 260 }}>
+          <label className="hotel-room-filter">
             <span className="tiny muted" style={{ display: "block", marginBottom: 5, fontWeight: 700 }}>
               ROOM TYPE
             </span>
@@ -270,7 +276,7 @@ export default async function PropertyPage({
       {cheapest ? (
         <div className="card" style={{ background: "var(--cream)", borderColor: "transparent", marginBottom: 26 }}>
           <div className="tiny muted" style={{ fontWeight: 700 }}>CHEAPEST NIGHT YOU CAN SEE</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 4 }}>
+          <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
             <span className="deal-price">{centsToDisplay(cheapest.nightlyCents)}</span>
             <span className="muted">on {formatLongDate(cheapest.stayDate)}</span>
           </div>
@@ -300,7 +306,7 @@ export default async function PropertyPage({
         slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOTEL_DETAIL}
       />
 
-      <h2 style={{ marginTop: 34 }}>Upcoming nights</h2>
+      <h2 id="upcoming-nights" style={{ marginTop: 34 }}>Upcoming nights</h2>
       {selectedRoomType ? <p className="tiny muted">Showing {selectedRoomType.name}.</p> : null}
       <div
         className="table-wrap pricing-scroll"

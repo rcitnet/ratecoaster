@@ -2,6 +2,7 @@ import { centsToDisplay, ExpressPassType } from "@ratecoaster/shared";
 import { getClient, dayNumber, dayOfWeekLabel, getMe, safe } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { WatchDateButton } from "@/components/WatchDateButton";
+import { PageIntro } from "@/components/PageIntro";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -76,13 +77,16 @@ export default async function ExpressPage({
   if (days) filterParams.set("days", String(days));
   const filterSuffix = filterParams.toString() ? `&${filterParams.toString()}` : "";
   return (
-    <main className="section">
-      <h1>Express Pass prices</h1>
+    <main className="section page-refresh calendar-refresh">
+      <PageIntro eyebrow="Spend where it matters" title="More rides. Less waiting." action={{ href: "/hotels", label: "Explore hotels with Express Unlimited" }}>
       <p className="lede" style={{ marginTop: 12 }}>
         Compare every current Express product for Universal Studios Florida, Islands of Adventure,
         Epic Universe, and Volcano Bay. Multi-day cards show the exact whole-pass price and the
         storefront&apos;s per-day amount.
       </p>
+      </PageIntro>
+
+      <div className="refresh-section-head"><div><h2>Find your Express Pass.</h2><p>Narrow the options by park, pass type, and duration.</p></div></div>
 
       <form action="/express-pass" method="get" className="pricing-filter-form">
         <label>
@@ -180,7 +184,8 @@ export default async function ExpressPage({
             </div>
           </div>
 
-          <div className="cal">
+          <div className="refresh-section-head calendar-section-head"><div><p className="refresh-eyebrow">Plan ahead</p><h2>Express prices by date</h2></div><span className="calendar-key"><i /> Lower priced <i className="calendar-key-high" /> Higher priced</span></div>
+          <div className="cal" aria-label="Express Pass prices by date">
             {prices.map((price) => {
               const total = price.totalCents;
               const band = !price.available || median === null ? ""

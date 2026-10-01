@@ -7,6 +7,7 @@ import {
 import { AdSlot } from "@/components/AdSlot";
 import { AffiliateDisclosure } from "@/components/AffiliateDisclosure";
 import { TripDateFields } from "@/components/TripDateFields";
+import { HotelPhoto } from "@/components/HotelPhoto";
 import { formatLongDate, getClient, relativeTime, TIER_LABELS } from "@/lib/api";
 import { addIsoDays } from "@/lib/trip-form";
 
@@ -101,18 +102,20 @@ export default async function TripPlannerPage({
   }
 
   return (
-    <main className="section">
+    <main className="section page-refresh planner-refresh">
       <div className="trip-hero">
         <div>
-          <span className="badge badge-purple">Orlando trip planner</span>
-          <h1>Price the whole trip, not just one night</h1>
+          <p className="refresh-eyebrow">Make it your kind of trip</p>
+          <h1>The excitement starts with a plan.</h1>
           <p className="lede">
             Enter your dates and party size. We&apos;ll find the least-expensive complete hotel stay
             and match it with the ticket duration and cached round-trip airfare that best fit your visit.
           </p>
+          <div className="planner-steps" aria-label="Your planning steps"><span><b>01</b> Pick your dates</span><span><b>02</b> Bring your party</span><span><b>03</b> See the whole trip</span></div>
         </div>
 
         <form action="/plan" method="get" className="trip-form">
+          <div className="trip-form-heading"><p className="refresh-eyebrow">Start here</p><h2>Your trip details</h2></div>
           <TripDateFields
             initialCheckIn={values.checkIn}
             initialCheckOut={values.checkOut}
@@ -173,6 +176,7 @@ export default async function TripPlannerPage({
 
           <div className={`grid ${quote.origin ? "grid-3" : "grid-2"} trip-breakdown`}>
             <article className="card">
+              {quote.hotel ? <HotelPhoto slug={quote.hotel.propertySlug} name={quote.hotel.propertyName} /> : null}
               <span className="badge badge-blue">Best hotel stay</span>
               {quote.hotel ? (
                 <>
@@ -279,6 +283,7 @@ export default async function TripPlannerPage({
               <div className="grid grid-3">
                 {quote.hotelAlternatives.map((option) => (
                   <a key={option.propertySlug} href={`/hotels/${option.propertySlug}`} className="card card-hover">
+                    <HotelPhoto slug={option.propertySlug} name={option.propertyName} />
                     <span className="badge">{TIER_LABELS[option.tier] ?? option.tier}</span>
                     <h3>{option.propertyName}</h3>
                     <p className="muted tiny">{option.roomTypeName ?? "Room type pending"}</p>

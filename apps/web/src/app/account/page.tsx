@@ -18,7 +18,7 @@ export default async function AccountPage() {
 
   if (!me.user) {
     return (
-      <main className="section" style={{ textAlign: "center", maxWidth: 520, margin: "0 auto" }}>
+      <main className="section page-refresh" style={{ textAlign: "center", maxWidth: 520, margin: "0 auto" }}>
         <h1 style={{ fontSize: 34 }}>You&apos;re not signed in</h1>
         <p className="lede" style={{ margin: "14px auto 24px" }}>
           All pricing is public. A free account saves trips, watches dates, and delivers requested alerts.
@@ -43,7 +43,7 @@ export default async function AccountPage() {
   ];
 
   return (
-    <main className="section">
+    <main className="section page-refresh">
       <h1>Your account</h1>
       <p className="lede" style={{ marginTop: 12 }}>{me.user.email}</p>
 

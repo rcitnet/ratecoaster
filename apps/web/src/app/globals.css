@@ -669,28 +669,24 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 .crowd-calendar { padding: 28px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper); }
 .crowd-calendar-head { display: grid; grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr); align-items: center; gap: 16px; margin-bottom: 22px; }
 .crowd-calendar-head h2 { margin: 0; font-size: 27px; text-align: center; }
+.crowd-calendar-head > :first-child { justify-self: start; }
 .crowd-calendar-head > :last-child { justify-self: end; }
+.crowd-month-picker { display: flex; align-items: flex-end; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+.crowd-month-picker label { display: grid; gap: 5px; font-size: 12px; color: var(--ink-soft); }
+.crowd-month-picker input { max-width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--ink); font: inherit; min-height: 44px; }
 .crowd-weekdays, .crowd-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .crowd-weekdays { margin-bottom: 5px; color: var(--ink-mute); font-size: 11px; font-weight: 700; text-align: center; text-transform: uppercase; }
 .crowd-day { min-height: 100px; display: grid; align-content: center; justify-items: center; gap: 3px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 10px; text-align: center; }
 .crowd-date { color: var(--ink-soft); font-size: 12px; }
 .crowd-day strong { font-size: 11px; line-height: 1.1; }
 .crowd-score { color: var(--ink-mute); font-size: 10px; }
-.crowd-very-low { border-color: #0a9689; background: var(--teal); color: #fff; }
-.crowd-low { border-color: var(--blue-dark); background: var(--blue); color: #fff; }
-.crowd-moderate { border-color: #e7aa16; background: var(--yellow); color: var(--ink); }
-.crowd-high { border-color: #e7502d; background: var(--coral); color: #fff; }
-.crowd-very-high { border-color: #c61673; background: var(--magenta); color: #fff; }
-.crowd-day.crowd-very-low .crowd-date, .crowd-day.crowd-very-low .crowd-score,
-.crowd-day.crowd-low .crowd-date, .crowd-day.crowd-low .crowd-score,
-.crowd-day.crowd-high .crowd-date, .crowd-day.crowd-high .crowd-score,
-.crowd-day.crowd-very-high .crowd-date, .crowd-day.crowd-very-high .crowd-score { color: rgba(255, 255, 255, 0.82); }
-.crowd-day.crowd-moderate .crowd-date, .crowd-day.crowd-moderate .crowd-score { color: rgba(22, 18, 60, 0.7); }
-.crowd-swatch.crowd-very-low { background: #0fb5a5; }
-.crowd-swatch.crowd-low { background: #7192ff; }
-.crowd-swatch.crowd-moderate { background: #ffc53d; }
-.crowd-swatch.crowd-high { background: #ff6a45; }
-.crowd-swatch.crowd-very-high { background: #e6218c; }
+.crowd-very-low { border-color: #a9ded6; background: var(--teal-tint); color: #077368; }
+.crowd-low { border-color: #cad3fa; background: var(--blue-tint); color: var(--blue-dark); }
+.crowd-moderate { border-color: #ecd69b; background: var(--yellow-tint); color: #7a5410; }
+.crowd-high { border-color: #f2c9bc; background: var(--coral-tint); color: #a13821; }
+.crowd-very-high { border-color: #efc3dc; background: var(--magenta-tint); color: #9d1c62; }
+.crowd-day .crowd-date, .crowd-day .crowd-score { color: inherit; }
+.crowd-no-data { background: #f7f6f8; color: var(--ink-mute); }
 
 /* ---------- wait times ---------- */
 
@@ -1116,7 +1112,7 @@ tbody tr:hover .sticky-col { background: var(--cream); }
 
 /* Homepage adventure refresh. Dense calendars retain the existing styles. */
 .home-refresh { --ink: #211d3f; --ink-soft: #514a63; --ink-mute: #6e687e; --magenta: #d51b78; --line: #e8e3ec; --r-pill: 12px; padding-bottom: 12px; }
-body:has(.home-refresh) { background: #fcfaf7; }
+body:has(.home-refresh), body:has(.page-refresh) { background: #fcfaf7; }
 .home-refresh h1, .home-refresh h2, .home-refresh h3 { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
 .home-refresh h2 { font-size: clamp(26px, 2.4vw, 32px); letter-spacing: -1px; }
 .home-refresh h3 { font-size: 20px; line-height: 1.35; letter-spacing: -.5px; }
@@ -1252,4 +1248,131 @@ body:has(.home-refresh) { background: #fcfaf7; }
 }
 @media (prefers-reduced-motion: reduce) {
   .home-refresh *, .home-refresh *::before { transition: none !important; }
+}
+
+/* Public pages share the homepage's adventure styling. */
+.page-refresh { --ink: #211d3f; --ink-soft: #514a63; --ink-mute: #6e687e; --magenta: #d51b78; --line: #e8e3ec; --r-pill: 12px; padding-top: 32px; }
+.page-refresh h1, .page-refresh h2, .page-refresh h3,
+.page-refresh .deal-price, .page-refresh .cal-price,
+.page-refresh .trip-grand-total strong, .page-refresh .trip-price-line strong,
+.page-refresh .waits-stat strong, .page-refresh .ride-live-wait strong { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-weight: 700; }
+.page-refresh h1 { font-size: clamp(32px, 3.8vw, 50px); line-height: 1.12; letter-spacing: -1.8px; }
+.page-refresh h2 { font-size: clamp(24px, 2.3vw, 30px); line-height: 1.25; letter-spacing: -.8px; }
+.page-refresh h3 { line-height: 1.35; letter-spacing: -.4px; }
+.page-refresh .btn { border-radius: 12px; min-height: 44px; }
+.page-refresh .btn-ghost { border-width: 1px; background: white; }
+.page-refresh .btn-blue { background: #5a3bc4; }
+.page-refresh .btn-blue:hover { background: #472c9e; }
+.page-refresh :is(a, button, input, select, [tabindex]):focus-visible { outline: 3px solid #7955de; outline-offset: 4px; }
+.page-refresh .card { border-radius: 20px; background-color: white; }
+.page-refresh .chip { font-size: 14px; border-width: 1px; border-radius: 12px; min-height: 44px; }
+.page-refresh .chip.on { background: #efebfa; color: #5a3bc4; border-color: #d9cdec; }
+.page-refresh .notice { border-radius: 16px; }
+.page-refresh .lede { font-size: 16px; line-height: 1.7; color: var(--ink-soft); }
+.page-intro { padding: 28px 32px; margin: 0 0 32px; border-radius: 24px; background: #efebfa; }
+.page-intro h1 { margin: 12px 0 14px; }
+.page-intro-description .lede { margin: 0 !important; max-width: 62ch; }
+.page-intro-action { display: inline-flex; gap: 8px; margin-top: 18px; min-height: 30px; align-items: center; }
+.page-intro-photo { display: grid; grid-template-columns: 1.25fr 1fr; align-items: center; gap: 40px; padding: 12px 0 28px; background: transparent; }
+.page-intro-copy { min-width: 0; }
+.page-intro-image { margin: 0; min-width: 0; height: 260px; position: relative; border-radius: 22px; overflow: hidden; background: #efebfa; }
+.page-intro-image img { object-fit: cover; }
+.page-intro-image figcaption { position: absolute; bottom: 16px; left: 16px; right: 16px; width: fit-content; border-radius: 8px; padding: 6px 10px; background: #211d3fcc; color: white; font-size: 11px; }
+.hotel-detail-refresh .page-intro-image { height: 330px; }
+.page-refresh .page-callout { background: #efebfa; border: 1px solid #e0d7f5; padding: 26px; border-radius: 20px; }
+.page-refresh :is(#hotel-calendar, #upcoming-nights, .guide-reading section) { scroll-margin-top: 145px; }
+.hotel-browse { margin: 32px 0 42px; min-width: 0; }
+.hotel-browse-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(270px, 300px); gap: 18px; overflow-x: auto; padding: 4px 3px 16px; scroll-snap-type: x proximity; }
+.hotel-browse-card { background: white; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; scroll-snap-align: start; display: flex; flex-direction: column; transition: border-color .15s, box-shadow .15s; }
+.hotel-browse-card:hover { border-color: #bda9df; box-shadow: var(--shadow-sm); }
+.hotel-browse-photo { position: relative; width: 100%; height: 185px; background: #efebfa; overflow: hidden; }
+.hotel-browse-photo img { object-fit: cover; }
+.hotel-browse-copy { padding: 20px; display: grid; gap: 12px; flex: 1; align-content: start; }
+.hotel-browse-copy h3 { font-size: 18px; }
+.hotel-browse-copy .badge { justify-self: start; white-space: normal; }
+.hotel-browse-copy p { margin: 0; }
+.hotel-browse-copy p strong { font-size: 26px; letter-spacing: -.8px; }
+.hotel-photo-credit { margin: 12px 0 0; }
+.hotel-room-filter { min-width: min(260px, 100%); max-width: 100%; flex: 0 1 420px; }
+.page-refresh .table-wrap { border: 1px solid var(--line); border-radius: 18px; background: white; }
+.page-refresh .table-wrap td a { color: #5a3bc4; }
+.page-refresh .table-wrap td a:hover { text-decoration: underline; }
+.page-refresh .pricing-filter-form { padding: 22px; border-radius: 18px; background: white; border: 1px solid var(--line); }
+.calendar-section-head { margin-top: 36px; }
+.calendar-key { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+.calendar-key i { width: 12px; height: 12px; background: var(--teal-tint); border: 1px solid #7ccabc; border-radius: 4px; }
+.calendar-key i.calendar-key-high { background: var(--coral-tint); border-color: #f4b3a1; margin-left: 10px; }
+.page-refresh .cal { gap: 10px; }
+.page-refresh .cal-day { border-radius: 14px; }
+.page-refresh .cal-price { font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.planner-refresh .trip-hero { background: transparent; padding: 12px 0 28px; gap: 40px; }
+.planner-refresh .trip-hero > div { min-width: 0; }
+.planner-refresh .trip-form { background: white; border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 10px 30px #211d3f08; padding: 28px; }
+.trip-form-heading { grid-column: 1 / -1; margin-bottom: 6px; }
+.trip-form-heading h2 { margin-top: 8px; font-size: 24px; }
+.planner-steps { margin-top: 26px; display: grid; gap: 14px; }
+.planner-steps span { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-soft); }
+.planner-steps b { display: grid; place-items: center; width: 34px; height: 34px; background: #efebfa; color: #5a3bc4; border-radius: 10px; font-size: 11px; }
+.planner-refresh .trip-total-card { border-radius: 22px; background: #211d3f; padding: 30px; }
+.planner-refresh .trip-grand-total strong { color: white; letter-spacing: -2px; }
+.planner-refresh .trip-breakdown .hotel-browse-photo { border-radius: 14px; }
+.planner-refresh .trip-alternatives-title + .grid .hotel-browse-photo { margin-bottom: 18px; border-radius: 14px; }
+.planner-refresh .trip-price-line { flex-wrap: wrap; }
+.page-refresh .waits-toolbar { background: white; border-radius: 20px; }
+.page-refresh .waits-summary { border-radius: 18px; }
+.page-refresh .wait-card { border-radius: 18px; background: white; }
+.page-refresh .ride-detail-hero { background: #efebfa; padding: 26px; border-radius: 22px; margin-top: 24px; }
+.page-refresh .ride-detail-hero h1 { font-size: clamp(28px, 3vw, 42px); overflow-wrap: anywhere; }
+.page-refresh .crowd-calendar { border-radius: 20px; }
+.guide-library-grid { margin: 20px 0 32px; }
+.guide-library .guide-library-card { padding: 0; overflow: hidden; }
+.guide-card-copy { padding: 26px; }
+.guide-card-copy .badge { margin-top: 8px; }
+.guide-featured { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.2fr; align-items: center; }
+.guide-featured .hotel-browse-photo { height: 100%; min-height: 260px; }
+.guide-article { max-width: 940px; margin-inline: auto; }
+.guide-article .page-intro { margin-top: 22px; }
+.guide-contents { padding: 24px 28px; background: white; border: 1px solid var(--line); border-radius: 18px; margin: 24px 0; }
+.guide-contents ol { margin: 14px 0 0; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; }
+.guide-contents a { color: #5a3bc4; }
+.guide-contents a:hover { text-decoration: underline; }
+.guide-reading { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 8px 36px 24px; }
+.guide-reading section + section { border-top: 1px solid var(--line); margin-top: 28px; }
+.page-refresh.legal-page:not(.guide-article) { margin-inline: auto; }
+.auth-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px; align-items: start; max-width: 1080px; margin: 20px auto; }
+@media (max-width: 1000px) {
+  .page-intro-photo { gap: 26px; }
+  .page-intro-image { height: 240px; }
+  .hotel-detail-refresh .page-intro-image { height: 280px; }
+}
+@media (max-width: 700px) {
+  .page-refresh { padding-top: 24px; }
+  .page-refresh h1 { letter-spacing: -1.2px; }
+  .page-intro { padding: 24px 20px; border-radius: 18px; }
+  .page-intro-photo { grid-template-columns: 1fr; padding: 0 0 12px; gap: 22px; }
+  .page-intro-image, .hotel-detail-refresh .page-intro-image { height: 190px; border-radius: 18px; }
+  .hotel-browse-strip { grid-auto-columns: 85%; }
+  .hotel-browse-copy { padding: 18px; }
+  .page-refresh .refresh-section-head { align-items: flex-start; }
+  .page-refresh .pricing-filter-form { padding: 18px; }
+  .planner-refresh .trip-form { padding: 20px; }
+  .planner-refresh .trip-total-card { padding: 24px; }
+  .page-refresh .ride-detail-hero { padding: 20px; }
+  .crowd-calendar-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crowd-calendar-head h2 { grid-column: 1 / -1; grid-row: 1; }
+  .crowd-calendar-head > :first-child { grid-column: 1; grid-row: 2; }
+  .crowd-calendar-head > :last-child { grid-column: 2; grid-row: 2; }
+  .guide-featured { grid-template-columns: 1fr; }
+  .guide-featured .hotel-browse-photo { min-height: 190px; }
+  .guide-card-copy { padding: 22px; }
+  .guide-reading { padding: 0 22px 18px; }
+  .auth-grid { grid-template-columns: 1fr; gap: 28px; }
+}
+@media (max-width: 450px) {
+  .page-refresh .ride-detail-hero { grid-template-columns: minmax(0, 1fr); }
+  .page-refresh .ride-live-wait { grid-template-columns: auto minmax(0, 1fr); }
+  .page-refresh .ride-live-wait small { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-refresh *, .page-refresh *::before { transition: none !important; scroll-behavior: auto !important; }
 }

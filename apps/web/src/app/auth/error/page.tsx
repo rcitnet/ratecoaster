@@ -5,7 +5,7 @@ export default async function AuthErrorPage({
 }) {
   const { reason } = await searchParams;
   return (
-    <main className="section" style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+    <main className="section page-refresh" style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
       <h1 style={{ fontSize: 34 }}>That link didn&apos;t work</h1>
       <p className="lede" style={{ margin: "14px auto 26px" }}>
         {reason === "missing"

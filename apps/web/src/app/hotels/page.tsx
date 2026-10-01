@@ -6,10 +6,12 @@ import {
   type RateCode as RateCodeValue,
 } from "@ratecoaster/shared";
 import {
-  getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, relativeTime, safe, TIER_LABELS,
+  getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, formatLongDate, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { CompareButton } from "@/components/CompareButton";
+import { PageIntro } from "@/components/PageIntro";
+import { HotelPhoto } from "@/components/HotelPhoto";
 
 import { pageMetadata } from "@/lib/seo";
 
@@ -91,8 +93,10 @@ export default async function HotelsPage({
   const availabilityParam = availableOnly ? "&available=1" : "";
 
   return (
-    <main className="section">
-      <h1>Hotel rates</h1>
+    <main className="section page-refresh">
+      <PageIntro eyebrow="Find your place in the adventure" title="Great stays. Smarter dates."
+        image={destination === "universal-orlando" ? { src: "/hotels/royal-pacific.webp", alt: "Loews Royal Pacific Resort", label: "Loews Royal Pacific Resort · Orlando" } : undefined}
+        action={{ href: "#hotel-calendar", label: "Compare nights side by side" }}>
       <p className="lede" style={{ marginTop: 12 }}>
         The cheapest available room at every hotel, night by night.
         {availableRateCodes.includes("APH")
@@ -100,6 +104,7 @@ export default async function HotelsPage({
           : " Rates shown are the plans currently published for this destination."}
         {lastObserved ? ` Updated ${relativeTime(lastObserved)}.` : ""}
       </p>
+      </PageIntro>
 
       <div className="chips">
         {DESTS.map((d) => (
@@ -127,6 +132,32 @@ export default async function HotelsPage({
         </a>
       </div>
 
+      {visibleProperties.length > 0 ? (
+        <section className="hotel-browse" aria-labelledby="hotel-browse-heading">
+          <div className="refresh-section-head">
+            <div><h2 id="hotel-browse-heading">A stay for your kind of trip.</h2><p>Explore the hotels, then compare your dates below.</p></div>
+            <span className="tiny muted">Scroll to explore all {visibleProperties.length} hotels</span>
+          </div>
+          <div className="hotel-browse-strip" tabIndex={0} role="region" aria-label="Hotel photos and lowest tracked nights; scroll horizontally for more hotels">
+            {visibleProperties.map((property) => {
+              const lowest = [...(byProperty.get(property.slug)?.values() ?? [])].sort((a, b) => a.nightlyCents - b.nightlyCents)[0];
+              return <a key={property.slug} className="hotel-browse-card" href={`/hotels/${property.slug}?rateCode=${rateCode}${lowest ? `&stayDate=${lowest.stayDate}` : ""}`}>
+                <HotelPhoto slug={property.slug} name={property.name} />
+                <div className="hotel-browse-copy">
+                  <span className="refresh-eyebrow">{TIER_LABELS[property.tier] ?? property.tier}</span>
+                  <h3>{property.name}</h3>
+                  {property.includesExpressPass ? <span className="badge badge-express">Express Unlimited included</span> : null}
+                  {lowest ? <><p><strong>{centsToDisplay(lowest.nightlyCents)}</strong> <span className="tiny muted">/ night</span></p><span className="tiny muted">{formatLongDate(lowest.stayDate)} · {RATE_CODE_LABELS[rateCode]} · before taxes and fees</span></> : <p className="tiny muted">Rates are being collected.</p>}
+                  <span className="refresh-text-link">Explore this hotel →</span>
+                </div>
+              </a>;
+            })}
+          </div>
+          {destination === "universal-orlando" ? <p className="tiny muted hotel-photo-credit">Hotel photography: Loews Hotels. Prices show the lowest tracked night for the selected rate and occupancy.</p> : null}
+        </section>
+      ) : null}
+
+      <div className="refresh-section-head" id="hotel-calendar"><div><p className="refresh-eyebrow">The full picture</p><h2>Compare every night.</h2></div><p>Lowest tracked rates are highlighted in green.</p></div>
       {rates.items.length === 0 ? (
         <div className="notice">
           <b>Rate tracking for these {properties.length} hotels isn&apos;t live yet.</b> We&apos;re
@@ -240,7 +271,7 @@ export default async function HotelsPage({
         with nothing relevant on it is worse than no button.
       */}
       {destination === "universal-orlando" ? (
-        <div style={{ marginTop: 32 }}>
+        <div className="page-callout" style={{ marginTop: 32 }}>
           <h2 style={{ fontSize: 20 }}>Staying off-site?</h2>
           <p className="muted" style={{ fontSize: 15, marginTop: 6 }}>
             We track the on-site hotels because that&apos;s where Express Pass and early

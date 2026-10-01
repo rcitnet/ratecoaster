@@ -9,7 +9,7 @@ export const metadata = pageMetadata({
 
 export default function TermsPage() {
   return (
-    <main className="section legal-page">
+    <main className="section legal-page page-refresh">
       <p className="eyebrow">Legal</p>
       <h1>Terms of Service</h1>
       <p className="muted">Effective August 19, 2026</p>

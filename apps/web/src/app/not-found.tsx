@@ -8,7 +8,7 @@
  */
 export default function NotFound() {
   return (
-    <main className="section" style={{ textAlign: "center", maxWidth: 560, margin: "0 auto" }}>
+    <main className="section page-refresh" style={{ textAlign: "center", maxWidth: 560, margin: "0 auto" }}>
       <div style={{ fontSize: 64, lineHeight: 1 }} aria-hidden="true">
         🎢
       </div>

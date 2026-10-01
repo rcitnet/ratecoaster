@@ -3,6 +3,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { WaitsExplorer } from "@/components/WaitsExplorer";
 import { pageMetadata } from "@/lib/seo";
 import { rideImage } from "@/lib/ride-images";
+import { PageIntro } from "@/components/PageIntro";
 
 export const metadata = pageMetadata({
   title: "Live Universal attraction wait times",
@@ -36,12 +37,15 @@ export default async function WaitsPage({
   };
 
   return (
-    <main className="section">
-      <h1>Live attraction waits</h1>
+    <main className="section page-refresh waits-refresh">
+      <PageIntro eyebrow="The park pulse" title="Your next ride starts here."
+        image={{ src: "/brand/home-adventure.webp", alt: "Jurassic World VelociCoaster at Islands of Adventure", label: "Islands of Adventure · Universal Orlando" }}
+        action={{ href: "/crowd-calendar", label: "Plan a lighter park day" }}>
       <p className="lede" style={{ marginTop: 12 }}>
         Search, sort, and filter Universal attractions using classifications published by
         Universal, with current wait times updated throughout the day.
       </p>
+      </PageIntro>
 
       <WaitsExplorer data={webData} initialParkSlug={params.park} />
 
