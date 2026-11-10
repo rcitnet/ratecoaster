@@ -22,6 +22,7 @@ export const TIMING_GUIDES: GuideContent[] = [
         paragraphs: [
           "Universal prices hotel rooms, admission and Express Pass by expected demand, and the swing across a year is wide. The same room, the same ticket and the same family can cost very different amounts depending only on which week is chosen. That variation is usually larger than any promotion, passholder rate or package discount applied to a fixed set of dates.",
           "This is the most useful thing to understand before booking anything. Hunting for a code to take a few percent off a peak week is effort in the wrong place if moving the trip by two weeks would save several times as much. The table below this section is computed from the rates RateCoaster is tracking today, so you can see the size of the swing for the coming twelve months instead of taking it on trust.",
+          "Read that table with two things in mind. It shows prices as they stand today, and hotel rates for dates many months away are often the starting price, before any of the offers that tend to appear closer in. A distant month can therefore look expensive now and soften later. And the first and last months in the table are usually partial. The seasonal pattern described next is the long-run shape; the table is the current reading, and where they differ for dates you care about, the table and the calendars are the ones to act on.",
         ],
       },
       {

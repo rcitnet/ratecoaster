@@ -135,9 +135,9 @@ export const HOTEL_GUIDES: GuideContent[] = [
     published: "2026-08-21",
     updated: "2026-11-09",
     takeaways: [
-      "An APH rate is a separate rate plan with eligibility rules. It is not a fixed percentage and it is not offered on every night.",
+      "An APH rate is a separate rate plan with eligibility rules. Universal sets it per hotel and per night, and can change or withdraw it for any date.",
       "The only fair comparison holds the hotel, night, room type and occupancy constant and changes the rate plan alone.",
-      "Where both rates exist, RateCoaster shows the dollar difference per night. Where the APH rate is missing, the night is blank and no discount is implied.",
+      "Where both rates exist, RateCoaster shows the dollar difference per night. Where no APH rate was published, the night is blank and no discount is implied.",
       "The pass, the discounted room and park admission are three different products. An annual pass does not include Epic Universe.",
     ],
     live: "passholder-savings",
@@ -146,7 +146,7 @@ export const HOTEL_GUIDES: GuideContent[] = [
         heading: "APH is a rate plan, not a hotel category",
         paragraphs: [
           "An Annual Passholder rate is a booking offer with conditions attached. Universal's booking engine publishes it for some hotels, some dates and some room types, and leaves it out for others. It has nothing to do with the hotel's category, and its presence on one night says nothing about the next.",
-          "The discount is not a fixed percentage. It is set per hotel and per night, it tends to be deepest when a hotel expects empty rooms, and it shrinks or disappears on the nights a hotel expects to fill at the public rate. That is the opposite of what most people want, which is a discount on the busy weekend they have already chosen.",
+          "The discount is not a promise. It is set per hotel and per night, it is released for particular travel windows, and Universal can reduce or withdraw it for any date. A passholder rate you saw last month is not guaranteed to exist today. The table below shows what RateCoaster's tracked rates look like right now: on how many upcoming nights each hotel has a passholder rate below its standard rate, and by how much.",
           "RateCoaster only offers the Annual Passholder filter for a destination or hotel where the booking engine has actually published an APH rate. Hotels without one show a standard-only view, so an empty passholder column never looks like broken data or a hidden deal.",
         ],
       },
@@ -181,8 +181,8 @@ export const HOTEL_GUIDES: GuideContent[] = [
       {
         heading: "When the passholder rate is and is not the story",
         paragraphs: [
-          "A passholder rate is one lever among several, and often not the biggest. Moving a stay from a Friday to a Tuesday, or from a peak week to a shoulder week, routinely changes the nightly rate by more than any passholder discount on a fixed date. The [cheapest time to visit](/guides/cheapest-time-to-visit-universal-orlando) guide shows the month-by-month picture from tracked rates.",
-          "The discount matters most in two situations. One is a flexible local or repeat visitor who can go when the hotels are soft, which is exactly when APH rates are deepest. The other is a family doing the sum of whether buying one pass pays for itself through the room discount alone, which is covered in [Is an annual pass worth it for the hotel discount?](/guides/universal-annual-pass-hotel-discount-math)",
+          "A passholder rate is one lever among several. Moving a stay from a Friday to a Tuesday, or from a peak week to a shoulder week, also changes the nightly rate, and the two effects stack: the passholder rate on a cheap night is lower again. The [cheapest time to visit](/guides/cheapest-time-to-visit-universal-orlando) guide shows the month-by-month picture from tracked rates.",
+          "The discount matters most in two situations. One is a repeat visitor who already holds a pass and simply needs to know which nights to book. The other is a family doing the sum of whether buying one pass pays for itself through the room discount alone, which is covered in [Is an annual pass worth it for the hotel discount?](/guides/universal-annual-pass-hotel-discount-math)",
         ],
       },
     ],
@@ -195,7 +195,7 @@ export const HOTEL_GUIDES: GuideContent[] = [
       {
         question: "Is the passholder hotel discount always available?",
         answer:
-          "No. It is published per hotel, per night and per room type, and it is commonly missing on high-demand dates.",
+          "It is published per hotel, per night and per room type, and Universal can withdraw it for any date. The table on this page shows how many tracked nights currently have one at each hotel.",
       },
       {
         question: "Does every guest in the room need an annual pass?",
@@ -215,7 +215,7 @@ export const HOTEL_GUIDES: GuideContent[] = [
     updated: "2026-11-09",
     takeaways: [
       "The break-even is simple: the price of one pass against the room savings across your nights, plus the admission that person no longer needs to buy.",
-      "Advertised \"up to\" discounts describe the best night at the best hotel. The typical tracked saving is the number to use.",
+      "Advertised \"up to\" discounts describe the best night at the best hotel. The median tracked saving for your hotel is the number to plan with.",
       "The lowest pass tiers have blockout dates, and the cheapest hotel nights often fall outside them, which helps.",
       "No pass tier includes Epic Universe in 2026, so a trip centred on Epic gets less from a pass.",
     ],
@@ -241,15 +241,15 @@ export const HOTEL_GUIDES: GuideContent[] = [
         ],
         after: [
           "Pass pays for itself when (room saving per night times nights) plus (avoided ticket) is greater than (pass price). Remember that the room saving is before tax, so the real saving is about 12.5% larger than the sum of the nightly differences.",
-          "A quick sanity check: for a short stay at a Value hotel, the nightly saving is small in dollars and the pass rarely pays off through the room alone. For a five-night stay at a Signature Collection hotel on dates with a real APH rate, it often does.",
+          "The dollar saving scales with the room rate and the number of nights. It is smallest for a short stay at a Value hotel and largest for a long stay at a Signature Collection hotel, so the same pass can be an easy win for one trip and a poor buy for another. The table on this page shows the current median saving per night at each hotel.",
         ],
       },
       {
         heading: "Why the advertised maximum misleads",
         paragraphs: [
           "Passholder hotel offers are advertised as savings of \"up to\" a percentage. That figure is the deepest discount on any night at any participating hotel during the offer window. It is real, and it is not what a typical night looks like.",
-          "The box on this page shows what RateCoaster's tracked rates say right now: for each hotel, on how many upcoming nights a passholder rate exists and what the median dollar saving is on those nights. The median is the honest planning number. The maximum tells you what is possible if your dates happen to land well.",
-          "Discount depth also follows demand in reverse. Rates are discounted most when a hotel expects to have rooms left over. Spring break, the weeks around Christmas and summer weekends are where passholder rates are thinnest or absent.",
+          "The box on this page shows what RateCoaster's tracked rates say right now: for each hotel, on how many upcoming nights a passholder rate is below the standard rate, the median saving on those nights, and the range that the middle half of nights fall in. The median is the planning number. Then check your own nights on the hotel's page, because the figure that matters is the saving on the room you would book on the dates you are going.",
+          "Offers are also released for set travel windows and can be changed. A saving that exists when you plan is not locked in until the room is booked, which is one more reason to book a refundable rate once the sum works.",
         ],
       },
       {

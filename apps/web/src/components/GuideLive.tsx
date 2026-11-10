@@ -30,6 +30,16 @@ function median(values: number[]): number | null {
     : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
 }
 
+/** Linear-interpolated percentile, p in [0, 1]. */
+function percentile(values: number[], p: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const position = (sorted.length - 1) * p;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  return Math.round(sorted[lower]! + (sorted[upper]! - sorted[lower]!) * (position - lower));
+}
+
 function latest(stamps: string[]): string | undefined {
   return [...stamps].sort().at(-1);
 }
@@ -171,7 +181,12 @@ async function HotelMonths({ client, properties }: { client: RateCoasterClient; 
   }).filter((row) => row.nights >= 10 && row.other !== null);
   if (summary.length < 2) return null;
 
-  const ranked = [...summary].sort((a, b) => (a.other ?? 0) - (b.other ?? 0));
+  // Only near-complete months are named as lowest or highest. The first and
+  // last months of the window are usually partial, and three weeks that happen
+  // to include or miss a holiday are not a fair picture of the month.
+  const complete = summary.filter((row) => row.nights >= 25);
+  if (complete.length < 2) return null;
+  const ranked = [...complete].sort((a, b) => (a.other ?? 0) - (b.other ?? 0));
   const cheapest = ranked[0]!;
   const dearest = ranked.at(-1)!;
 
@@ -179,18 +194,18 @@ async function HotelMonths({ client, properties }: { client: RateCoasterClient; 
     <Shell
       title="Median nightly rate by month"
       asOf={latest(rates.map((rate) => rate.observedAt))}
-      note="Standard rate, least expensive available room for two adults, per night before tax. The median is taken across every tracked hotel-night in the month."
+      note="Standard rate, least expensive available room for two adults, per night before tax. The median is taken across every tracked hotel-night in the month. The first and last months shown may cover only part of the month, and rates for months far ahead often change before they arrive."
     >
       <p>
-        On current tracked rates, the lowest month is <b>{monthLabel(cheapest.month)}</b> at a median
-        of {centsToDisplay(cheapest.other)} a night at hotels without Express, and the highest
-        is <b>{monthLabel(dearest.month)}</b> at {centsToDisplay(dearest.other)}.
+        Among the complete months currently tracked, the lowest is <b>{monthLabel(cheapest.month)}</b> at
+        a median of {centsToDisplay(cheapest.other)} a night at hotels without Express, and the
+        highest is <b>{monthLabel(dearest.month)}</b> at {centsToDisplay(dearest.other)}.
       </p>
       <Table
         label="Median tracked nightly hotel rate by month"
         head={["Month", "Hotels without Express", "Express-included hotels", "Lowest single night"]}
         rows={summary.map((row) => [
-          monthLabel(row.month),
+          row.nights >= 25 ? monthLabel(row.month) : `${monthLabel(row.month)} (part)`,
           centsToDisplay(row.other),
           centsToDisplay(row.withExpress),
           centsToDisplay(row.low),
@@ -228,6 +243,7 @@ async function PremierMath({ client, properties }: { client: RateCoasterClient; 
   const premiums: number[] = [];
   const passCosts: number[] = [];
   const wins = { 2: 0, 3: 0, 4: 0, 5: 0 };
+  const winsOneDay = { 2: 0, 3: 0, 4: 0, 5: 0 };
   let compared = 0;
   for (const [date, withExpress] of cheapestWith) {
     const without = cheapestWithout.get(date);
@@ -238,9 +254,12 @@ async function PremierMath({ client, properties }: { client: RateCoasterClient; 
     const premium = withExpress - without;
     premiums.push(premium);
     passCosts.push(dayOne);
-    // One night covers check-in day and check-out day, so two days of passes.
+    // One night covers check-in day and check-out day, so up to two days of
+    // passes. Many parties would only have bought Express for one of them, so
+    // both cases are counted.
     for (const party of [2, 3, 4, 5] as const) {
       if (premium < party * (dayOne + dayTwo)) wins[party] += 1;
+      if (premium < party * Math.min(dayOne, dayTwo)) winsOneDay[party] += 1;
     }
   }
   if (compared < 14) return null;
@@ -249,15 +268,15 @@ async function PremierMath({ client, properties }: { client: RateCoasterClient; 
 
   return (
     <Shell
-      title="How often the Express hotel wins on tracked dates"
+      title="How often the Express-included hotel costs less"
       asOf={latest(rates.map((rate) => rate.observedAt))}
       note={
         <>
           For each tracked night: the least expensive Express-included hotel minus the least
-          expensive other on-site hotel, compared with buying {product.name} for the check-in
-          day and the following day. Room rates are the standard rate for two adults before
-          tax, so a larger party may need a bigger room, and the comparison assumes you would
-          have bought Express on both days.
+          expensive other on-site hotel, compared with buying {product.name} for each person.
+          The first column assumes you would have bought it for both the check-in day and the
+          following day, the second for only the cheaper of those two days. Room rates are the
+          standard rate for two adults before tax, so a larger party may need a bigger room.
         </>
       }
     >
@@ -268,8 +287,12 @@ async function PremierMath({ client, properties }: { client: RateCoasterClient; 
       </p>
       <Table
         label="Nights on which an Express-included hotel costs less than a cheaper hotel plus purchased Express"
-        head={["Party size", "Nights where the Express hotel is cheaper"]}
-        rows={([2, 3, 4, 5] as const).map((party) => [`${party} people`, share(wins[party])])}
+        head={["Party size", "Cheaper than buying Express for both days", "Cheaper than buying Express for one day"]}
+        rows={([2, 3, 4, 5] as const).map((party) => [
+          `${party} people`,
+          share(wins[party]),
+          share(winsOneDay[party]),
+        ])}
       />
     </Shell>
   );
@@ -293,7 +316,9 @@ async function PassholderSavings({ client, properties }: { client: RateCoasterCl
       `${discounted.length} of ${own.length}`,
       discounted.length > 0 ? centsToDisplay(median(discounted.map((rate) => rate.savingsCents!))) : "—",
       medianPercent !== null ? `${medianPercent}%` : "—",
-      discounted.length > 0 ? centsToDisplay(Math.max(...discounted.map((rate) => rate.savingsCents!))) : "—",
+      discounted.length > 0
+        ? `${centsToDisplay(percentile(discounted.map((rate) => rate.savingsCents!), 0.25))} to ${centsToDisplay(percentile(discounted.map((rate) => rate.savingsCents!), 0.75))}`
+        : "—",
     ]);
   }
   if (rows.length === 0) return null;
@@ -302,11 +327,11 @@ async function PassholderSavings({ client, properties }: { client: RateCoasterCl
     <Shell
       title="What the passholder rate is saving right now"
       asOf={latest(rates.map((rate) => rate.observedAt))}
-      note="Per night before tax, for two adults. Each figure compares the least expensive passholder room with the least expensive standard room for the same night, which are not always the same room type. Pin a room type on the hotel page for an exact comparison."
+      note="Per night before tax, for two adults, across every night currently tracked. Each figure compares the least expensive passholder room with the least expensive standard rate recorded for the same night, which are not always the same room type, so check the exact saving for your room and dates on the hotel page and at checkout."
     >
       <Table
         label="Tracked Annual Passholder savings by hotel"
-        head={["Hotel", "Nights with a saving", "Median saving", "Median %", "Largest saving"]}
+        head={["Hotel", "Nights with a saving", "Median saving", "Median %", "Middle half of nights"]}
         rows={rows}
       />
     </Shell>

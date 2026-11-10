@@ -39,7 +39,7 @@ export const EXPLAINERS = {
       {
         heading: "Standard and Annual Passholder rates",
         paragraphs: [
-          "Use the rate-type control to switch between the public standard rate and the Annual Passholder (APH) rate. APH rates are offered to Universal Orlando annual passholders on selected nights and room types. They are not available every night, and the discount varies from a few dollars to a substantial share of the rate.",
+          "Use the rate-type control to switch between the public standard rate and the Annual Passholder (APH) rate. APH rates are offered to Universal Orlando annual passholders, and Universal sets them per hotel, per night and per room type. The saving shown under each price is the difference from the standard rate recorded for the same night.",
           "The overview compares the cheapest room on each plan, which may not be the same room. For an exact comparison, open the hotel, choose a room type, and then switch plans.",
         ],
       },
