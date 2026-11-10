@@ -28,7 +28,10 @@ The realistic first wins are long-tail queries — "cabana bay passholder rate",
 | Structured data | Organization + WebSite sitewide; Article + Breadcrumb on guides; Hotel + Breadcrumb on properties |
 | Social cards | Generated Open Graph image at `/opengraph-image` |
 | Noindex | Admin, account, join, auth, and affiliate redirects |
-| Guides | 9 articles |
+| Guides | 21 articles, each with a byline, published and updated dates, and a visible FAQ |
+| About and Contact | `/about` and `/contact`, in the footer and the sitemap |
+| Explainers | Written "how to read this page" sections with FAQ markup on the data pages |
+| Hotel profiles | A written profile on each hotel page |
 
 ### The one that mattered most
 
@@ -107,10 +110,12 @@ Ranked by effect, most first. None of it is technical.
 data. A hotel page with no prices is thin content, and Google is good at
 recognising that. This matters more than anything else on this list.
 
-**2. Publish more guides.** The nine articles are the only pages that can rank
+**2. Keep the guides current.** The guides are the pages that can rank
 *today*, because they don't depend on collected data. They're also what earns
-links. `apps/web/src/lib/guides.ts` — add an entry and the sitemap, metadata,
-structured data and routing all follow automatically.
+links. They live in `apps/web/src/content/guides/` — add an entry and the
+sitemap, metadata, byline, structured data and routing all follow
+automatically. Change a guide's `updated` date whenever you revise it. See
+`ADSENSE.md` for the content rules.
 
 **3. Get a few real links.** Theme-park forums, Reddit, Facebook planning
 groups. Not spam — answer a question, and link the specific calendar that

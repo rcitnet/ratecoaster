@@ -13,6 +13,7 @@ import { breadcrumbSchema, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 import { WatchButton } from "@/components/WatchButton";
 import { PageIntro } from "@/components/PageIntro";
 import hotelImages from "@/lib/hotel-images.json";
+import { HotelProfileSection, HotelSummary } from "@/components/HotelProfileSection";
 
 export const revalidate = 60;
 
@@ -213,6 +214,8 @@ export default async function PropertyPage({
         <p className="lede">Find dates worth booking, compare room types, and follow the price of your next stay.</p>
       </PageIntro>
 
+      <HotelSummary slug={slug} />
+
       <WatchButton
         propertyId={property.id}
         propertyName={property.name}
@@ -355,6 +358,12 @@ export default async function PropertyPage({
         </table>
       </div>
 
+      <HotelProfileSection
+        slug={slug}
+        name={property.name}
+        roomCount={property.roomCount}
+        includesExpressPass={property.includesExpressPass}
+      />
     </main>
   );
 }

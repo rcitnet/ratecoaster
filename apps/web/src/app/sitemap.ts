@@ -32,12 +32,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/waits`, changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE_URL}/crowd-calendar`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/guides`, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/contact`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${SITE_URL}/terms`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   const guideRoutes: MetadataRoute.Sitemap = GUIDES.map((guide) => ({
     url: `${SITE_URL}/guides/${guide.slug}`,
+    // The one sitemap hint Google does use, provided it is truthful: this is
+    // the date the guide's text was last revised, not the date of the build.
+    lastModified: guide.updated,
     changeFrequency: "monthly",
     priority: 0.6,
   }));

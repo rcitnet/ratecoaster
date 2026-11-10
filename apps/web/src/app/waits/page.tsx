@@ -4,11 +4,12 @@ import { WaitsExplorer } from "@/components/WaitsExplorer";
 import { pageMetadata } from "@/lib/seo";
 import { rideImage } from "@/lib/ride-images";
 import { PageIntro } from "@/components/PageIntro";
+import { PageExplainer } from "@/components/PageExplainer";
 
 export const metadata = pageMetadata({
   title: "Live Universal attraction wait times",
   description:
-    "Current wait times for rides and attractions at Universal Studios Florida, Islands of Adventure, Epic Universe, Volcano Bay and Universal Studios Hollywood, updated every few minutes.",
+    "Current wait times for rides and attractions at Universal Studios Florida, Islands of Adventure, Epic Universe and Volcano Bay, updated every five minutes and compared with what is typical for the hour.",
   path: "/waits",
 });
 
@@ -53,6 +54,13 @@ export default async function WaitsPage({
         placement="waits-after-boards"
         slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_WAITS}
       />
+
+      <p className="image-credit">
+        Attraction imagery &copy; Universal, shown to identify each attraction. Wait times from
+        Queue-Times.com and ThemeParks.wiki. RateCoaster is not affiliated with Universal.
+      </p>
+
+      <PageExplainer page="waits" />
     </main>
   );
 }

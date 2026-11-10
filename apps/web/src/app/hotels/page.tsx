@@ -14,6 +14,7 @@ import { PageIntro } from "@/components/PageIntro";
 import { HotelPhoto } from "@/components/HotelPhoto";
 
 import { pageMetadata } from "@/lib/seo";
+import { PageExplainer } from "@/components/PageExplainer";
 
 export const metadata = pageMetadata({
   title: "Universal hotel rates — a full year of prices",
@@ -280,6 +281,8 @@ export default async function HotelsPage({
           <CompareButton linkKey="hotels-orlando" />
         </div>
       ) : null}
+
+      <PageExplainer page="hotels" />
     </main>
   );
 }

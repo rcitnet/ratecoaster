@@ -1,4 +1,4 @@
-import { travelpayoutsLoaderSource } from "@/lib/travelpayouts";
+import { travelpayoutsDriveEnabled, travelpayoutsLoaderSource } from "@/lib/travelpayouts";
 
 /**
  * Travelpayouts asks for its bootstrap at the start of <head>. This is a plain
@@ -11,6 +11,9 @@ import { travelpayoutsLoaderSource } from "@/lib/travelpayouts";
  * they can affect the actual production environment and Travelpayouts CMP mode.
  */
 export function TravelpayoutsDrive() {
+  // Off by default; see travelpayoutsDriveEnabled() for why.
+  if (!travelpayoutsDriveEnabled()) return null;
+
   return (
     <script
       id="ratecoaster-travelpayouts-drive"

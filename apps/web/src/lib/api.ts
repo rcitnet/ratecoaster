@@ -151,9 +151,16 @@ export const TIER_COLORS: Record<string, string> = {
   partner: "linear-gradient(135deg, #8b5cf6, #3355ee)",
 };
 
+/*
+ * Universal retired the "Premier" and "Preferred" names when Epic Universe
+ * opened and folded both into the Signature Collection. The stored tier still
+ * separates them, because it is what distinguishes the three hotels that
+ * include Express Unlimited; the label follows Universal's current wording and
+ * the Express badge carries the difference.
+ */
 export const TIER_LABELS: Record<string, string> = {
-  premier: "Premier",
-  preferred: "Preferred",
+  premier: "Signature Collection",
+  preferred: "Signature Collection",
   "universal-classic": "Classic",
   "prime-value": "Prime Value",
   value: "Value",

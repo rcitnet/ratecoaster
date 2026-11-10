@@ -78,9 +78,9 @@ export default function PrivacyPage() {
         own privacy policy applies after you leave RateCoaster.
       </p>
       <p>
-        RateCoaster uses Travelpayouts Drive on public content pages. Drive may analyze page content
+        RateCoaster may use Travelpayouts Drive on public content pages. When it is enabled, Drive may analyze page content
         and aggregated link interactions, convert eligible travel links into affiliate links, and
-        add or optimize travel-booking tools. It is not loaded on account, administration,
+        add or optimize travel-booking tools. It is never loaded on account, administration,
         authentication, signup, or legal pages. Travelpayouts states that its Content Analytics does
         not collect IP addresses or user-identifiable information. See the{" "}
         <a

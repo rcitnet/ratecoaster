@@ -7,6 +7,7 @@ import { CompareButton } from "@/components/CompareButton";
 import { PageIntro } from "@/components/PageIntro";
 
 import { pageMetadata } from "@/lib/seo";
+import { PageExplainer } from "@/components/PageExplainer";
 
 export const metadata = pageMetadata({
   title: "Universal ticket prices by date",
@@ -182,6 +183,8 @@ export default async function TicketsPage({
         placement="tickets-after-calendar"
         slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_TICKETS}
       />
+
+      <PageExplainer page="tickets" />
     </main>
   );
 }

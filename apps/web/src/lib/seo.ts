@@ -41,6 +41,8 @@ export interface PageSeoInput {
   /** Overrides the shared social image. */
   image?: string;
   publishedTime?: string;
+  /** With publishedTime, marks the page as an article for social previews. */
+  modifiedTime?: string;
 }
 
 /**
@@ -76,16 +78,27 @@ export function pageMetadata(input: PageSeoInput): Metadata {
             "max-video-preview": -1,
           },
         },
-    openGraph: {
-      type: "website",
-      siteName: SITE_NAME,
-      title: input.title,
-      description: input.description,
-      url,
-      images: [image],
-      locale: "en_US",
-      ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
-    },
+    openGraph: input.publishedTime
+      ? {
+          type: "article",
+          siteName: SITE_NAME,
+          title: input.title,
+          description: input.description,
+          url,
+          images: [image],
+          locale: "en_US",
+          publishedTime: input.publishedTime,
+          ...(input.modifiedTime ? { modifiedTime: input.modifiedTime } : {}),
+        }
+      : {
+          type: "website",
+          siteName: SITE_NAME,
+          title: input.title,
+          description: input.description,
+          url,
+          images: [image],
+          locale: "en_US",
+        },
     twitter: {
       card: "summary_large_image",
       title: input.title,
@@ -119,6 +132,13 @@ export function organizationSchema() {
     url: SITE_URL,
     logo: absoluteUrl("/brand/ratecoaster-logo-5x1-150kb.png"),
     description: DEFAULT_DESCRIPTION,
+    email: "thrills@ratecoaster.net",
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: "thrills@ratecoaster.net",
+      url: absoluteUrl("/contact"),
+    },
   };
 }
 
@@ -151,11 +171,24 @@ export function breadcrumbSchema(trail: Array<{ name: string; path: string }>) {
   };
 }
 
+/**
+ * Article markup, with the three things a reviewer or crawler looks for first:
+ * who wrote it, when, and when it was last revised.
+ *
+ * The author is the publishing organization, pointing at the About page. That
+ * is a true statement about how these guides are produced; inventing a named
+ * individual to fill the field would not be.
+ */
 export function articleSchema(input: {
   title: string;
   description: string;
   path: string;
   section?: string;
+  published?: string;
+  updated?: string;
+  wordCount?: number;
+  authorName?: string;
+  authorPath?: string;
 }) {
   return {
     "@context": "https://schema.org",
@@ -163,7 +196,17 @@ export function articleSchema(input: {
     headline: input.title,
     description: input.description,
     url: absoluteUrl(input.path),
+    mainEntityOfPage: absoluteUrl(input.path),
+    image: absoluteUrl("/opengraph-image"),
     ...(input.section ? { articleSection: input.section } : {}),
+    ...(input.published ? { datePublished: input.published } : {}),
+    ...(input.updated ? { dateModified: input.updated } : {}),
+    ...(input.wordCount ? { wordCount: input.wordCount } : {}),
+    author: {
+      "@type": "Organization",
+      name: input.authorName ?? SITE_NAME,
+      url: absoluteUrl(input.authorPath ?? "/about"),
+    },
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,

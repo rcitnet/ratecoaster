@@ -212,6 +212,11 @@ export default async function RideWaitPage({ params }: { params: Promise<{ slug:
           </section>
         ) : null}
       </div>
+
+      <p className="image-credit">
+        Attraction imagery &copy; Universal, shown to identify the attraction. RateCoaster is not
+        affiliated with Universal.
+      </p>
     </main>
   );
 }

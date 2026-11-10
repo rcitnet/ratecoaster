@@ -6,6 +6,7 @@ import { test } from "node:test";
 import {
   shouldLoadTravelpayouts,
   TRAVELPAYOUTS_DRIVE_URL,
+  travelpayoutsDriveEnabled,
   travelpayoutsLoaderSource,
 } from "./travelpayouts.js";
 
@@ -21,6 +22,13 @@ function sourceFiles(directory: string): string[] {
         : [];
   });
 }
+
+test("Travelpayouts Drive is off unless explicitly enabled", () => {
+  assert.equal(travelpayoutsDriveEnabled({}), false);
+  assert.equal(travelpayoutsDriveEnabled({ TRAVELPAYOUTS_DRIVE_ENABLED: "0" }), false);
+  assert.equal(travelpayoutsDriveEnabled({ TRAVELPAYOUTS_DRIVE_ENABLED: "true" }), false);
+  assert.equal(travelpayoutsDriveEnabled({ TRAVELPAYOUTS_DRIVE_ENABLED: "1" }), true);
+});
 
 test("Travelpayouts Drive loads on public planning and price pages", () => {
   for (const path of ["/", "/guides", "/guides/hotel-rates", "/hotels", "/plan", "/waits"]) {

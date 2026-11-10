@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { dayOfWeekLabel, getClient, PARK_COLORS, safe } from "@/lib/api";
 import { pageMetadata } from "@/lib/seo";
 import { PageIntro } from "@/components/PageIntro";
+import { PageExplainer } from "@/components/PageExplainer";
 
 export const metadata: Metadata = pageMetadata({
   title: "Universal Orlando crowd calendar",
@@ -233,6 +234,8 @@ export default async function CrowdCalendarPage({
           {isHistory ? "RateCoaster has no stored ticket, Express, or hotel demand signals for these dates. You can continue browsing earlier or later months." : "It will appear as ticket, Express, and hotel demand data become available for this park."}
         </div>
       )}
+
+      <PageExplainer page="crowds" />
     </main>
   );
 }

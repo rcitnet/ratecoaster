@@ -4,6 +4,7 @@ import { AdSlot } from "@/components/AdSlot";
 import { WatchDateButton } from "@/components/WatchDateButton";
 import { PageIntro } from "@/components/PageIntro";
 import { pageMetadata } from "@/lib/seo";
+import { PageExplainer } from "@/components/PageExplainer";
 
 export const metadata = pageMetadata({
   title: "Universal Express Pass prices by date",
@@ -212,9 +213,10 @@ export default async function ExpressPage({
           </div>
 
           <p className="tiny muted" style={{ marginTop: 22 }}>
-            Theme park admission is separate. Premier hotels include Express Unlimited for eligible
-            participating attractions at Universal Studios Florida and Islands of Adventure; check
-            the hotel&apos;s current benefit terms before comparing that perk with a purchased pass.
+            Theme park admission is separate. Loews Portofino Bay, Hard Rock Hotel and Loews Royal
+            Pacific include Express Unlimited for eligible participating attractions at Universal
+            Studios Florida and Islands of Adventure; check the hotel&apos;s current benefit terms
+            before comparing that perk with a purchased pass.
           </p>
         </>
       ) : null}
@@ -223,6 +225,8 @@ export default async function ExpressPage({
         placement="express-after-calendar"
         slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_EXPRESS}
       />
+
+      <PageExplainer page="express" />
     </main>
   );
 }

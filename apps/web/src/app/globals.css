@@ -1376,3 +1376,69 @@ body:has(.home-refresh), body:has(.page-refresh) { background: #fcfaf7; }
 @media (prefers-reduced-motion: reduce) {
   .page-refresh *, .page-refresh *::before { transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ------------------------------------------------------------------ *
+ * Editorial content: guide articles, page explainers, hotel profiles
+ * ------------------------------------------------------------------ */
+.guide-byline { margin: 4px 0 20px; font-size: 14px; color: var(--ink-mute); }
+.guide-byline a { color: #5a3bc4; font-weight: 700; }
+.guide-takeaways { background: #efebfa; border: 1px solid #e0d7f5; border-radius: 18px; padding: 22px 28px; margin: 0 0 20px; }
+.guide-takeaways ul { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 10px; }
+.guide-takeaways li { line-height: 1.6; }
+.guide-article article { display: grid; gap: 22px; }
+.guide-article .guide-reading h3 { margin-top: 22px; font-size: 18px; }
+.guide-reading a, .guide-live a, .page-explainer a, .hotel-profile a { color: #5a3bc4; text-decoration: underline; text-underline-offset: 3px; }
+.guide-table { margin: 18px 0; }
+.guide-table table { font-size: 14px; }
+.guide-table caption, .guide-live caption { caption-side: top; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--ink-mute); padding: 0 0 10px; }
+.guide-table tbody th { text-align: left; font-weight: 600; padding: 13px 14px; border-bottom: 1px solid var(--line-soft); background: transparent; color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 14px; }
+.guide-table td { vertical-align: top; }
+.guide-live { background: white; border: 1px solid #cfe9e4; border-left: 5px solid var(--teal); border-radius: 18px; padding: 24px 28px; }
+.guide-live h2 { margin: 8px 0 12px; font-size: 22px; }
+.guide-live h3 { margin: 20px 0 10px; font-size: 16px; }
+.guide-live p { line-height: 1.7; }
+.guide-live .table-wrap { margin-top: 12px; }
+.guide-live-note { margin: 14px 0 0; line-height: 1.6; }
+.guide-faq-item + .guide-faq-item { margin-top: 6px; }
+.guide-reviewed { margin: 22px 0 0; line-height: 1.7; }
+.guide-author { margin-top: 28px; padding: 22px 26px; border: 1px solid var(--line); border-radius: 18px; background: white; }
+.guide-author p { margin: 8px 0 0; line-height: 1.7; }
+.guide-author a { color: #5a3bc4; }
+.guide-related { margin-top: 36px; }
+.guide-related h2 { font-size: 24px; margin-bottom: 16px; }
+.guide-related .card h3 { font-size: 18px; margin: 8px 0; }
+.guide-library-about { max-width: 78ch; color: var(--ink-soft); line-height: 1.7; margin: 8px 0 26px; }
+.guide-library-about a { color: #5a3bc4; font-weight: 700; }
+.guide-library section + section { margin-top: 18px; }
+.contact-topics { margin: 16px 0 8px; }
+.contact-topics .card h3 { margin: 0 0 8px; font-size: 18px; }
+.contact-topics .card p { margin: 0 0 12px; line-height: 1.65; }
+
+.page-explainer { margin-top: 48px; padding: 30px 34px; background: white; border: 1px solid var(--line); border-radius: 22px; }
+.page-explainer > h2 { font-size: 26px; margin: 6px 0 4px; }
+.page-explainer h3 { font-size: 18px; margin: 26px 0 8px; }
+.page-explainer p, .page-explainer li { line-height: 1.75; max-width: 80ch; }
+.page-explainer ul { padding-left: 22px; }
+.page-explainer-faq { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); }
+.page-explainer-faq h3 { margin-top: 18px; }
+.page-explainer-more { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 14px; }
+.page-explainer-more a { font-weight: 700; text-decoration: none; }
+
+.hotel-profile { margin-top: 44px; padding: 30px 34px; background: white; border: 1px solid var(--line); border-radius: 22px; }
+.hotel-profile > h2 { font-size: 26px; margin: 6px 0 10px; }
+.hotel-profile h3 { font-size: 18px; margin: 24px 0 8px; }
+.hotel-profile p, .hotel-profile li { line-height: 1.75; max-width: 80ch; }
+.hotel-profile ul { padding-left: 22px; }
+.hotel-profile-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 18px 0 6px; padding: 0; list-style: none; }
+.hotel-profile-facts li { background: #f7f5fc; border-radius: 14px; padding: 14px 16px; line-height: 1.45; }
+.hotel-profile-facts span { display: block; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 4px; }
+.hotel-summary { max-width: 80ch; margin: 18px 0 6px; line-height: 1.75; color: var(--ink-soft); }
+.image-credit { margin: 14px 0 0; font-size: 12px; color: var(--ink-mute); }
+
+@media (max-width: 700px) {
+  .guide-takeaways { padding: 18px 20px; }
+  .guide-live { padding: 20px 18px; }
+  .page-explainer, .hotel-profile { padding: 22px 20px; }
+}
+.guide-table tbody th { white-space: normal; position: static; }
+.guide-table thead th { white-space: normal; }

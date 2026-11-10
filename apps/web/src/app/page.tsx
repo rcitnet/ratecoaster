@@ -13,11 +13,22 @@ import { AdSlot } from "@/components/AdSlot";
 import { HomeHero } from "@/components/HomeHero";
 import { HomeDeals, HomeParkCards } from "@/components/HomeCollections";
 import { pageMetadata } from "@/lib/seo";
+import { GUIDE_CATEGORIES, GUIDES, guideBySlug } from "@/lib/guides";
+
+/** Six guides for the home page: one per decision a first-time planner has to make. */
+const HOME_GUIDE_SLUGS = [
+  "universal-orlando-hotels-compared",
+  "cheapest-time-to-visit-universal-orlando",
+  "universal-express-pass-worth-it",
+  "understanding-universal-ticket-pricing",
+  "epic-universe-first-visit",
+  "universal-trip-budget-checklist",
+];
 
 export const metadata = pageMetadata({
   title: "Universal hotel deals — passholder and public rates",
   description:
-    "The cheapest upcoming nights at Universal Orlando and Hollywood hotels, ranked against each hotel's own price history rather than raw nightly cost. Free, updated daily.",
+    "The cheapest upcoming nights at Universal Orlando hotels, ranked against each hotel's own price history rather than raw nightly cost. Free, updated daily.",
   path: "/",
 });
 
@@ -156,6 +167,46 @@ export default async function DealsPage() {
           <a href="/tickets"><span className="refresh-eyebrow">Choose your park days</span><h3>See the ticket price calendar</h3><p>Compare adult, child, and Park-to-Park prices across the year.</p><span className="refresh-text-link">Explore tickets <span aria-hidden="true">→</span></span></a>
           <a href="/express-pass"><span className="refresh-eyebrow">Spend where it matters</span><h3>Is Express worth it for your trip?</h3><p>Compare Express prices and hotels that include Express Unlimited.</p><span className="refresh-text-link">Compare Express <span aria-hidden="true">→</span></span></a>
           <a href="/guides"><span className="refresh-eyebrow">A head start on the fun</span><h3>Get to know your next adventure</h3><p>Practical guides to Universal hotels, parks, and planning.</p><span className="refresh-text-link">Read the guides <span aria-hidden="true">→</span></span></a>
+        </div>
+      </section>
+
+      <section className="refresh-section">
+        <div className="page-explainer home-about" style={{ marginTop: 0 }}>
+          <p className="refresh-eyebrow">What RateCoaster is</p>
+          <h2>A year of Universal prices, side by side.</h2>
+          <p>
+            Universal prices hotel rooms, park tickets and Express Pass by date, and the same trip
+            can cost very different amounts a fortnight apart. The official booking pages show one
+            set of dates at a time. RateCoaster records what Universal publishes for every date it
+            sells, keeps the history of each price, and lays the dates out together so the cheaper
+            weeks are easy to see.
+          </p>
+          <p>
+            Hotel rates at {properties.length > 0 ? `all ${properties.length}` : "every"} on-site
+            hotels are re-checked four times a day for the next 365 nights, at standard and Annual
+            Passholder prices. Ticket and Express Pass prices are tracked by date, ride wait times
+            are collected every five minutes, and a crowd calendar reads Universal&apos;s own
+            pricing as a signal of how busy each day is expected to be. The site is free,
+            independent and not affiliated with Universal.{" "}
+            <a href="/about"><b>About RateCoaster</b></a> ·{" "}
+            <a href="/guides/how-ratecoaster-compares-prices"><b>How the prices are collected</b></a>
+          </p>
+        </div>
+      </section>
+
+      <section className="refresh-section">
+        <div className="refresh-section-head">
+          <div><div className="refresh-eyebrow">From the planning library</div><h2>Guides worth reading first.</h2></div>
+          <a href="/guides" className="btn btn-ghost btn-sm">All {GUIDES.length} guides <span aria-hidden="true">→</span></a>
+        </div>
+        <div className="grid grid-3">
+          {HOME_GUIDE_SLUGS.map((slug) => guideBySlug(slug)).filter((guide) => guide !== undefined).map((guide) => (
+            <a key={guide.slug} href={`/guides/${guide.slug}`} className="card card-hover">
+              <p className="refresh-eyebrow">{GUIDE_CATEGORIES[guide.category]} · {guide.readTime}</p>
+              <h3 style={{ fontSize: 19, margin: "8px 0" }}>{guide.title}</h3>
+              <p className="muted tiny">{guide.summary}</p>
+            </a>
+          ))}
         </div>
       </section>
 

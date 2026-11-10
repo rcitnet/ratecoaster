@@ -12,6 +12,7 @@ import { formatLongDate, getClient, relativeTime, TIER_LABELS } from "@/lib/api"
 import { addIsoDays } from "@/lib/trip-form";
 
 import { pageMetadata } from "@/lib/seo";
+import { PageExplainer } from "@/components/PageExplainer";
 
 export const metadata = pageMetadata({
   title: "Price your Universal trip",
@@ -305,6 +306,8 @@ export default async function TripPlannerPage({
           />
         </section>
       ) : null}
+
+      <PageExplainer page="plan" />
     </main>
   );
 }

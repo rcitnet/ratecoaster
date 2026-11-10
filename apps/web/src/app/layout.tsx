@@ -8,7 +8,6 @@ import { AdSenseScript } from "@/components/AdSenseScript";
 import { Analytics } from "@/components/Analytics";
 import { TravelpayoutsDrive } from "@/components/TravelpayoutsDrive";
 import { analyticsConfig } from "@/lib/analytics";
-import { CONTACT_MAILTO } from "@/lib/contact";
 import {
   DEFAULT_DESCRIPTION,
   jsonLd,
@@ -212,15 +211,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </p>
               </div>
               <div>
-                <strong style={{ color: "#fff" }}>Account &amp; legal</strong>
+                <strong style={{ color: "#fff" }}>About &amp; legal</strong>
                 <p style={{ margin: "8px 0 0", lineHeight: 2 }}>
+                  <a href="/about">About RateCoaster</a>
+                  <br />
+                  <a href="/contact">Contact</a>
+                  <br />
+                  <a href="/guides/how-ratecoaster-compares-prices">How prices are collected</a>
+                  <br />
                   <a href="/join">Create a free account</a>
                   <br />
                   <a href="/privacy">Privacy policy</a>
                   <br />
                   <a href="/terms">Terms of service</a>
-                  <br />
-                  <a href={CONTACT_MAILTO}>Contact</a>
                 </p>
               </div>
             </div>
@@ -242,7 +245,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </p>
               <p style={{ margin: "0 0 6px" }}>
                 Not affiliated with, endorsed by or sponsored by Universal Destinations &amp;
-                Experiences, NBCUniversal, or Loews Hotels.
+                Experiences, NBCUniversal, or Loews Hotels. Hotel photography: Loews Hotels.
+                Attraction imagery &copy; Universal, shown to identify each attraction.
               </p>
               <p style={{ margin: "0 0 6px" }}>
                 RateCoaster is free to use and may be supported by clearly labeled advertising.
