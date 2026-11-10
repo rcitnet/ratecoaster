@@ -39,7 +39,7 @@ export interface PageSeoInput {
   /** Set for pages that must never appear in search results. */
   noindex?: boolean;
   /** Overrides the shared social image. */
-  image?: string;
+  image?: string | { url: string; width: number; height: number; alt: string };
   publishedTime?: string;
   /** With publishedTime, marks the page as an article for social previews. */
   modifiedTime?: string;

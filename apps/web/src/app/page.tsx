@@ -26,10 +26,16 @@ const HOME_GUIDE_SLUGS = [
 ];
 
 export const metadata = pageMetadata({
-  title: "Universal hotel deals — passholder and public rates",
+  title: "Universal Orlando hotel deals",
   description:
-    "The cheapest upcoming nights at Universal Orlando hotels, ranked against each hotel's own price history rather than raw nightly cost. Free, updated daily.",
+    "Find lower-priced nights at Universal Orlando hotels. Compare public and passholder rates for free, with daily updates.",
   path: "/",
+  image: {
+    url: "/brand/ratecoaster-hotel-deals-v1.jpg",
+    width: 1200,
+    height: 630,
+    alt: "RateCoaster: Better hotel rates at Universal Orlando. Public and passholder rates. Pictured: Loews Sapphire Falls Resort.",
+  },
 });
 
 export const revalidate = 60;
