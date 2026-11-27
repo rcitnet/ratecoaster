@@ -30,6 +30,41 @@ const DESTS = [
   { slug: "universal-kids-frisco", label: "Frisco", dot: "#ffc53d" },
 ] as const;
 
+const DATE_WINDOWS = [
+  { id: "1", startOffset: 0, endOffset: 89, tag: "Next 90 days" },
+  { id: "2", startOffset: 90, endOffset: 179, tag: "3–6 months out" },
+  { id: "3", startOffset: 180, endOffset: 269, tag: "6–9 months out" },
+  { id: "4", startOffset: 270, endOffset: 364, tag: "9–12 months out" },
+] as const;
+
+function todayInDestination(destination: string): string {
+  const timeZone = destination === "universal-kids-frisco" ? "America/Chicago" : "America/New_York";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const next = new Date(Date.UTC(y!, m! - 1, d! + days));
+  return next.toISOString().slice(0, 10);
+}
+
+function windowRangeLabel(from: string, to: string): string {
+  const fmt = (iso: string) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  };
+  return `${fmt(from)} – ${fmt(to)}`;
+}
+
 export default async function HotelsPage({
   searchParams,
 }: {
@@ -38,6 +73,7 @@ export default async function HotelsPage({
     rateCode?: string;
     adults?: string;
     available?: string;
+    window?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -52,6 +88,14 @@ export default async function HotelsPage({
     ? Math.min(8, Math.max(1, Math.trunc(adultsRaw)))
     : 2;
   const availableOnly = params.available === "1";
+
+  const today = todayInDestination(destination);
+  const windows = DATE_WINDOWS.map((w) => {
+    const from = addDaysIso(today, w.startOffset);
+    const to = addDaysIso(today, w.endOffset);
+    return { ...w, from, to, rangeLabel: windowRangeLabel(from, to) };
+  });
+  const activeWindow = windows.find((w) => w.id === params.window) ?? windows[0]!;
 
   const client = getPublicClient(60);
   const filterOptions = await safe(client.rateFilterOptions({ destination }), {
@@ -75,10 +119,21 @@ export default async function HotelsPage({
   }));
   const [properties, rates] = await Promise.all([
     safe(client.listProperties(destination), []),
-    // One row per hotel/date across the complete public year.
-    safe(client.listRates({ destination, rateCode, adults, limit: 6000 }), {
-      items: [], attribution: [], gate: EMPTY_GATE,
-    } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }),
+    // Bounded to a 90-day window so the HTML table stays snappy and the API
+    // payload stays well under Next.js's 2 MB per-fetch Data Cache cap.
+    safe(
+      client.listRates({
+        destination,
+        rateCode,
+        adults,
+        from: activeWindow.from,
+        to: activeWindow.to,
+        limit: 1500,
+      }),
+      {
+        items: [], attribution: [], gate: EMPTY_GATE,
+      } as Awaited<ReturnType<typeof client.listRates>> & { gate: typeof EMPTY_GATE }
+    ),
   ]);
 
   const dates = [...new Set(rates.items.map((r) => r.stayDate))].sort();
@@ -91,7 +146,21 @@ export default async function HotelsPage({
     ? properties.filter((property) => byProperty.has(property.slug))
     : properties;
   const lastObserved = rates.items.map((r) => r.observedAt).sort().at(-1);
-  const availabilityParam = availableOnly ? "&available=1" : "";
+  const buildHref = (overrides: {
+    destination?: string;
+    rateCode?: string;
+    available?: boolean;
+    window?: string;
+  }) => {
+    const q = new URLSearchParams();
+    q.set("destination", overrides.destination ?? destination);
+    q.set("rateCode", overrides.rateCode ?? rateCode);
+    q.set("adults", String(adults));
+    const win = overrides.window ?? activeWindow.id;
+    if (win !== "1") q.set("window", win);
+    if (overrides.available ?? availableOnly) q.set("available", "1");
+    return `/hotels?${q.toString()}`;
+  };
 
   return (
     <main className="section page-refresh">
@@ -109,7 +178,7 @@ export default async function HotelsPage({
 
       <div className="chips">
         {DESTS.map((d) => (
-          <a key={d.slug} href={`/hotels?destination=${d.slug}&rateCode=${rateCode}&adults=${adults}${availabilityParam}`}
+          <a key={d.slug} rel="nofollow" href={buildHref({ destination: d.slug })}
              className={`chip ${destination === d.slug ? "on" : ""}`}>
             <span className="chip-dot" style={{ background: d.dot }} />
             {d.label}
@@ -119,18 +188,33 @@ export default async function HotelsPage({
 
       <div className="chips" style={{ marginTop: 0 }}>
         {rateChoices.length > 1 ? rateChoices.map((c) => (
-          <a key={c.code} href={`/hotels?destination=${destination}&rateCode=${c.code}&adults=${adults}${availabilityParam}`}
+          <a key={c.code} rel="nofollow" href={buildHref({ rateCode: c.code })}
              className={`chip ${rateCode === c.code ? "on" : ""}`}>
             {c.label}
           </a>
         )) : null}
         <a
-          href={`/hotels?destination=${destination}&rateCode=${rateCode}&adults=${adults}${availableOnly ? "" : "&available=1"}`}
+          rel="nofollow"
+          href={buildHref({ available: !availableOnly })}
           className={`chip ${availableOnly ? "on" : ""}`}
           aria-pressed={availableOnly}
         >
           Available only
         </a>
+      </div>
+
+      <div className="chips" style={{ marginTop: 0 }} aria-label="90-day date window">
+        {windows.map((w) => (
+          <a
+            key={w.id}
+            rel="nofollow"
+            href={buildHref({ window: w.id })}
+            className={`chip ${activeWindow.id === w.id ? "on" : ""}`}
+            aria-pressed={activeWindow.id === w.id}
+          >
+            {w.rangeLabel}
+          </a>
+        ))}
       </div>
 
       {visibleProperties.length > 0 ? (
@@ -158,12 +242,25 @@ export default async function HotelsPage({
         </section>
       ) : null}
 
-      <div className="refresh-section-head" id="hotel-calendar"><div><p className="refresh-eyebrow">The full picture</p><h2>Compare every night.</h2></div><p>Lowest tracked rates are highlighted in green.</p></div>
+      <div className="refresh-section-head" id="hotel-calendar">
+        <div>
+          <p className="refresh-eyebrow">{activeWindow.tag} · {activeWindow.rangeLabel}</p>
+          <h2>Compare every night.</h2>
+        </div>
+        <p>Lowest tracked rates in this 90-day window are highlighted in green.</p>
+      </div>
       {rates.items.length === 0 ? (
         <div className="notice">
-          <b>Rate tracking for these {properties.length} hotels isn&apos;t live yet.</b> We&apos;re
-          working on it. In the meantime, <a href="/waits"><b>live ride wait times</b></a> are
-          available for every park.
+          <b>No {RATE_CODE_LABELS[rateCode]} rates published for {activeWindow.rangeLabel} yet.</b>{" "}
+          {rateCode !== "STANDARD" ? (
+            <>
+              Universal typically releases passholder inventory closer to travel dates. Try{" "}
+              <a rel="nofollow" href={buildHref({ rateCode: "STANDARD" })}><b>Standard rates</b></a>{" "}
+              or switch to an earlier 90-day window above.
+            </>
+          ) : (
+            <>Try another 90-day window above, or check <a href="/waits"><b>live ride wait times</b></a>.</>
+          )}
         </div>
       ) : (
         <div>
