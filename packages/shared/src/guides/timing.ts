@@ -311,4 +311,107 @@ export const TIMING_GUIDES: GuideContent[] = [
     ],
     related: ["cheapest-time-to-visit-universal-orlando", "reading-wait-times-like-a-local", "how-far-ahead-to-book-universal"],
   },
+  {
+    slug: "universal-orlando-price-report-winter-2026-2027",
+    title: "Universal Orlando price report: winter 2026–2027 outlook",
+    summary:
+      "What RateCoaster's tracked hotel, ticket, and Express Pass observations show for December 2026 through March 2027 — where prices drop after New Year, how Volcano Bay's winter closure shifts hotel value, and when passholder rooms open up.",
+    category: "timing",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    takeaways: [
+      "The sharpest drop on the entire Universal Orlando calendar happens in the second week of January once holiday school breaks end.",
+      "Volcano Bay is closed for refurbishment through on or before March 24, 2027, reducing the location advantage of Cabana Bay and Aventura during winter trips.",
+      "Passholder (APH) discounts typically appear in waves 60 to 120 days ahead — late-January and February nights are the strongest winter window to watch right now.",
+      "Comparing the whole-trip total matters most in winter: cool mid-January weekdays pair lower hotel rates with lighter crowds and lower Express Pass pricing.",
+    ],
+    live: "hotel-months",
+    sections: [
+      {
+        heading: "What the tracked winter calendar shows right now",
+        paragraphs: [
+          "Every Universal Orlando planning season has a few inflection points where hotel rooms, date-based park tickets, and Express Pass all step down together. Winter 2026–2027 has an unusually steep cliff between the Christmas–New Year peak and mid-January, followed by a steady climb back up once Presidents' Day weekend and early spring breaks arrive in late February and March.",
+          "The live table below is computed directly from RateCoaster's current tracked hotel rates across all eleven Universal Orlando on-site resorts. Because it recalculates from the database on every update cycle, you can compare December, January, February, and March medians side by side against the rest of the year rather than relying on outdated rules of thumb.",
+        ],
+      },
+      {
+        heading: "Three distinct pricing tiers inside winter",
+        paragraphs: [
+          "Treating 'winter' as a single season hides the biggest savings on the calendar. Tracked observations split the four-month stretch from December through March into three very different price regimes:",
+        ],
+        table: {
+          caption: "Winter 2026–2027 Universal Orlando pricing windows",
+          head: ["Window", "Typical hotel & ticket posture", "Planning strategy"],
+          rows: [
+            [
+              "Early December (post-Thanksgiving to mid-Dec)",
+              "Moderate weekdays, higher Fri–Sat nights",
+              "Strong holiday atmosphere without Christmas-week pricing; aim for Sun–Thu stays.",
+            ],
+            [
+              "Late December to Jan 3",
+              "Highest peak of the year across rooms, tickets, and Express",
+              "If dates are fixed, compare Signature Collection Express-included hotels against Value room + standalone Express.",
+            ],
+            [
+              "Second week of January to mid-February",
+              "One of the cheapest windows of the entire year",
+              "Best overall value for rides, weather, and APH availability; watch for MLK weekend spikes.",
+            ],
+            [
+              "Mid-February through March",
+              "Rising steadily into Mardi Gras & staggered spring breaks",
+              "Book a refundable room early and set a rate watch; weekends jump faster than midweek.",
+            ],
+          ],
+        },
+        after: [
+          "Notice how quickly the weekend premium expands in February and March. Shifting a three-night stay by just two days — arriving Sunday instead of Friday — regularly saves more than waiting for a promotional code.",
+        ],
+      },
+      {
+        heading: "How Volcano Bay's closure changes winter hotel comparisons",
+        paragraphs: [
+          "Volcano Bay closed for its extended seasonal refurbishment on October 26, 2026 and is scheduled to reopen on or before March 24, 2027. For winter travellers, that changes the relative value of two popular resorts: Cabana Bay Beach Resort and Universal Aventura Hotel normally command extra appeal because guests can walk straight to the water park.",
+          "Without water-park access during winter, the decision between Endless Summer (Dockside and Surfside), Cabana Bay, Aventura, Terra Luna, and Stella Nova comes down much more cleanly to room price, bus or water-taxi convenience, and proximity to Epic Universe. Check the [hotel calendar](/hotels) across all Prime Value and Value resorts before assuming Cabana Bay is the default winter pick.",
+        ],
+      },
+      {
+        heading: "Epic Universe in its first full winter season",
+        paragraphs: [
+          "With Epic Universe open through its first holiday and winter cycle, demand patterns across the resort are less lopsided toward Universal Studios Florida and Islands of Adventure than in earlier years. Guests staying at Helios Grand, Stella Nova, or Terra Luna are closest to Epic Universe, while Loews Portofino Bay, Hard Rock Hotel, and Loews Royal Pacific remain the only resorts whose rooms include Universal Express Unlimited at Universal Studios Florida and Islands of Adventure.",
+          "Before paying a winter premium for an Express-included Signature Collection hotel, run the math for your exact dates on the [Express Pass calendar](/express-pass). On quiet mid-January weekdays, standalone Express Pass prices drop dramatically — meaning a cheaper hotel plus selective Express (or no Express at all) often beats a Signature Collection room by several hundred dollars per night.",
+        ],
+      },
+      {
+        heading: "When to watch for Annual Passholder (APH) winter releases",
+        paragraphs: [
+          "Universal releases Annual Passholder hotel inventory in rolling waves rather than 365 days in advance. In RateCoaster's tracking, APH rooms usually appear most reliably 60 to 120 days ahead of check-in and continue adjusting right up to the week of arrival as occupancy fills.",
+          "If your trip is in January, February, or March 2027, the lowest-risk play is to lock in a refundable standard reservation at a rate you can live with, then watch both Standard and APH calendars on [RateCoaster's hotel explorer](/hotels). Because Universal lets guests modify an existing room-only reservation when an APH rate opens for the same hotel and dates, you keep downside protection without gambling on availability.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: "What is the single cheapest week to visit Universal Orlando in winter 2027?",
+        answer:
+          "Historically and in tracked rates, the weekdays immediately following Marathon/New Year travel in mid-January through the first half of February (excluding MLK Day weekend) offer the lowest combined hotel, ticket, and Express Pass prices.",
+      },
+      {
+        question: "Does Volcano Bay's closure lower Universal Orlando hotel prices in winter?",
+        answer:
+          "It does not lower resort-wide peak pricing during holidays or spring break, but it removes the walking-distance water-park perk at Cabana Bay and Aventura, making Endless Summer, Stella Nova, and Terra Luna stronger value comparisons.",
+      },
+      {
+        question: "How often is this winter price report updated?",
+        answer:
+          "The live rate table embedded on this page updates automatically from RateCoaster's hotel collectors four times per day, while the editorial outlook is reviewed whenever Universal updates seasonal schedules or major refurbishment dates.",
+      },
+    ],
+    related: [
+      "cheapest-time-to-visit-universal-orlando",
+      "standard-vs-passholder-hotel-rates",
+      "premier-hotel-or-express-pass",
+    ],
+  },
 ];

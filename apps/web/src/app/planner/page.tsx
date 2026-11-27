@@ -17,6 +17,7 @@ export const metadata = pageMetadata({
   description:
     "Hotel, tickets and travel added up for every possible start date, so you can see the weeks that cost thousands less before you book anything.",
   path: "/planner",
+  noindex: true,
 });
 
 export const revalidate = 300;

@@ -40,13 +40,15 @@ and it is now in the repository.
 
 ### Where things live
 
-- Guides: `apps/web/src/content/guides/*.ts`, one file per topic. Types and
-  lookups are in `apps/web/src/lib/guides.ts`.
+- Guides: `packages/shared/src/guides/*.ts`, one file per topic (shared across
+  web and mobile). Re-exported by `apps/web/src/lib/guides.ts`.
 - Live data boxes in guides: `apps/web/src/components/GuideLive.tsx`. A guide
   opts in with `live: "hotel-months"` and so on.
 - Data-page explainers: `apps/web/src/content/explainers.ts`.
 - Hotel profiles: `apps/web/src/content/hotel-profiles.ts`.
 - Byline wording: `apps/web/src/content/site.ts`.
+- AdSense route allowlist: `apps/web/src/lib/adsense.ts` (keeps `adsbygoogle.js`
+  off account, legal, contact, calculator, and `noindex` `/waits/[slug]` pages).
 
 ### Adding or revising a guide
 

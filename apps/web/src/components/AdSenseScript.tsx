@@ -2,14 +2,12 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
-import { ADSENSE_CLIENT } from "@/lib/adsense";
+import { ADSENSE_CLIENT, shouldLoadAdSense } from "@/lib/adsense";
 
-const AD_FREE_PREFIXES = ["/account", "/admin", "/auth", "/join", "/privacy", "/terms"];
-
-/** Load the network once, and never load it at all on account or legal pages. */
+/** Load the network once, and never load it on account, legal, or thin utility pages. */
 export function AdSenseScript() {
   const pathname = usePathname();
-  if (AD_FREE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
+  if (!shouldLoadAdSense(pathname)) return null;
 
   return (
     <Script

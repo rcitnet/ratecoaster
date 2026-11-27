@@ -5,6 +5,7 @@ import { HeaderAccountActions } from "@/components/ClientSession";
 import { MobileMenu } from "@/components/MobileMenu";
 import { PrimaryNavigation } from "@/components/PrimaryNavigation";
 import { AdSenseScript } from "@/components/AdSenseScript";
+import { ADSENSE_CLIENT } from "@/lib/adsense";
 import { Analytics } from "@/components/Analytics";
 import { TravelpayoutsDrive } from "@/components/TravelpayoutsDrive";
 import { analyticsConfig } from "@/lib/analytics";
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
         <TravelpayoutsDrive />
         {/* Fredoka carries the playful energy in headlines; Inter keeps dense
             rate tables readable, which a rounded display face would not. */}

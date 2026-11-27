@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { RideImage } from "@/components/RideImage";
-import { getClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
+import { getPublicClient, relativeTime, safe, PARK_COLORS } from "@/lib/api";
 import { rideImage } from "@/lib/ride-images";
 import { pageMetadata, breadcrumbSchema, jsonLd } from "@/lib/seo";
 import type { WaitRollupPoint } from "@ratecoaster/shared";
@@ -71,7 +71,7 @@ function WaitHistory({ points }: { points: WaitRollupPoint[] }) {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const client = await getClient();
+  const client = getPublicClient(60);
   const live = await safe(client.liveWaits({ destination: "universal-orlando", ridesOnly: false }), { parks: [], attribution: [], fetchedAt: new Date().toISOString() });
   const ride = live.parks.flatMap((park) => park.waits.map((wait) => ({ ...wait, park: park.park }))).find((wait) => wait.attractionSlug === slug);
 
@@ -83,12 +83,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${ride.attractionName} wait times and attraction details`,
     description: `Current and typical wait times for ${ride.attractionName} at ${ride.park.name}, plus official attraction details and its location in the park.`,
     path: `/waits/${slug}`,
+    // Live attraction status cards are utility pages (~70 words of unique body text).
+    // Keeping them out of the search index prevents 120+ thin status cards from
+    // diluting the editorial guide library during Google Search & AdSense reviews.
+    noindex: true,
   });
 }
 
 export default async function RideWaitPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const client = await getClient();
+  const client = getPublicClient(60);
   const live = await safe(client.liveWaits({ destination: "universal-orlando", ridesOnly: false }), { parks: [], attribution: [], fetchedAt: new Date().toISOString() });
   const found = live.parks
     .flatMap((entry) => entry.waits.map((wait) => ({ ...wait, park: entry.park })))

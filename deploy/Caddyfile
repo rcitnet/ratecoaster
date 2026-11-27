@@ -4,7 +4,30 @@
 # Caddy gets and renews the HTTPS certificate automatically. There is no
 # certbot step and no renewal cron job to forget about.
 
-ratecoaster.net, www.ratecoaster.net {
+# Redirect bare apex web traffic permanently to the canonical www host so search
+# engines and AdSense never see duplicate content on two hostnames, while
+# keeping Android App Links (/.well-known/assetlinks.json, /app/auth) and
+# native mobile API calls (/api/*) working directly on ratecoaster.net without
+# breaking redirects.
+ratecoaster.net {
+	handle /.well-known/assetlinks.json {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle /app/auth* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle {
+		redir https://www.ratecoaster.net{uri} permanent
+	}
+}
+
+www.ratecoaster.net {
 
 	# The API is served under /api on the SAME domain as the website.
 	#
