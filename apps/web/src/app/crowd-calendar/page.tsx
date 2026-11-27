@@ -4,12 +4,26 @@ import { pageMetadata } from "@/lib/seo";
 import { PageIntro } from "@/components/PageIntro";
 import { PageExplainer } from "@/components/PageExplainer";
 
-export const metadata: Metadata = pageMetadata({
-  title: "Universal Orlando crowd calendar",
-  description:
-    "Explore Universal Orlando crowd outlooks and archived demand estimates, built from published ticket, Express Pass, and hotel pricing signals.",
-  path: "/crowd-calendar",
-});
+/** First month RateCoaster collected pricing data; earlier months have no data. */
+const FIRST_TRACKED_MONTH = "2026-08";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ park?: string; month?: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const emptyArchiveMonth = Boolean(
+    params.month && isMonth(params.month) && params.month < FIRST_TRACKED_MONTH
+  );
+  return pageMetadata({
+    title: "Universal Orlando crowd calendar",
+    description:
+      "Explore Universal Orlando crowd outlooks and archived demand estimates, built from published ticket, Express Pass, and hotel pricing signals.",
+    path: "/crowd-calendar",
+    noindex: emptyArchiveMonth,
+  });
+}
 
 export const revalidate = 300;
 
@@ -113,7 +127,7 @@ export default async function CrowdCalendarPage({
   const busyDays = days.filter((day) => day.level === "high" || day.level === "very-high");
   const quietest = [...days].sort((a, b) => a.score - b.score)[0];
   const firstDay = utcDate(`${selectedMonth}-01`).getUTCDay();
-  const canGoBack = selectedMonth > "0001-01";
+  const canGoBack = selectedMonth > FIRST_TRACKED_MONTH;
   const canGoForward = selectedMonth < (data?.gate.visibleThrough?.slice(0, 7) ?? lastMonth);
 
   return (
@@ -145,7 +159,7 @@ export default async function CrowdCalendarPage({
 
       <form action="/crowd-calendar" method="get" className="crowd-month-picker">
         <input type="hidden" name="park" value={selectedPark} />
-        <label>Jump to a month<input type="month" name="month" defaultValue={selectedMonth} max={lastMonth} required /></label>
+        <label>Jump to a month<input type="month" name="month" defaultValue={selectedMonth} min={FIRST_TRACKED_MONTH} max={lastMonth} required /></label>
         <button type="submit" className="btn btn-ghost btn-sm">Go to month</button>
       </form>
       <p className="tiny muted">Past crowd estimates are saved permanently. Older dates may be reconstructed from retained pricing signals; these are demand estimates, not measured attendance. Dates we never collected show “No data.”</p>
@@ -187,13 +201,13 @@ export default async function CrowdCalendarPage({
           <section className="crowd-calendar" aria-label={`${PARKS.find((park) => park.slug === selectedPark)!.label} crowd calendar`}>
             <div className="crowd-calendar-head">
               {canGoBack ? (
-                <a className="btn btn-ghost btn-sm" href={calendarHref(selectedPark, addMonths(selectedMonth, -1))}>
+                <a className="btn btn-ghost btn-sm" rel="nofollow" href={calendarHref(selectedPark, addMonths(selectedMonth, -1))}>
                   ← Previous month
                 </a>
               ) : <span />}
               <h2>{monthLabel(`${selectedMonth}-01`)}</h2>
               {canGoForward ? (
-                <a className="btn btn-ghost btn-sm" href={calendarHref(selectedPark, addMonths(selectedMonth, 1))}>
+                <a className="btn btn-ghost btn-sm" rel="nofollow" href={calendarHref(selectedPark, addMonths(selectedMonth, 1))}>
                   Next month →
                 </a>
               ) : <span />}

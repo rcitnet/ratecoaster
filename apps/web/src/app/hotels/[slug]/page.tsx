@@ -8,6 +8,7 @@ import {
   getPublicClient, EMPTY_GATE, formatLongDate, formatStayDate, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { breadcrumbSchema, jsonLd, pageMetadata, SITE_URL } from "@/lib/seo";
 import { WatchButton } from "@/components/WatchButton";
@@ -109,13 +110,9 @@ export default async function PropertyPage({
 
   const property = properties.find((p) => p.slug === slug);
   if (!property) {
-    return (
-      <main className="section page-refresh">
-        <h1>Hotel not found</h1>
-        <p className="lede">We don&apos;t track a hotel with that name yet.</p>
-        <a href="/hotels" className="btn btn-primary">See all hotels</a>
-      </main>
-    );
+    // Return a real HTTP 404 rather than an HTTP 200 "Hotel not found" page
+    // (which Google Search Console flags as a Soft 404).
+    notFound();
   }
 
   const availableRateCodes: RateCodeValue[] = filterOptions.rateCodes.length > 0
