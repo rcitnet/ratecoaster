@@ -203,20 +203,6 @@ export default async function HotelsPage({
         </a>
       </div>
 
-      <div className="chips" style={{ marginTop: 0 }} aria-label="90-day date window">
-        {windows.map((w) => (
-          <a
-            key={w.id}
-            rel="nofollow"
-            href={buildHref({ window: w.id })}
-            className={`chip ${activeWindow.id === w.id ? "on" : ""}`}
-            aria-pressed={activeWindow.id === w.id}
-          >
-            {w.rangeLabel}
-          </a>
-        ))}
-      </div>
-
       {visibleProperties.length > 0 ? (
         <section className="hotel-browse" aria-labelledby="hotel-browse-heading">
           <div className="refresh-section-head">
@@ -248,6 +234,19 @@ export default async function HotelsPage({
           <h2>Compare every night.</h2>
         </div>
         <p>Lowest tracked rates in this 90-day window are highlighted in green.</p>
+      </div>
+      <div className="chips" style={{ marginTop: 0, marginBottom: 18 }} aria-label="90-day date window">
+        {windows.map((w) => (
+          <a
+            key={w.id}
+            rel="nofollow"
+            href={`${buildHref({ window: w.id })}#hotel-calendar`}
+            className={`chip ${activeWindow.id === w.id ? "on" : ""}`}
+            aria-pressed={activeWindow.id === w.id}
+          >
+            {w.rangeLabel}
+          </a>
+        ))}
       </div>
       {rates.items.length === 0 ? (
         <div className="notice">
