@@ -6,7 +6,7 @@ import {
   type RateCode as RateCodeValue,
 } from "@ratecoaster/shared";
 import {
-  getClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, formatLongDate, relativeTime, safe, TIER_LABELS,
+  getPublicClient, EMPTY_GATE, dayNumber, dayOfWeekLabel, formatLongDate, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { CompareButton } from "@/components/CompareButton";
@@ -53,7 +53,7 @@ export default async function HotelsPage({
     : 2;
   const availableOnly = params.available === "1";
 
-  const client = await getClient();
+  const client = getPublicClient(60);
   const filterOptions = await safe(client.rateFilterOptions({ destination }), {
     rateCodes: [],
     roomTypes: [],

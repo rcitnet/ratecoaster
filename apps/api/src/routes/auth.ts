@@ -42,6 +42,33 @@ authRouter.use(
     message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
   })
 );
+authRouter.use(
+  "/mobile/magic-link",
+  rateLimitByIp({
+    namespace: "mobile-magic-link",
+    limit: 5,
+    windowMs: MAGIC_LINK_WINDOW_MS,
+    message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
+  })
+);
+authRouter.use(
+  "/verify",
+  rateLimitByIp({
+    namespace: "magic-link-verify",
+    limit: 20,
+    windowMs: MAGIC_LINK_WINDOW_MS,
+    message: "Too many verification attempts. Please wait 15 minutes and try again.",
+  })
+);
+authRouter.use(
+  "/mobile/exchange",
+  rateLimitByIp({
+    namespace: "mobile-exchange",
+    limit: 20,
+    windowMs: MAGIC_LINK_WINDOW_MS,
+    message: "Too many sign-in exchange attempts. Please wait 15 minutes and try again.",
+  })
+);
 
 const WEB_ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 /*
@@ -63,6 +90,33 @@ function safeRedirect(target: string | undefined): string {
   if (!target) return "/";
   if (!target.startsWith("/") || target.startsWith("//")) return "/";
   return target;
+}
+
+/**
+ * This is deliberately configured on the server, never accepted from the
+ * handset. A client-provided custom URI would turn sign-in into an open
+ * redirect (and leak the native bearer session to any app that registered a
+ * matching scheme).
+ */
+function mobileRedirectUri(): string | null {
+  const value = process.env.MOBILE_AUTH_REDIRECT_URI ?? "https://ratecoaster.net/app/auth";
+  try {
+    const uri = new URL(value);
+    if (uri.protocol !== "https:" || uri.pathname !== "/app/auth" || uri.username || uri.password) {
+      return null;
+    }
+    return uri.toString();
+  } catch {
+    return null;
+  }
+}
+
+function mobileRedirectWithToken(redirectTo: string | null, token: string): string | null {
+  const expected = mobileRedirectUri();
+  if (!expected || redirectTo !== expected) return null;
+  const url = new URL(expected);
+  url.searchParams.set("token", token);
+  return url.toString();
 }
 
 /** GET /v1/auth/me — who am I and what do I get. */
@@ -162,7 +216,77 @@ authRouter.post("/magic-link", async (c) => {
   });
 });
 
-/** GET /v1/auth/verify?token=… — redeem the link, set the cookie, bounce back. */
+/**
+ * Native equivalent of /magic-link. Its callback is fixed in deployment
+ * configuration; the app never gets to nominate a destination URL.
+ */
+authRouter.post("/mobile/magic-link", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = RequestMagicLink.pick({ email: true }).safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { code: "invalid_email", message: "Enter a valid email address." } }, 400);
+  }
+
+  const redirectTo = mobileRedirectUri();
+  if (!redirectTo) {
+    console.error("[auth] MOBILE_AUTH_REDIRECT_URI is invalid");
+    return c.json({ error: { code: "mobile_auth_unavailable", message: "Mobile sign-in is not configured." } }, 503);
+  }
+
+  const emailLimit = enforceRateLimit(c, opaqueRateLimitKey("mobile-magic-link-email", parsed.data.email), {
+    limit: 3,
+    windowMs: MAGIC_LINK_WINDOW_MS,
+    message: "Too many sign-in attempts. Please wait 15 minutes and try again.",
+  });
+  if (emailLimit) return emailLimit;
+
+  const { token, email, expiresInMinutes } = await createMagicLink(parsed.data.email, redirectTo);
+  const link = `${PUBLIC_API_URL}/v1/auth/mobile/verify?token=${encodeURIComponent(token)}`;
+
+  if (emailConfigured()) {
+    const result = await sendMagicLinkEmail(email, link);
+    if (!result.sent) {
+      console.error(`[auth] failed to send mobile magic link: ${result.reason}`);
+      return c.json({ error: { code: "email_failed", message: "We couldn't send that email just now. Please try again in a moment." } }, 502);
+    }
+    return c.json({ ok: true, message: "Check your email for a sign-in link." });
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    console.error("[auth] RESEND_API_KEY / EMAIL_FROM are not set — sign-in emails cannot be delivered");
+    return c.json({ error: { code: "email_unavailable", message: "Sign-in by email isn't switched on yet. Please try again later." } }, 503);
+  }
+
+  console.log(`\n=== MOBILE MAGIC LINK for ${email} (valid ${expiresInMinutes}m) ===\n${link}\n`);
+  return c.json({ ok: true, message: "Check your email for a sign-in link." });
+});
+
+/**
+ * Native email callback. The email token is not redeemed here: browsers and
+ * proxies can see a redirect URL, while a bearer session must only ever travel
+ * over the app's JSON exchange request. Android App Links verify that the
+ * configured HTTPS destination belongs to this package.
+ */
+authRouter.get("/mobile/verify", (c) => {
+  const token = c.req.query("token");
+  const redirect = token ? mobileRedirectWithToken(mobileRedirectUri(), token) : null;
+  return c.redirect(redirect ?? `${WEB_ORIGIN}/auth/error?reason=missing`);
+});
+
+authRouter.post("/mobile/exchange", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const token = typeof body.token === "string" ? body.token : null;
+  if (!token) {
+    return c.json({ error: { code: "invalid_token", message: "That sign-in link is invalid or expired." } }, 400);
+  }
+  const result = await consumeMagicLink(token, c.req.header("user-agent"));
+  if (!result || result.redirectTo !== mobileRedirectUri()) {
+    return c.json({ error: { code: "invalid_token", message: "That sign-in link is invalid or expired." } }, 401);
+  }
+  return c.json({ ok: true, sessionToken: result.sessionToken });
+});
+
+/** GET /v1/auth/verify?token=… — redeem the web link, set a cookie, bounce back. */
 authRouter.get("/verify", async (c) => {
   const token = c.req.query("token");
   if (!token) return c.redirect(`${WEB_ORIGIN}/auth/error?reason=missing`);

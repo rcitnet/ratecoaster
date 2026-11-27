@@ -2,8 +2,11 @@ node_modules/
 dist/
 .next/
 .turbo/
+.expo/
 .env
 .env.local
 *.log
+*.err
+*.tsbuildinfo
 .cache/
 har/

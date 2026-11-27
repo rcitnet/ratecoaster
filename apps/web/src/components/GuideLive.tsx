@@ -1,6 +1,6 @@
 import { centsToDisplay, type RateCoasterClient } from "@ratecoaster/shared";
 import type { ReactNode } from "react";
-import { EMPTY_GATE, getClient, relativeTime, safe } from "@/lib/api";
+import { EMPTY_GATE, getPublicClient, relativeTime, safe } from "@/lib/api";
 import type { GuideLiveKey } from "@/lib/guides";
 
 /**
@@ -539,7 +539,7 @@ async function CrowdOutlook({ client }: { client: RateCoasterClient }) {
 /* ------------------------------------------------------------------ */
 
 export async function GuideLive({ kind }: { kind: GuideLiveKey }) {
-  const client = await getClient();
+  const client = getPublicClient(300);
   const needsProperties =
     kind === "hotel-lows" || kind === "hotel-months" || kind === "premier-math" || kind === "passholder-savings";
   const properties = needsProperties ? await safe(client.listProperties(ORLANDO), []) : [];

@@ -105,7 +105,8 @@ const DEMO_TIER_COOKIE = "rc_demo_tier";
  * demonstrating the paywall, and never mounted outside demo mode.
  */
 export const demoAuthMiddleware: MiddlewareHandler = async (c, next) => {
-  const raw = getCookie(c, DEMO_TIER_COOKIE);
+  const bearer = c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
+  const raw = bearer === "demo-mobile-session" ? "free" : getCookie(c, DEMO_TIER_COOKIE);
   const tier: Tier = raw === "free" || raw === "pro" ? raw : "anonymous";
   c.set("tier", tier);
   c.set(
@@ -147,6 +148,16 @@ demoApp.post("/v1/auth/magic-link", async (c) => {
     ok: true,
     demo: true,
     message: `Demo mode: signed in as ${body.email ?? "you@ratecoaster.net"} with no email sent.`,
+  });
+});
+
+demoApp.post("/v1/auth/mobile/magic-link", async (c) => {
+  const body = await c.req.json().catch(() => ({}) as { email?: string });
+  return c.json({
+    ok: true,
+    demo: true,
+    message: `Demo mode: signed in as ${body.email ?? "you@ratecoaster.net"} with no email sent.`,
+    sessionToken: "demo-mobile-session",
   });
 });
 
@@ -757,6 +768,20 @@ demoApp.get("/v1/waits/live", async (c) => {
 demoApp.get("/v1/waits/:slug/typical", (c) => c.json([]));
 
 demoApp.get("/v1/site/homepage", (c) => c.json({ heroVariant: "current" }));
+
+demoApp.post("/v1/push/register", (c) => {
+  if (!c.get("user")) {
+    return c.json({ error: { code: "unauthorized", message: "sign in first" } }, 401);
+  }
+  return c.json({ ok: true, id: "00000000-0000-4000-8000-000000000001" }, 201);
+});
+
+demoApp.delete("/v1/push/register", (c) => {
+  if (!c.get("user")) {
+    return c.json({ error: { code: "unauthorized", message: "sign in first" } }, 401);
+  }
+  return c.json({ ok: true });
+});
 
 demoApp.get("/v1/status", (c) =>
   c.json({

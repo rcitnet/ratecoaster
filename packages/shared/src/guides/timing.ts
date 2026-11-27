@@ -1,4 +1,4 @@
-import type { GuideContent } from "@/lib/guides";
+import type { GuideContent } from "./types.js";
 
 export const TIMING_GUIDES: GuideContent[] = [
   {

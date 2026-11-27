@@ -93,6 +93,14 @@ test("HTTP auth responses never contain a redeemable development link", () => {
   assert.doesNotMatch(source, /devLink\s*:/);
 });
 
+test("native magic links exchange a one-time token instead of redirecting a session", () => {
+  const source = readFileSync(authRoutes, "utf8");
+  assert.match(source, /\/v1\/auth\/mobile\/verify\?token=/);
+  assert.match(source, /authRouter\.post\("\/mobile\/exchange"/);
+  assert.match(source, /mobileRedirectWithToken\(/);
+  assert.doesNotMatch(source, /mobileRedirectWithSession/);
+});
+
 test("the admin router protects itself when mounted independently", async () => {
   const { adminRouter } = await import("./routes/admin.js");
   const response = await adminRouter.request("/overview");

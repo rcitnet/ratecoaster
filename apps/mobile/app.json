@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "RateCoaster",
+    "slug": "ratecoaster",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "ratecoaster",
+    "userInterfaceStyle": "light",
+    "androidNavigationBar": {
+      "backgroundColor": "#ffffff",
+      "barStyle": "dark-content"
+    },
+    "android": {
+      "package": "net.ratecoaster.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ratecoaster.net",
+              "pathPrefix": "/app/auth"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#3355ee"
+      }
+    },
+    "extra": {
+      "apiBaseUrl": "https://ratecoaster.net/api"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RateCoaster uses your location only when you ask for walking directions inside a park."
+        }
+      ]
+    ]
+  }
+}

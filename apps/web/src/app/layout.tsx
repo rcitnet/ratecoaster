@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import "./globals.css";
-import { getMe } from "@/lib/api";
+import { HeaderAccountActions } from "@/components/ClientSession";
 import { MobileMenu } from "@/components/MobileMenu";
 import { PrimaryNavigation } from "@/components/PrimaryNavigation";
 import { AdSenseScript } from "@/components/AdSenseScript";
@@ -85,14 +85,7 @@ const NAV = [
   { href: "/guides", label: "Guides" },
 ];
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const me = await getMe();
-  const signedIn = Boolean(me.user);
-  // The link only appears for admins. It isn't the security boundary — the API
-  // 404s /v1/admin for everyone else — it just keeps staff tooling out of the
-  // way of visitors.
-  const isAdmin = me.entitlements.admin === true;
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -138,29 +131,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <span className="spacer" />
             <div className="desktop-actions">
               <a href="/plan" className="btn btn-primary btn-sm">Plan my trip <span aria-hidden="true">↗</span></a>
-              {signedIn ? (
-                <>
-                  {isAdmin ? (
-                    <a href="/admin" className="badge badge-hot" style={{ textDecoration: "none" }}>
-                      Admin
-                    </a>
-                  ) : (
-                    <span className="badge badge-blue">
-                      Free account
-                    </span>
-                  )}
-                  <a href="/account" className="btn btn-ghost btn-sm">
-                    Account
-                  </a>
-                </>
-              ) : (
-                <a href="/join" className="btn btn-ghost btn-sm">
-                  Sign up free
-                </a>
-              )}
+              <HeaderAccountActions />
             </div>
 
-            <MobileMenu items={NAV} signedIn={signedIn} isAdmin={isAdmin} />
+            <MobileMenu items={NAV} />
           </div>
         </header>
 

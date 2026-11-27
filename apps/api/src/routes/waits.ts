@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import { attractions, parkHours, parks, waitCurrent, waitRollups } from "@ratecoaster/db/schema";
 import {
@@ -9,6 +9,42 @@ import {
 } from "../collectors/waits/providers.js";
 
 export const waitsRouter = new Hono();
+
+const WEEKDAY_TO_DOW: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/**
+ * Local calendar date, Postgres-compatible DOW (0=Sun..6=Sat), and 24-hour
+ * clock hour for a park's IANA timezone.
+ */
+export function parkLocalClock(
+  now: Date,
+  timezone: string
+): { date: string; dayOfWeek: number; hour: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? "";
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    dayOfWeek: WEEKDAY_TO_DOW[part("weekday")] ?? now.getUTCDay(),
+    hour: Number(part("hour")) % 24,
+  };
+}
 
 /**
  * GET /v1/waits/live
@@ -35,16 +71,93 @@ waitsRouter.get("/live", async (c) => {
     .orderBy(asc(parks.name));
 
   const now = new Date();
-  const dow = now.getUTCDay();
-  const hour = now.getUTCHours();
+  if (parkRows.length === 0) {
+    return c.json({
+      parks: [],
+      attribution: [THEMEPARKS_WIKI_ATTRIBUTION, QUEUE_TIMES_ATTRIBUTION],
+      fetchedAt: now.toISOString(),
+    });
+  }
 
   /*
-   * Today's hours, per park, in the park's own local date.
-   *
-   * "Today" has to be computed in the park's timezone, not the server's. At
-   * 1am UTC it is still the previous day in Orlando, and looking up the wrong
-   * date would report a park closed on the very evening it is busiest.
+   * Compute each park's local date, weekday, and hour once, then fetch park
+   * hours, live waits, and matching typical-wait rollups in 3 batched queries
+   * instead of 2*N sequential per-park queries.
    */
+  const clockByPark = new Map(parkRows.map((park) => [park.id, parkLocalClock(now, park.timezone)]));
+  const parkIds = parkRows.map((park) => park.id);
+  const uniqueDates = [...new Set([...clockByPark.values()].map((clock) => clock.date))];
+  const uniqueClockBuckets = [
+    ...new Map(
+      [...clockByPark.values()].map((clock) => [`${clock.dayOfWeek}:${clock.hour}`, clock])
+    ).values(),
+  ];
+
+  const [allHours, allAttractionWaits, allRollups] = await Promise.all([
+    db
+      .select({
+        parkId: parkHours.parkId,
+        date: parkHours.date,
+        opensAt: parkHours.opensAt,
+        closesAt: parkHours.closesAt,
+        kind: parkHours.kind,
+      })
+      .from(parkHours)
+      .where(and(inArray(parkHours.parkId, parkIds), inArray(parkHours.date, uniqueDates))),
+    db
+      .select({
+        parkId: attractions.parkId,
+        attractionId: attractions.id,
+        attractionSlug: attractions.slug,
+        attractionName: attractions.name,
+        land: attractions.land,
+        kind: attractions.kind,
+        attractionTypes: attractions.attractionTypes,
+        interests: attractions.interests,
+        ageGroups: attractions.ageGroups,
+        heightRequirements: attractions.heightRequirements,
+        accessibility: attractions.accessibility,
+        expressPass: attractions.expressPass,
+        latitude: attractions.latitude,
+        longitude: attractions.longitude,
+        officialUrl: attractions.officialUrl,
+        officialImageUrl: attractions.officialImageUrl,
+        waitMinutes: waitCurrent.waitMinutes,
+        singleRiderMinutes: waitCurrent.singleRiderMinutes,
+        status: waitCurrent.status,
+        observedAt: waitCurrent.observedAt,
+      })
+      .from(attractions)
+      .innerJoin(waitCurrent, eq(waitCurrent.attractionId, attractions.id))
+      .where(
+        and(
+          inArray(attractions.parkId, parkIds),
+          eq(attractions.active, true),
+          ridesOnly ? eq(attractions.kind, "ride") : sql`true`
+        )
+      )
+      .orderBy(asc(attractions.name)),
+    db
+      .select({
+        attractionId: waitRollups.attractionId,
+        dayOfWeek: waitRollups.dayOfWeek,
+        hour: waitRollups.hour,
+        p50Minutes: waitRollups.p50Minutes,
+      })
+      .from(waitRollups)
+      .innerJoin(attractions, eq(attractions.id, waitRollups.attractionId))
+      .where(
+        and(
+          inArray(attractions.parkId, parkIds),
+          or(
+            ...uniqueClockBuckets.map((bucket) =>
+              and(eq(waitRollups.dayOfWeek, bucket.dayOfWeek), eq(waitRollups.hour, bucket.hour))
+            )
+          )
+        )
+      ),
+  ]);
+
   const hoursByPark = new Map<
     string,
     {
@@ -57,22 +170,8 @@ waitsRouter.get("/live", async (c) => {
     }
   >();
   for (const park of parkRows) {
-    const localDate = new Intl.DateTimeFormat("en-CA", {
-      timeZone: park.timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(now);
-
-    const rows = await db
-      .select({
-        opensAt: parkHours.opensAt,
-        closesAt: parkHours.closesAt,
-        kind: parkHours.kind,
-      })
-      .from(parkHours)
-      .where(and(eq(parkHours.parkId, park.id), eq(parkHours.date, localDate)));
-
+    const localDate = clockByPark.get(park.id)!.date;
+    const rows = allHours.filter((row) => row.parkId === park.id && row.date === localDate);
     if (rows.length === 0) continue;
 
     /*
@@ -94,51 +193,22 @@ waitsRouter.get("/live", async (c) => {
     });
   }
 
-  const result = [];
-  for (const park of parkRows) {
-    const rows = await db
-      .select({
-        attractionId: attractions.id,
-        attractionSlug: attractions.slug,
-        attractionName: attractions.name,
-        land: attractions.land,
-        kind: attractions.kind,
-        attractionTypes: attractions.attractionTypes,
-        interests: attractions.interests,
-        ageGroups: attractions.ageGroups,
-        heightRequirements: attractions.heightRequirements,
-        accessibility: attractions.accessibility,
-        expressPass: attractions.expressPass,
-        latitude: attractions.latitude,
-        longitude: attractions.longitude,
-        officialUrl: attractions.officialUrl,
-        officialImageUrl: attractions.officialImageUrl,
-        waitMinutes: waitCurrent.waitMinutes,
-        singleRiderMinutes: waitCurrent.singleRiderMinutes,
-        status: waitCurrent.status,
-        observedAt: waitCurrent.observedAt,
-        typicalMinutes: waitRollups.p50Minutes,
-      })
-      .from(attractions)
-      .innerJoin(waitCurrent, eq(waitCurrent.attractionId, attractions.id))
-      .leftJoin(
-        waitRollups,
-        and(
-          eq(waitRollups.attractionId, attractions.id),
-          eq(waitRollups.dayOfWeek, dow),
-          eq(waitRollups.hour, hour)
-        )
-      )
-      .where(
-        and(
-          eq(attractions.parkId, park.id),
-          eq(attractions.active, true),
-          ridesOnly ? eq(attractions.kind, "ride") : sql`true`
-        )
-      )
-      .orderBy(asc(attractions.name));
+  const typicalByKey = new Map<string, number | null>(
+    allRollups.map((row) => [`${row.attractionId}|${row.dayOfWeek}|${row.hour}`, row.p50Minutes])
+  );
 
-    result.push({
+  const waitsByPark = new Map<string, typeof allAttractionWaits>();
+  for (const row of allAttractionWaits) {
+    const list = waitsByPark.get(row.parkId);
+    if (list) list.push(row);
+    else waitsByPark.set(row.parkId, [row]);
+  }
+
+  const result = parkRows.map((park) => {
+    const clock = clockByPark.get(park.id)!;
+    const rows = waitsByPark.get(park.id) ?? [];
+
+    return {
       park: {
         id: park.id,
         destination: park.destination,
@@ -148,37 +218,43 @@ waitsRouter.get("/live", async (c) => {
         queueTimesId: park.queueTimesId,
         themeParksWikiId: park.themeParksWikiId,
       },
-      waits: rows.filter((r) => !isRetiredAttraction(park.slug, r.attractionName)).map((r) => ({
-        attractionId: r.attractionId,
-        attractionSlug: r.attractionSlug,
-        attractionName: r.attractionName,
-        parkSlug: park.slug,
-        parkName: park.name,
-        land: r.land,
-        kind: r.kind,
-        attractionTypes: r.attractionTypes,
-        interests: r.interests,
-        ageGroups: r.ageGroups,
-        heightRequirements: r.heightRequirements,
-        accessibility: r.accessibility,
-        expressPass: r.expressPass,
-        latitude: r.latitude,
-        longitude: r.longitude,
-        officialUrl: r.officialUrl,
-        officialImageUrl: r.officialImageUrl,
-        waitMinutes: r.waitMinutes,
-        singleRiderMinutes: r.singleRiderMinutes,
-        status: r.status,
-        observedAt: r.observedAt.toISOString(),
-        typicalMinutes: r.typicalMinutes,
-        vsTypicalMinutes:
-          r.waitMinutes !== null && r.typicalMinutes !== null
-            ? r.waitMinutes - r.typicalMinutes
-            : null,
-      })),
+      waits: rows
+        .filter((r) => !isRetiredAttraction(park.slug, r.attractionName))
+        .map((r) => {
+          const typicalMinutes =
+            typicalByKey.get(`${r.attractionId}|${clock.dayOfWeek}|${clock.hour}`) ?? null;
+          return {
+            attractionId: r.attractionId,
+            attractionSlug: r.attractionSlug,
+            attractionName: r.attractionName,
+            parkSlug: park.slug,
+            parkName: park.name,
+            land: r.land,
+            kind: r.kind,
+            attractionTypes: r.attractionTypes,
+            interests: r.interests,
+            ageGroups: r.ageGroups,
+            heightRequirements: r.heightRequirements,
+            accessibility: r.accessibility,
+            expressPass: r.expressPass,
+            latitude: r.latitude,
+            longitude: r.longitude,
+            officialUrl: r.officialUrl,
+            officialImageUrl: r.officialImageUrl,
+            waitMinutes: r.waitMinutes,
+            singleRiderMinutes: r.singleRiderMinutes,
+            status: r.status,
+            observedAt: r.observedAt.toISOString(),
+            typicalMinutes,
+            vsTypicalMinutes:
+              r.waitMinutes !== null && typicalMinutes !== null
+                ? r.waitMinutes - typicalMinutes
+                : null,
+          };
+        }),
       hours: hoursByPark.get(park.id) ?? null,
-    });
-  }
+    };
+  });
 
   return c.json({
     parks: result,

@@ -5,7 +5,7 @@ import {
   type RateCode as RateCodeValue,
 } from "@ratecoaster/shared";
 import {
-  getClient, EMPTY_GATE, formatLongDate, formatStayDate, getMe, relativeTime, safe, TIER_LABELS,
+  getPublicClient, EMPTY_GATE, formatLongDate, formatStayDate, relativeTime, safe, TIER_LABELS,
 } from "@/lib/api";
 import type { Metadata } from "next";
 import { AdSlot } from "@/components/AdSlot";
@@ -31,7 +31,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const client = await getClient();
+  const client = getPublicClient(60);
   const properties = await safe(client.listProperties(), []);
   const property = properties.find((p) => p.slug === slug);
 
@@ -101,7 +101,7 @@ export default async function PropertyPage({
 }) {
   const { slug } = await params;
   const search = await searchParams;
-  const client = await getClient();
+  const client = getPublicClient(60);
   const [properties, filterOptions] = await Promise.all([
     safe(client.listProperties(), []),
     safe(client.rateFilterOptions({ propertySlug: slug }), { rateCodes: [], roomTypes: [] }),
@@ -151,8 +151,6 @@ export default async function PropertyPage({
 
   const cheapest = [...rates.items].sort((a, b) => a.nightlyCents - b.nightlyCents)[0];
   const roomTypeParam = roomTypeId ? `&roomTypeId=${encodeURIComponent(roomTypeId)}` : "";
-  // Decides whether the watch control invites a sign-up or creates the watch.
-  const me = await getMe();
 
   /*
    * Hotel schema, with an offer only when a real price exists.
@@ -221,7 +219,6 @@ export default async function PropertyPage({
         propertyName={property.name}
         destination={property.destination}
         rateCode={rateCode}
-        signedIn={Boolean(me.user)}
         returnTo={`/hotels/${slug}`}
       />
 

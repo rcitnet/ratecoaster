@@ -268,6 +268,34 @@ export class RateCoasterClient {
     );
   }
 
+  /**
+   * Starts the native-app sign-in flow. The email link returns to the app with
+   * a bearer session, rather than relying on browser cookies crossing into a
+   * native runtime.
+   */
+  requestMobileMagicLink(email: string) {
+    return this.request(
+      "/v1/auth/mobile/magic-link",
+      z.object({
+        ok: z.boolean(),
+        message: z.string(),
+        demo: z.boolean().optional(),
+        // Demo mode can complete locally without an email round trip.
+        sessionToken: z.string().optional(),
+      }),
+      { method: "POST", body: JSON.stringify({ email }) }
+    );
+  }
+
+  /** Exchange the one-time Android App Link token for an app-only session. */
+  exchangeMobileMagicLink(token: string) {
+    return this.request(
+      "/v1/auth/mobile/exchange",
+      z.object({ ok: z.literal(true), sessionToken: z.string() }),
+      { method: "POST", body: JSON.stringify({ token }) }
+    );
+  }
+
   logout() {
     return this.request("/v1/auth/logout", z.object({ ok: z.boolean() }), { method: "POST" });
   }
@@ -291,14 +319,19 @@ export class RateCoasterClient {
     });
   }
 
-  /*
-   * registerPush() lived here, calling /v1/push/register — a route that was
-   * never mounted. Removed rather than left as a method that compiles, looks
-   * implemented, and fails at runtime.
-   *
-   * The push tables and schemas remain; when the mobile app arrives, mount the
-   * route first and add the method back. claims.test.ts now fails the build if
-   * a client method points at a path the server does not serve, which is how
-   * this was found.
-   */
+  // ---- Push registrations (auth required) ----
+
+  registerPush(body: { token: string; platform: "ios" | "android"; channel?: "expo-push" }) {
+    return this.request("/v1/push/register", z.object({ ok: z.literal(true), id: z.string().uuid() }), {
+      method: "POST",
+      body: JSON.stringify({ channel: body.channel ?? "expo-push", token: body.token, platform: body.platform }),
+    });
+  }
+
+  unregisterPush(token: string) {
+    return this.request("/v1/push/register", z.object({ ok: z.literal(true) }), {
+      method: "DELETE",
+      body: JSON.stringify({ token }),
+    });
+  }
 }

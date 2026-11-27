@@ -1,4 +1,21 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { backoffDelay, bucketForHost, sleep } from "./limiter.js";
+
+const dryRunContext = new AsyncLocalStorage<{ dryRun: boolean }>();
+
+/**
+ * Scope dry-run mode to a single async execution tree without mutating global
+ * `process.env`. Safe for concurrent collector runs triggered from admin.
+ */
+export function runWithDryRun<T>(dryRun: boolean, fn: () => Promise<T>): Promise<T> {
+  return dryRunContext.run({ dryRun }, fn);
+}
+
+export function isDryRunActive(): boolean {
+  const scoped = dryRunContext.getStore();
+  if (scoped !== undefined) return scoped.dryRun;
+  return (process.env.COLLECTOR_DRY_RUN ?? "1") === "1";
+}
 
 export interface FetchOptions extends RequestInit {
   /** Requests per minute allowed to this host. Defaults to COLLECTOR_MAX_RPM. */
@@ -67,7 +84,7 @@ export async function politeFetch(
   // Dry run exists so the first thing you do with a new adapter is *not* to
   // send 16,000 requests at someone's booking engine because of a typo in a
   // loop bound. Flip COLLECTOR_DRY_RUN off deliberately.
-  const dryRun = env("COLLECTOR_DRY_RUN", "1") === "1";
+  const dryRun = isDryRunActive();
   if (dryRun && !alwaysSend) {
     console.log(`[dry-run] ${init.method ?? "GET"} ${url}`);
     return { status: 0, body: "", headers: new Headers(), url, skipped: true };

@@ -16,6 +16,7 @@ import { closeDb, getDb } from "@ratecoaster/db";
 import {
   alertEvents,
   properties,
+  pushRegistrations,
   rateCurrent,
   ticketPriceCurrent,
   ticketProducts,
@@ -26,6 +27,7 @@ import { RATE_CODE_LABELS } from "@ratecoaster/shared";
 import { addDays } from "../collectors/framework/dates.js";
 import { evaluateWatch, totalForStay } from "../lib/alerts.js";
 import { emailConfigured, sendPriceDropEmail } from "../lib/email.js";
+import { sendExpoPushMessages } from "../lib/push.js";
 
 const SITE_URL = process.env.WEB_ORIGIN ?? "https://ratecoaster.net";
 
@@ -158,14 +160,104 @@ async function releaseClaim(db: ReturnType<typeof getDb>, id: string): Promise<v
   await db.update(watches).set({ dispatchClaimedAt: null }).where(eq(watches.id, id));
 }
 
+async function deliverWatchChannels(
+  db: ReturnType<typeof getDb>,
+  now: Date,
+  params: {
+    userId: string;
+    email: string | null;
+    channels: string[];
+    title: string;
+    hotelName: string;
+    checkIn: string;
+    checkOut: string;
+    currentCents: number;
+    previousCents: number | null;
+    rateLabel: string;
+    url: string;
+  }
+): Promise<{ delivered: boolean; reasons: string[] }> {
+  let delivered = false;
+  const reasons: string[] = [];
+
+  if (params.channels.includes("email")) {
+    if (!emailConfigured()) {
+      reasons.push("email not configured");
+    } else if (!params.email) {
+      reasons.push("no email on account");
+    } else {
+      const emailResult = await sendPriceDropEmail({
+        to: params.email,
+        hotelName: params.hotelName,
+        checkIn: params.checkIn,
+        checkOut: params.checkOut,
+        currentCents: params.currentCents,
+        previousCents: params.previousCents,
+        rateLabel: params.rateLabel,
+        url: params.url,
+      });
+      if (emailResult.sent) delivered = true;
+      else reasons.push(`email: ${emailResult.reason}`);
+    }
+  }
+
+  if (params.channels.includes("expo-push")) {
+    const regs = await db
+      .select({ token: pushRegistrations.token })
+      .from(pushRegistrations)
+      .where(
+        and(
+          eq(pushRegistrations.userId, params.userId),
+          eq(pushRegistrations.channel, "expo-push"),
+          isNull(pushRegistrations.revokedAt)
+        )
+      );
+    if (regs.length === 0) {
+      reasons.push("no active mobile push registration");
+    } else {
+      const current = `$${(params.currentCents / 100).toFixed(2)}`;
+      const prev =
+        params.previousCents !== null ? ` (was $${(params.previousCents / 100).toFixed(2)})` : "";
+      const pushResult = await sendExpoPushMessages(
+        regs.map((reg) => ({
+          to: reg.token,
+          title: params.title,
+          body: `${params.hotelName} (${params.checkIn}) is now ${current}${prev}.`,
+          data: { url: params.url },
+        }))
+      );
+      if (pushResult.unregisteredTokens.length > 0) {
+        await db
+          .update(pushRegistrations)
+          .set({ revokedAt: now })
+          .where(inArray(pushRegistrations.token, pushResult.unregisteredTokens));
+      }
+      if (pushResult.sent > 0) delivered = true;
+      else reasons.push(`expo-push: ${pushResult.errors.join("; ") || "failed"}`);
+    }
+  }
+
+  return { delivered, reasons };
+}
+
 async function main() {
   const send = process.argv.includes("--send");
   const db = getDb();
   const now = new Date();
 
-  if (send && !emailConfigured()) {
-    console.error("Email is not configured — refusing to run with --send.");
-    console.error("Set RESEND_API_KEY and EMAIL_FROM, then try again.");
+  const hasPushRegistrations = send
+    ? (
+        await db
+          .select({ id: pushRegistrations.id })
+          .from(pushRegistrations)
+          .where(and(eq(pushRegistrations.channel, "expo-push"), isNull(pushRegistrations.revokedAt)))
+          .limit(1)
+      ).length > 0
+    : false;
+
+  if (send && !emailConfigured() && !hasPushRegistrations) {
+    console.error("Neither email nor mobile push is configured — refusing to run with --send.");
+    console.error("Set RESEND_API_KEY and EMAIL_FROM, or register a mobile push token, then try again.");
     await closeDb();
     process.exit(1);
   }
@@ -265,13 +357,8 @@ async function main() {
         `  SEND  ${label} — ${money(previous)} → ${money(total)} (${decision.reason})`
       );
       if (!send) continue;
-      if (!w.channels.includes("email")) {
-        console.log("        email channel is not enabled, skipping");
-        skipped++;
-        continue;
-      }
-      if (!w.email) {
-        console.log("        no email on the account, skipping");
+      if (!w.channels.includes("email") && !w.channels.includes("expo-push")) {
+        console.log("        no supported alert channel enabled, skipping");
         skipped++;
         continue;
       }
@@ -286,8 +373,11 @@ async function main() {
           ? `${SITE_URL}/tickets?destination=${destination ?? "universal-orlando"}`
           : `${SITE_URL}/express-pass?destination=${destination ?? "universal-orlando"}`;
 
-      const result = await sendPriceDropEmail({
-        to: w.email,
+      const delivery = await deliverWatchChannels(db, now, {
+        userId: w.userId,
+        email: w.email,
+        channels: w.channels,
+        title: w.kind === "ticket" ? "Universal ticket price drop" : "Express Pass price drop",
         hotelName:
           w.kind === "ticket"
             ? (w.ticketProductName ?? "Your watched ticket")
@@ -300,8 +390,8 @@ async function main() {
         url,
       });
 
-      if (!result.sent) {
-        console.error(`        send failed: ${result.reason}`);
+      if (!delivery.delivered) {
+        console.error(`        send failed: ${delivery.reasons.join("; ")}`);
         await releaseClaim(db, w.id);
         continue;
       }
@@ -433,13 +523,8 @@ async function main() {
 
     if (!send) continue;
 
-    if (!w.channels.includes("email")) {
-      console.log("        email channel is not enabled, skipping");
-      skipped++;
-      continue;
-    }
-    if (!w.email) {
-      console.log("        no email on the account, skipping");
+    if (!w.channels.includes("email") && !w.channels.includes("expo-push")) {
+      console.log("        no supported alert channel enabled, skipping");
       skipped++;
       continue;
     }
@@ -458,8 +543,11 @@ async function main() {
       ? `${SITE_URL}/hotels/${w.propertySlug}?rateCode=${w.rateCode}&stayDate=${w.checkIn}`
       : `${SITE_URL}/hotels?destination=${destination ?? "universal-orlando"}&rateCode=${w.rateCode}`;
 
-    const result = await sendPriceDropEmail({
-      to: w.email,
+    const delivery = await deliverWatchChannels(db, now, {
+      userId: w.userId,
+      email: w.email,
+      channels: w.channels,
+      title: "Universal hotel price drop",
       hotelName:
         w.propertyName ??
         DESTINATION_LABELS[destination ?? "universal-orlando"] ??
@@ -472,13 +560,13 @@ async function main() {
       url,
     });
 
-    if (!result.sent) {
+    if (!delivery.delivered) {
       /*
        * A failed send must NOT advance lastNotifiedCents. Otherwise the watch
        * believes it has already told the user about this price, and the alert
        * they actually wanted is suppressed forever by a transient outage.
        */
-      console.error(`        send failed: ${result.reason}`);
+      console.error(`        send failed: ${delivery.reasons.join("; ")}`);
       await releaseClaim(db, w.id);
       continue;
     }

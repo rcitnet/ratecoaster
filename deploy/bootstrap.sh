@@ -279,11 +279,20 @@ c_do "Seeding reference data"
 sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && set -a && . ./.env && set +a && npm run db:seed"
 c_ok "hotels, parks and ticket products seeded"
 
+c_do "Building the API bundle"
+sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && set -a && . ./.env && set +a && NODE_ENV=production npm run -w @ratecoaster/api build"
+c_ok "API built"
+
 c_do "Building the website (1-3 minutes)"
 # Must be production here. A development build fails with a misleading error
 # about '<Html> should not be imported outside of pages/_document'.
 sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && set -a && . ./.env && set +a && NODE_ENV=production npm run -w @ratecoaster/web build"
 c_ok "website built"
+
+sudo mkdir -p "/home/${APP_USER}/locks"
+sudo chown "${APP_USER}:${APP_USER}" "/home/${APP_USER}/locks"
+sudo cp "${APP_DIR}/deploy/logrotate.ratecoaster" /etc/logrotate.d/ratecoaster
+sudo chmod 644 /etc/logrotate.d/ratecoaster
 
 # ── 9. services ──────────────────────────────────────────────────────────────
 c_do "Installing systemd services"

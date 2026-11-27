@@ -13,11 +13,13 @@ import { crowdsRouter } from "./routes/crowds.js";
 import { flightsRouter } from "./routes/flights.js";
 import { plannerRouter } from "./routes/planner.js";
 import { outboundRouter } from "./routes/outbound.js";
+import { pushRouter } from "./routes/push.js";
 import { watchesRouter } from "./routes/watches.js";
 import { tripsRouter } from "./routes/trips.js";
 import { siteRouter } from "./routes/site.js";
 import { socialMediaRouter } from "./routes/social-media.js";
 import { COLLECTORS } from "./jobs/registry.js";
+import { csrfProtection } from "./lib/csrf.js";
 import { rateLimitByIp } from "./lib/rate-limit.js";
 
 const app = new Hono();
@@ -36,15 +38,23 @@ app.use(
     },
   })
 );
+const allowedOrigins = [
+  ...(process.env.CORS_ORIGINS ?? "http://localhost:3000").split(","),
+  ...(process.env.WEB_ORIGIN ? [process.env.WEB_ORIGIN] : []),
+]
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
   "*",
   cors({
     // Explicit origin list rather than `*`, because the watch endpoints are
     // authenticated and will send credentials.
-    origin: (process.env.CORS_ORIGINS ?? "http://localhost:3000").split(","),
+    origin: allowedOrigins,
     credentials: true,
   })
 );
+app.use("*", csrfProtection(allowedOrigins));
 
 const DEMO = process.env.DEMO_MODE === "1";
 
@@ -158,6 +168,18 @@ app.use(
   "/v1/crowds/*",
   rateLimitByIp({ namespace: "crowd-calendar", limit: 30, windowMs: 60_000 })
 );
+app.use(
+  "/v1/outbound/*",
+  rateLimitByIp({ namespace: "outbound", limit: 120, windowMs: 60_000 })
+);
+const accountWriteLimit = rateLimitByIp({
+  namespace: "account-writes",
+  limit: 30,
+  windowMs: 60_000,
+});
+app.use("/v1/watches", accountWriteLimit);
+app.use("/v1/watches/*", accountWriteLimit);
+app.use("/v1/push/*", accountWriteLimit);
 
 app.route("/v1/site", siteRouter);
 app.route("/v1/social", socialMediaRouter);
@@ -172,6 +194,7 @@ app.route("/v1/trips", tripsRouter);
 app.route("/v1/flights", flightsRouter);
 app.route("/v1/planner", plannerRouter);
 app.route("/v1/outbound", outboundRouter);
+app.route("/v1/push", pushRouter);
 app.route("/v1/watches", watchesRouter);
 
 app.notFound((c) => c.json({ error: { code: "not_found", message: "no such route" } }, 404));

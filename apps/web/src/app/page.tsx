@@ -5,7 +5,7 @@ import {
 } from "@ratecoaster/shared";
 import {
   formatLongDate,
-  getClient,
+  getPublicClient,
   relativeTime,
   safe,
 } from "@/lib/api";
@@ -43,7 +43,7 @@ export const revalidate = 60;
 const HOME_TIERS = ["premier", "preferred", "prime-value", "value"] as const;
 
 export default async function DealsPage() {
-  const client = await getClient();
+  const client = getPublicClient(60);
   const [deals, properties, waits, ticketProducts, homepage] = await Promise.all([
     safe(client.listDeals({ destination: "universal-orlando", limit: 40 }), []),
     safe(client.listProperties(), []),

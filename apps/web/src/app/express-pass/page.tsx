@@ -1,5 +1,5 @@
 import { centsToDisplay, ExpressPassType } from "@ratecoaster/shared";
-import { getClient, dayNumber, dayOfWeekLabel, getMe, safe } from "@/lib/api";
+import { getPublicClient, dayNumber, dayOfWeekLabel, safe } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { WatchDateButton } from "@/components/WatchDateButton";
 import { PageIntro } from "@/components/PageIntro";
@@ -48,7 +48,7 @@ export default async function ExpressPage({
     : undefined;
   const park = params.park && PARK_LABELS[params.park] ? params.park : undefined;
 
-  const client = await getClient();
+  const client = getPublicClient(300);
   const products = await safe(client.listExpressPassProducts(destination), []);
   const filteredProducts = products.filter(
     (product) =>
@@ -71,7 +71,6 @@ export default async function ExpressPage({
   // they are already looking at rather than an arbitrary one a month out.
   const cheapestDate =
     [...availablePrices].sort((a, b) => a.totalCents - b.totalCents)[0]?.validDate ?? null;
-  const me = await getMe();
   const filterParams = new URLSearchParams();
   if (park) filterParams.set("park", park);
   if (passType) filterParams.set("passType", passType);
@@ -170,7 +169,6 @@ export default async function ExpressPage({
                 productId={selected.id}
                 productName={selected.name}
                 destination={destination}
-                signedIn={Boolean(me.user)}
                 returnTo="/express-pass"
                 defaultDate={cheapestDate ?? undefined}
               />

@@ -1,4 +1,4 @@
-import { getClient, safe } from "@/lib/api";
+import { getPublicClient, safe } from "@/lib/api";
 import { AdSlot } from "@/components/AdSlot";
 import { WaitsExplorer } from "@/components/WaitsExplorer";
 import { pageMetadata } from "@/lib/seo";
@@ -21,7 +21,7 @@ export default async function WaitsPage({
   searchParams: Promise<{ park?: string }>;
 }) {
   const params = await searchParams;
-  const client = await getClient();
+  const client = getPublicClient(60);
   const data = await safe(
     client.liveWaits({ destination: "universal-orlando", ridesOnly: false }),
     { parks: [], attribution: [], fetchedAt: new Date().toISOString() }

@@ -2,58 +2,42 @@
 # Install with:  sudo crontab -u ratecoaster /home/ratecoaster/app/deploy/ratecoaster.cron
 #
 # Cron runs with almost no environment, so every line loads .env first and uses
-# absolute paths. This is the single most common reason a job that works when
-# you type it by hand does nothing on a schedule.
+# absolute paths. Every job is wrapped in `flock -n` so a slow upstream response
+# never causes overlapping runs to pile up and exhaust the Postgres pool, and
+# runs the compiled production bundle (`dist/jobs/*.js`) for instant startup.
 
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
 # Live wait times — every 5 minutes. Works immediately, no setup needed.
-*/5 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only wait-times >> /home/ratecoaster/logs/waits.log 2>&1
+*/5 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/wait-times.lock /usr/bin/npm run collect:prod -- --only wait-times >> /home/ratecoaster/logs/waits.log 2>&1
 
-# Park hours — twice a day. Published weeks ahead and rarely revised, so this
-# is generous; it is what lets the site tell a closed park from a quiet one.
-8 3,15 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only park-hours >> /home/ratecoaster/logs/hours.log 2>&1
+# Park hours — twice a day. Published weeks ahead and rarely revised.
+8 3,15 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/park-hours.lock /usr/bin/npm run collect:prod -- --only park-hours >> /home/ratecoaster/logs/hours.log 2>&1
 
 # Official Universal attraction classifications, imagery and map coordinates — daily.
-# This is one catalog request, so checking more frequently would only reread the same publication.
-24 2 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only attraction-metadata >> /home/ratecoaster/logs/attraction-metadata.log 2>&1
+24 2 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/attraction-metadata.lock /usr/bin/npm run collect:prod -- --only attraction-metadata >> /home/ratecoaster/logs/attraction-metadata.log 2>&1
 
 # Hotel rates — every 6 hours, offset off the hour to avoid stampeding.
-17 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only hotel-rates >> /home/ratecoaster/logs/hotels.log 2>&1
+17 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/hotel-rates.lock /usr/bin/npm run collect:prod -- --only hotel-rates >> /home/ratecoaster/logs/hotels.log 2>&1
 
 # Ticket prices — twice a day.
-23 4,16 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only ticket-prices >> /home/ratecoaster/logs/tickets.log 2>&1
+23 4,16 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/ticket-prices.lock /usr/bin/npm run collect:prod -- --only ticket-prices >> /home/ratecoaster/logs/tickets.log 2>&1
 
 # Express Pass — every 4 hours; it moves faster than anything else.
-41 */4 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only express-pass >> /home/ratecoaster/logs/express.log 2>&1
+41 */4 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/express-pass.lock /usr/bin/npm run collect:prod -- --only express-pass >> /home/ratecoaster/logs/express.log 2>&1
 
 # Flight fares — once a day, in the small hours.
-#
-# Daily is deliberate. The upstream data is itself a cache that refreshes on its
-# own schedule, so running this hourly would re-read the same numbers and spend
-# our rate limit learning nothing.
-52 2 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run collect -- --only flight-prices >> /home/ratecoaster/logs/flights.log 2>&1
+52 2 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/flight-prices.lock /usr/bin/npm run collect:prod -- --only flight-prices >> /home/ratecoaster/logs/flights.log 2>&1
 
 # Rate-drop alerts — 20 minutes after the hotel collector, four times a day.
-#
-# It can only act on prices already written, so it has to follow the collector
-# rather than race it. Four runs a day is well inside the per-watch cooldown, so
-# the extra passes cost nothing and only shorten the delay between a real drop
-# and the email about it.
-37 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api alerts:dispatch -- --send >> /home/ratecoaster/logs/alerts.log 2>&1
+37 */6 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/alerts.lock /usr/bin/npm run -w @ratecoaster/api alerts:dispatch:prod -- --send >> /home/ratecoaster/logs/alerts.log 2>&1
 
-# Social publishing — eight minutes past every hour, after a fresh wait-time
-# sample. The job itself checks park hours, source freshness, daily-deal timing,
-# admin enable switches and dry-run state. X is always queued for human approval.
-8 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api social:publish -- --send >> /home/ratecoaster/logs/social.log 2>&1
+# Social publishing — eight minutes past every hour, after a fresh wait-time sample.
+8 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/social.lock /usr/bin/npm run -w @ratecoaster/api social:publish:prod -- --send >> /home/ratecoaster/logs/social.log 2>&1
 
-# Nightly: fold wait samples into hourly averages and prune the raw rows.
-30 3 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/npm run -w @ratecoaster/api rollup >> /home/ratecoaster/logs/rollup.log 2>&1
+# Nightly: fold wait samples into hourly averages and prune raw rows, sessions, tokens and old runs.
+30 3 * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/rollup.lock /usr/bin/npm run -w @ratecoaster/api rollup:prod >> /home/ratecoaster/logs/rollup.log 2>&1
 
 # Hourly: preserve dated crowd estimates and flag missing/stale signals in admin.
-# Run after the pricing jobs; past estimates are immutable and never pruned.
-54 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && /usr/bin/flock -n /home/ratecoaster/crowd-archive.lock /usr/bin/npm run -w @ratecoaster/api crowds:archive >> /home/ratecoaster/logs/crowd-archive.log 2>&1
-
-# Keep the log files from growing forever.
-0 5 * * 0 find /home/ratecoaster/logs -name '*.log' -size +50M -delete
+54 * * * * cd /home/ratecoaster/app && set -a && . ./.env && set +a && mkdir -p /home/ratecoaster/locks && /usr/bin/flock -n /home/ratecoaster/locks/crowd-archive.lock /usr/bin/npm run -w @ratecoaster/api crowds:archive:prod >> /home/ratecoaster/logs/crowd-archive.log 2>&1

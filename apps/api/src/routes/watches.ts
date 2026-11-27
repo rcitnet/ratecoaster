@@ -103,9 +103,14 @@ watchesRouter.post("/", async (c) => {
   }
   const input = parsed.data;
 
-  if (input.channels.some((channel) => channel !== "email")) {
+  if (input.channels.some((channel) => channel !== "email" && channel !== "expo-push")) {
     return c.json(
-      { error: { code: "unsupported_channel", message: "Only email alerts are available right now." } },
+      {
+        error: {
+          code: "unsupported_channel",
+          message: "Only email and mobile push alerts are available right now.",
+        },
+      },
       400
     );
   }

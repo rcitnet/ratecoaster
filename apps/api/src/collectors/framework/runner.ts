@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@ratecoaster/db";
 import { collectorRuns } from "@ratecoaster/db/schema";
+import { runWithDryRun } from "./http.js";
 import { createLogger, createStats, type Collector } from "./types.js";
 import { getCollectorSetting } from "../../lib/settings.js";
 
@@ -15,6 +16,12 @@ export interface RunResult {
   durationMs: number;
 }
 
+const activeCollectors = new Set<string>();
+
+export function isCollectorRunning(name: string): boolean {
+  return activeCollectors.has(name);
+}
+
 /**
  * Runs one collector with full bookkeeping.
  *
@@ -26,36 +33,14 @@ export interface RunResult {
  * when a user emails you three weeks later.
  */
 export async function runCollector(collector: Collector): Promise<RunResult> {
-  const db = getDb();
   const logger = createLogger(collector.name);
-  const stats = createStats();
-  const startedAt = Date.now();
 
-  /*
-   * Per-collector dry-run, applied to the process environment for the duration
-   * of this run. Collectors execute sequentially and in-process, so this is
-   * safe; the alternative — threading a flag down to every fetch call site —
-   * would touch far more code for the same effect. If runs ever become
-   * concurrent, this has to become explicit context instead.
-   */
-  const setting = await getCollectorSetting(collector.name);
-  const previousDryRun = process.env.COLLECTOR_DRY_RUN;
-  const forceDryRun = process.env.RATECOASTER_FORCE_DRY_RUN === "1";
-  const isDryRun = setting.dryRun || forceDryRun;
-  process.env.COLLECTOR_DRY_RUN = isDryRun ? "1" : "0";
-
-  const restoreEnv = () => {
-    if (previousDryRun === undefined) delete process.env.COLLECTOR_DRY_RUN;
-    else process.env.COLLECTOR_DRY_RUN = previousDryRun;
-  };
-
-  if (!setting.enabled) {
-    logger.info("skipped — disabled in admin settings");
-    restoreEnv();
+  if (activeCollectors.has(collector.name)) {
+    logger.warn("skipped — collector is already running in this process");
     return {
       collector: collector.name,
       status: "skipped",
-      reason: "disabled in admin settings",
+      reason: "already running",
       requestCount: 0,
       parsedCount: 0,
       writtenCount: 0,
@@ -64,85 +49,112 @@ export async function runCollector(collector: Collector): Promise<RunResult> {
     };
   }
 
-  const readiness = await collector.isConfigured({ db, stats, logger });
-  if (!readiness.ready) {
-    logger.warn(`skipped — ${readiness.reason ?? "not configured"}`);
-    restoreEnv();
-    return {
-      collector: collector.name,
-      status: "skipped",
-      reason: readiness.reason,
-      requestCount: 0,
-      parsedCount: 0,
-      writtenCount: 0,
-      errorCount: 0,
-      durationMs: 0,
-    };
-  }
-
-  const [run] = await db
-    .insert(collectorRuns)
-    .values({ collector: collector.name, status: "running" })
-    .returning({ id: collectorRuns.id });
-
-  let status: "ok" | "partial" | "failed" = "ok";
-  let thrown: unknown = null;
-
+  activeCollectors.add(collector.name);
   try {
-    await collector.run({ db, stats, logger });
-    if (stats.errorCount > 0) {
-      status = "partial";
-    } else if (stats.parsedCount === 0 && isDryRun) {
-      logger.info(`dry-run planned ${stats.requestCount} requests; no requests were sent`);
-    } else if (stats.parsedCount === 0) {
-      status = "partial";
-      logger.warn(
-        "run finished but parsed 0 records — the upstream response shape has probably changed"
-      );
+    const db = getDb();
+    const stats = createStats();
+    const startedAt = Date.now();
+
+    const setting = await getCollectorSetting(collector.name);
+    const forceDryRun = process.env.RATECOASTER_FORCE_DRY_RUN === "1";
+    const isDryRun = setting.dryRun || forceDryRun;
+
+    if (!setting.enabled) {
+      logger.info("skipped — disabled in admin settings");
+      return {
+        collector: collector.name,
+        status: "skipped",
+        reason: "disabled in admin settings",
+        requestCount: 0,
+        parsedCount: 0,
+        writtenCount: 0,
+        errorCount: 0,
+        durationMs: 0,
+      };
     }
-  } catch (err) {
-    status = "failed";
-    thrown = err;
-    stats.errorCount++;
-    logger.error(`run failed: ${String(err)}`);
+
+    const readiness = await collector.isConfigured({ db, stats, logger, dryRun: isDryRun });
+    if (!readiness.ready) {
+      logger.warn(`skipped — ${readiness.reason ?? "not configured"}`);
+      return {
+        collector: collector.name,
+        status: "skipped",
+        reason: readiness.reason,
+        requestCount: 0,
+        parsedCount: 0,
+        writtenCount: 0,
+        errorCount: 0,
+        durationMs: 0,
+      };
+    }
+
+    const [run] = await db
+      .insert(collectorRuns)
+      .values({ collector: collector.name, status: "running" })
+      .returning({ id: collectorRuns.id });
+
+    let status: "ok" | "partial" | "failed" = "ok";
+    let thrown: unknown = null;
+
+    try {
+      // AsyncLocalStorage scopes dry-run mode to this execution tree so
+      // concurrent admin-triggered runs never race on process.env.
+      await runWithDryRun(isDryRun, () => collector.run({ db, stats, logger, dryRun: isDryRun }));
+      if (stats.errorCount > 0) {
+        status = "partial";
+      } else if (stats.parsedCount === 0 && isDryRun) {
+        logger.info(`dry-run planned ${stats.requestCount} requests; no requests were sent`);
+      } else if (stats.parsedCount === 0) {
+        status = "partial";
+        logger.warn(
+          "run finished but parsed 0 records — the upstream response shape has probably changed"
+        );
+      }
+    } catch (err) {
+      status = "failed";
+      thrown = err;
+      stats.errorCount++;
+      logger.error(`run failed: ${String(err)}`);
+    }
+
+    const durationMs = Date.now() - startedAt;
+
+    if (run) {
+      await db
+        .update(collectorRuns)
+        .set({
+          status,
+          finishedAt: new Date(),
+          requestCount: stats.requestCount,
+          parsedCount: stats.parsedCount,
+          writtenCount: stats.writtenCount,
+          errorCount: stats.errorCount,
+          notes: {
+            ...stats.notes,
+            durationMs,
+            dryRun: isDryRun,
+            ...(thrown ? { error: String(thrown) } : {}),
+          },
+        })
+        .where(eq(collectorRuns.id, run.id));
+    }
+
+    logger.info(
+      `${status} in ${durationMs}ms — ${stats.requestCount} requests, ${stats.parsedCount} parsed, ${stats.writtenCount} written, ${stats.errorCount} errors`
+    );
+
+    return {
+      collector: collector.name,
+      status,
+      requestCount: stats.requestCount,
+      parsedCount: stats.parsedCount,
+      writtenCount: stats.writtenCount,
+      errorCount: stats.errorCount,
+      durationMs,
+    };
+  } finally {
+    activeCollectors.delete(collector.name);
   }
-
-  restoreEnv();
-  const durationMs = Date.now() - startedAt;
-
-  if (run) {
-    await db
-      .update(collectorRuns)
-      .set({
-        status,
-        finishedAt: new Date(),
-        requestCount: stats.requestCount,
-        parsedCount: stats.parsedCount,
-        writtenCount: stats.writtenCount,
-        errorCount: stats.errorCount,
-        notes: {
-          ...stats.notes,
-          durationMs,
-          dryRun: isDryRun,
-          ...(thrown ? { error: String(thrown) } : {}),
-        },
-      })
-      .where(eq(collectorRuns.id, run.id));
-  }
-
-  logger.info(
-    `${status} in ${durationMs}ms — ${stats.requestCount} requests, ${stats.parsedCount} parsed, ${stats.writtenCount} written, ${stats.errorCount} errors`
-  );
-
-  return {
-    collector: collector.name,
-    status,
-    requestCount: stats.requestCount,
-    parsedCount: stats.parsedCount,
-    writtenCount: stats.writtenCount,
-    errorCount: stats.errorCount,
-    durationMs,
-  };
 }
 
 /**

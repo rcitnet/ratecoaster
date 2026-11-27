@@ -5,6 +5,8 @@ export interface CollectorContext {
   /** Incremented by adapters so a run's health is measurable, not guessed. */
   stats: RunStats;
   logger: Logger;
+  /** True when outbound booking-engine requests should be logged instead of sent. */
+  dryRun?: boolean;
   signal?: AbortSignal;
 }
 

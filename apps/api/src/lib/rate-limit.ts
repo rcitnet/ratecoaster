@@ -27,6 +27,16 @@ export class MemoryRateLimitStore {
   private readonly buckets = new Map<string, Bucket>();
   private checks = 0;
 
+  constructor(private readonly maxEntries = 50_000) {
+    if (!Number.isInteger(maxEntries) || maxEntries < 1) {
+      throw new Error("maxEntries must be positive");
+    }
+  }
+
+  get size(): number {
+    return this.buckets.size;
+  }
+
   take(key: string, limit: number, windowMs: number, now = Date.now()): RateLimitDecision {
     if (!Number.isInteger(limit) || limit < 1) throw new Error("rate limit must be positive");
     if (!Number.isFinite(windowMs) || windowMs < 1) throw new Error("rate window must be positive");
@@ -40,7 +50,18 @@ export class MemoryRateLimitStore {
 
     const allowed = bucket.count < limit;
     if (allowed) bucket.count++;
+    // Refresh insertion order on update so LRU eviction keeps hot keys.
+    if (existing) this.buckets.delete(key);
     this.buckets.set(key, bucket);
+
+    if (this.buckets.size > this.maxEntries) {
+      this.prune(now);
+      while (this.buckets.size > this.maxEntries) {
+        const oldest = this.buckets.keys().next().value as string | undefined;
+        if (oldest === undefined) break;
+        this.buckets.delete(oldest);
+      }
+    }
 
     return {
       allowed,

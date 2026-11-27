@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { GUIDES } from "@/lib/guides";
 import { SITE_URL } from "@/lib/seo";
-import { getClient, safe } from "@/lib/api";
+import { getPublicClient, safe } from "@/lib/api";
 
 /**
  * The sitemap, built from real data rather than a hardcoded list.
@@ -53,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * are gone, and re-crawling them afterwards takes far longer than the outage
    * did. Falling back to the static routes keeps the file honest and small.
    */
-  const client = await getClient();
+  const client = getPublicClient(3600);
   const properties = await safe(client.listProperties(), []);
 
   const hotelRoutes: MetadataRoute.Sitemap = properties.map((property) => ({

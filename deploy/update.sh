@@ -5,9 +5,9 @@
 #   /home/ratecoaster/app/deploy/update.sh
 #
 # It does the code and build steps as the unprivileged `ratecoaster` user, and
-# only the service restarts as you. That split is deliberate: the app user has
-# no sudo on purpose, so a compromise of the website cannot restart or reconfigure
-# system services.
+# only the system/service steps as you. That split is deliberate: the app user
+# has no sudo on purpose, so a compromise of the website cannot restart or
+# reconfigure system services.
 set -euo pipefail
 
 APP_USER="ratecoaster"
@@ -18,7 +18,6 @@ if [ "$(id -un)" = "$APP_USER" ]; then
   exit 1
 fi
 
-# Everything the app user can do, it does.
 run_as_app() {
   sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && $1"
 }
@@ -32,38 +31,54 @@ if ! dpkg-query -W -f='${Status}' fonts-dejavu-core 2>/dev/null | grep -q 'insta
   sudo apt-get update -qq
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fontconfig fonts-dejavu-core
 fi
-# --include=dev is REQUIRED. NODE_ENV=production makes npm skip
-# devDependencies, and this project needs TypeScript, tsx and drizzle-kit at
-# build and run time. Without this the build fails with confusing
-# "command not found" errors.
-run_as_app "NODE_ENV=development npm install --include=dev --no-audit --no-fund"
+run_as_app "NODE_ENV=development npm ci --include=dev --no-audit --no-fund || NODE_ENV=development npm install --include=dev --no-audit --no-fund"
 
 echo "==> Applying any database changes"
-run_as_app "set -a && . ./.env && set +a && npm run db:push"
+if [ -f "$APP_DIR/packages/db/drizzle/meta/_journal.json" ]; then
+  run_as_app "set -a && . ./.env && set +a && npm run db:migrate"
+else
+  run_as_app "set -a && . ./.env && set +a && npm run db:push"
+fi
 
-echo "==> Building the website"
-# Must be production. A development build fails with a misleading error about
-# '<Html> should not be imported outside of pages/_document'.
+echo "==> Building API bundle"
+run_as_app "set -a && . ./.env && set +a && NODE_ENV=production npm run -w @ratecoaster/api build"
+
+echo "==> Building website"
 run_as_app "set -a && . ./.env && set +a && NODE_ENV=production npm run -w @ratecoaster/web build"
 
-echo "==> Installing scheduled jobs"
-# deploy/ratecoaster.cron is the authoritative schedule. Reinstall it on every
-# deploy so a newly added job does not exist in git but never run in production.
+echo "==> Syncing system config (systemd, logrotate, cron)"
+sudo mkdir -p "/home/${APP_USER}/locks" "/home/${APP_USER}/logs"
+sudo chown "${APP_USER}:${APP_USER}" "/home/${APP_USER}/locks" "/home/${APP_USER}/logs"
+sudo cp "$APP_DIR/deploy/ratecoaster-api.service" /etc/systemd/system/
+sudo cp "$APP_DIR/deploy/ratecoaster-web.service" /etc/systemd/system/
+sudo cp "$APP_DIR/deploy/logrotate.ratecoaster" /etc/logrotate.d/ratecoaster
+sudo chmod 644 /etc/logrotate.d/ratecoaster
 sudo crontab -u "$APP_USER" "$APP_DIR/deploy/ratecoaster.cron"
 
 echo "==> Restarting services"
-# Pick up any change to the unit files first. Without this, systemd restarts
-# from its cached definition and warns that the units changed on disk — so an
-# edited unit file appears deployed, reports "running", and is silently still
-# running the old configuration.
 sudo systemctl daemon-reload
 sudo systemctl restart ratecoaster-api
 sudo systemctl restart ratecoaster-web
 
-sleep 3
+echo "==> Running post-deploy health checks"
+API_OK=0
+WEB_OK=0
+for _ in $(seq 1 15); do
+  if [ "$API_OK" -eq 0 ] && curl -fsS http://127.0.0.1:8787/health >/dev/null 2>&1; then
+    API_OK=1
+  fi
+  if [ "$WEB_OK" -eq 0 ] && curl -fsS -o /dev/null http://127.0.0.1:3000/ 2>/dev/null; then
+    WEB_OK=1
+  fi
+  if [ "$API_OK" -eq 1 ] && [ "$WEB_OK" -eq 1 ]; then
+    break
+  fi
+  sleep 1
+done
+
 echo "==> Status"
-systemctl is-active --quiet ratecoaster-api && echo "  API  running" || echo "  API  NOT RUNNING"
-systemctl is-active --quiet ratecoaster-web && echo "  web  running" || echo "  web  NOT RUNNING"
+[ "$API_OK" -eq 1 ] && echo "  API  healthy (http://127.0.0.1:8787/health)" || { echo "  API  FAILED HEALTH CHECK" >&2; exit 1; }
+[ "$WEB_OK" -eq 1 ] && echo "  web  healthy (http://127.0.0.1:3000/)" || { echo "  web  FAILED HEALTH CHECK" >&2; exit 1; }
 
 echo
-echo "Done. If something looks wrong:  journalctl -u ratecoaster-web -n 50 --no-pager"
+echo "Done. Logs: journalctl -u ratecoaster-api -u ratecoaster-web -n 50 --no-pager"

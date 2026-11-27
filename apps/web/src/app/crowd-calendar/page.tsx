@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { dayOfWeekLabel, getClient, PARK_COLORS, safe } from "@/lib/api";
+import { dayOfWeekLabel, getPublicClient, PARK_COLORS, safe } from "@/lib/api";
 import { pageMetadata } from "@/lib/seo";
 import { PageIntro } from "@/components/PageIntro";
 import { PageExplainer } from "@/components/PageExplainer";
@@ -99,7 +99,7 @@ export default async function CrowdCalendarPage({
     ? params.month
     : currentMonth;
   const requestedFrom = `${selectedMonth}-01`;
-  const client = await getClient();
+  const client = getPublicClient(300);
   const data = await safe(client.crowdCalendar({
     parkSlug: selectedPark,
     from: requestedFrom,

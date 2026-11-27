@@ -20,7 +20,7 @@ Being precise about this matters more than a feature list.
 | Hotel and Orlando ticket collectors | **Working once their public guest credentials are configured.** Scheduling, rate limiting, parsing, storage, and change detection are built and tested. |
 | Express and other ticket collectors | **Not configured yet.** Their source seams exist, but no verified first-party endpoint is wired in. |
 | Database schema, API, web UI | **Working.** Typechecked, tested, builds clean. |
-| Mobile app | Not built. The API and shared types are shaped so it slots in. |
+| Mobile app | **Built for Android (`apps/mobile`).** Expo / React Native companion sharing `@ratecoaster/shared` schemas, client, and planning guides. |
 
 Collectors use verified first-party endpoints and identify themselves through a
 configurable user agent. See [Legal and ethical posture](#legal-and-ethical-posture).
@@ -31,7 +31,8 @@ configurable user agent. See [Legal and ethical posture](#legal-and-ethical-post
 ratecoaster/
 ├── apps/
 │   ├── api/          Hono API + collectors + scheduled jobs
-│   └── web/          Next.js 15 (App Router), server components
+│   ├── web/          Next.js 15 (App Router), server components
+│   └── mobile/       Expo / React Native Android companion
 └── packages/
     ├── shared/       Zod schemas + typed API client  ← web and mobile both import this
     └── db/           Drizzle schema + seed data
@@ -45,6 +46,22 @@ the web renders, a phone can render, because there is no privileged path.
 `packages/shared` holds the Zod schemas *and* the API client, so a response-shape
 change becomes a compile error in every client at once instead of a runtime
 surprise in one of them.
+
+### Android companion
+
+The native app lives in [`apps/mobile`](apps/mobile). It includes trip totals
+and flights, deals, live waits and attraction history, native maps and walking
+directions, hotels, tickets, Express Pass, crowds, guides, and account watches.
+It persists its session in Android's secure storage and uses a verified Android
+App Link for magic-link sign-in. It does not embed the website in a WebView.
+
+```bash
+npm run android
+```
+
+See [`apps/mobile/README.md`](apps/mobile/README.md) for local-device API
+configuration, building an APK/AAB, and the one-time Android App Links setup
+needed before release.
 
 ### The storage decision that matters
 
@@ -174,6 +191,13 @@ Wait times use [Queue-Times](https://queue-times.com/pages/api) and
 [ThemeParks.wiki](https://themeparks.wiki/api) — free, unauthenticated, offered
 for exactly this purpose. Queue-Times requires visible attribution, which the
 API returns in every response so no client can forget it.
+
+Ride classifications, accessibility metadata, official images, and attraction
+coordinates come from Universal Orlando's public content-data catalog. The
+`attraction-metadata` collector checks that single catalog once per day and
+matches records by normalized attraction name within the same park. It starts
+in dry-run like every newly added collector; review its first result, enable it
+in collector settings, and run `npm run db:push` before its first live write.
 
 Hotel, ticket, and Express pricing is different. Automated querying of those
 booking engines is very likely contrary to the operators' terms of service, even

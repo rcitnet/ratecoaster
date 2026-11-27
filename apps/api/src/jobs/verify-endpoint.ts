@@ -10,6 +10,7 @@
  * you cannot take back.
  */
 import { closeDb } from "@ratecoaster/db";
+import { runWithDryRun } from "../collectors/framework/http.js";
 import { loadEndpointConfig } from "../collectors/hotels/endpoint-config.js";
 import { queryOffers } from "../collectors/hotels/index.js";
 import { addDays, todayInTimezone } from "../collectors/framework/dates.js";
@@ -32,27 +33,25 @@ async function main() {
   // 45 days out: far enough that rates are published, near enough to be real.
   const checkIn = addDays(todayInTimezone("America/New_York"), 45);
 
-  // This is a real outbound request, so the dry-run guard is lifted explicitly
-  // for this one call rather than by changing the environment.
-  const previous = process.env.COLLECTOR_DRY_RUN;
-  process.env.COLLECTOR_DRY_RUN = "0";
-
   console.log(`config:   ${name}`);
   console.log(`hotel:    ${hotelCode ?? "(none)"}`);
   console.log(`rateCode: ${rateCode}`);
   console.log(`checkIn:  ${checkIn}\n`);
 
   try {
-    const result = await queryOffers(endpoint, {
-      hotelCode: hotelCode ?? "",
-      checkIn,
-      checkOut: addDays(checkIn, 1),
-      nights: 1,
-      adults: 2,
-      children: 0,
-      rateCode: rateCode === "STANDARD" ? "" : rateCode,
-      currency: "USD",
-    });
+    // Lift the dry-run guard only for this explicit single-request probe.
+    const result = await runWithDryRun(false, () =>
+      queryOffers(endpoint, {
+        hotelCode: hotelCode ?? "",
+        checkIn,
+        checkOut: addDays(checkIn, 1),
+        nights: 1,
+        adults: 2,
+        children: 0,
+        rateCode: rateCode === "STANDARD" ? "" : rateCode,
+        currency: "USD",
+      })
+    );
 
     if (result === null) {
       console.error("Request was skipped — is COLLECTOR_DRY_RUN forced on elsewhere?");
@@ -85,8 +84,6 @@ async function main() {
       process.exitCode = 1;
     }
   } finally {
-    if (previous === undefined) delete process.env.COLLECTOR_DRY_RUN;
-    else process.env.COLLECTOR_DRY_RUN = previous;
     await closeDb();
   }
 }

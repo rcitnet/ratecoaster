@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useClientSession } from "./ClientSession";
 
 type NavItem = {
   href: string;
@@ -9,13 +10,16 @@ type NavItem = {
 
 export function MobileMenu({
   items,
-  signedIn,
-  isAdmin,
+  signedIn: signedInProp,
+  isAdmin: isAdminProp,
 }: {
   items: readonly NavItem[];
-  signedIn: boolean;
-  isAdmin: boolean;
+  signedIn?: boolean;
+  isAdmin?: boolean;
 }) {
+  const session = useClientSession();
+  const signedIn = signedInProp ?? session.signedIn;
+  const isAdmin = isAdminProp ?? session.isAdmin;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);

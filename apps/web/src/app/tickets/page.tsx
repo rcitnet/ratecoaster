@@ -1,5 +1,5 @@
 import { centsToDisplay, GuestCategory } from "@ratecoaster/shared";
-import { getClient, dayNumber, dayOfWeekLabel, formatLongDate, getMe, safe } from "@/lib/api";
+import { getPublicClient, dayNumber, dayOfWeekLabel, formatLongDate, safe } from "@/lib/api";
 import { WatchDateButton } from "@/components/WatchDateButton";
 import { AdSlot } from "@/components/AdSlot";
 import { BookButton } from "@/components/BookButton";
@@ -26,9 +26,7 @@ export default async function TicketsPage({
   const params = await searchParams;
   const destination = params.destination ?? "universal-orlando";
   const guestCategory = GuestCategory.catch("adult").parse(params.guest);
-  const client = await getClient();
-  // Decides whether the watch control offers a sign-up or creates the watch.
-  const me = await getMe();
+  const client = getPublicClient(300);
   const products = await safe(client.listTicketProducts(destination), []);
   const selected = params.product ?? products[0]?.slug;
   const selectedProduct = products.find((p) => p.slug === selected);
@@ -132,7 +130,6 @@ export default async function TicketsPage({
                     productId={selectedProduct.id}
                     productName={selectedProduct.name}
                     destination={destination}
-                    signedIn={Boolean(me.user)}
                     returnTo={`/tickets?destination=${destination}&product=${selected ?? ""}`}
                     defaultDate={cheapest.validDate}
                   />

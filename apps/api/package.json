@@ -4,36 +4,42 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "start:dev": "tsx src/index.ts",
     "collect": "tsx src/jobs/run.ts",
+    "collect:prod": "node dist/jobs/run.js",
     "har:import": "tsx src/collectors/hotels/har-import.ts",
     "verify:endpoint": "tsx src/jobs/verify-endpoint.ts",
     "rollup": "tsx src/jobs/rollup.ts",
+    "rollup:prod": "node dist/jobs/rollup.js",
     "crowds:archive": "tsx src/jobs/archive-crowds.ts",
-    "test": "node --import tsx --test src/collectors/collectors.test.ts src/collectors/waits/providers.test.ts src/collectors/parks/hours.test.ts src/lib/google-oauth.test.ts src/collectors/flights/flights.test.ts src/routes/trips.test.ts src/lib/trip-cost.test.ts src/lib/alerts.test.ts src/lib/crowds.test.ts src/lib/crowd-archive.test.ts src/lib/email.test.ts src/lib/rate-limit.test.ts src/social/content.test.ts src/social/platforms.test.ts src/social/image.test.ts src/claims.test.ts",
+    "crowds:archive:prod": "node dist/jobs/archive-crowds.js",
+    "test": "node ../../scripts/run-tests.mjs src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.json --noEmit",
+    "build": "node scripts/build.mjs",
     "smoke:waits": "tsx src/jobs/smoke-waits.ts",
     "admin:grant": "tsx src/jobs/grant-admin.ts",
     "login:link": "tsx src/jobs/login-link.ts",
     "flights:probe": "tsx src/jobs/probe-flights.ts",
     "affiliate:seed": "tsx src/jobs/seed-affiliate-links.ts",
     "alerts:dispatch": "tsx src/jobs/dispatch-alerts.ts",
-    "social:publish": "tsx src/jobs/publish-social.ts"
+    "alerts:dispatch:prod": "node dist/jobs/dispatch-alerts.js",
+    "social:publish": "tsx src/jobs/publish-social.ts",
+    "social:publish:prod": "node dist/jobs/publish-social.js"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
     "@ratecoaster/db": "*",
     "@ratecoaster/shared": "*",
-    "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.14",
     "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.11",
     "postgres": "^3.4.5",
-    "sharp": "^0.34.5",
+    "sharp": "0.35.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.2"
+    "typescript": "^5.8.2"
   }
 }

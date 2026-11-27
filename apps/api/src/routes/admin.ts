@@ -17,7 +17,7 @@ import { audit, requireAdmin } from "../lib/admin.js";
 import { getAllCollectorSettings, setCollectorSetting } from "../lib/settings.js";
 import { getHomepageSettingsMeta, setHomepageHeroVariant } from "../lib/site-settings.js";
 import { COLLECTORS } from "../jobs/registry.js";
-import { runCollector } from "../collectors/framework/runner.js";
+import { isCollectorRunning, runCollector } from "../collectors/framework/runner.js";
 import { universalOrlandoTicketCredentialsConfigured } from "../collectors/tickets/universal-orlando-commerce.js";
 import { adminSocialRouter } from "./admin-social.js";
 import { getCrowdArchiveStatus } from "../lib/crowd-archive.js";
@@ -262,6 +262,13 @@ adminRouter.post("/collectors/:name/run", async (c) => {
   const collector = COLLECTORS.find((x) => x.name === name);
   if (!collector) {
     return c.json({ error: { code: "not_found", message: "unknown collector" } }, 404);
+  }
+
+  if (isCollectorRunning(name)) {
+    return c.json(
+      { error: { code: "already_running", message: `${name} is already running.` } },
+      409
+    );
   }
 
   await audit(c, "collector.run", name);

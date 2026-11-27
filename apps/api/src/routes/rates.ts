@@ -108,98 +108,116 @@ ratesRouter.get("/", async (c) => {
   const propertyById = new Map(props.map((p) => [p.id, p]));
 
   /*
-   * Cheapest room per (property, date) rather than every room type.
+   * Cheapest room per (property, date) computed directly in Postgres via
+   * DISTINCT ON rather than transferring every room type into Node.
    *
-   * The collector deliberately stores all room types, but a calendar grid wants
-   * one number per cell — the price a guest would actually pay if they booked
-   * the cheapest available room. DISTINCT ON is Postgres-specific and much
-   * cheaper here than a window function or a correlated subquery.
+   * When comparing against STANDARD, fetch only the matching room types for the
+   * dates on the sliced page so the comparison query stays tightly bounded.
    */
-  const cheapest = async (rateCode: typeof q.rateCode) =>
-    db
+  const target = await db
+    .selectDistinctOn([rateCurrent.propertyId, rateCurrent.stayDate], {
+      propertyId: rateCurrent.propertyId,
+      stayDate: rateCurrent.stayDate,
+      nightlyCents: rateCurrent.nightlyCents,
+      totalCents: rateCurrent.totalCents,
+      available: rateCurrent.available,
+      source: rateCurrent.source,
+      isEstimated: rateCurrent.isEstimated,
+      merchant: rateCurrent.merchant,
+      historicalLowCents: rateCurrent.historicalLowCents,
+      previousCents: rateCurrent.previousCents,
+      observedAt: rateCurrent.observedAt,
+      roomTypeId: rateCurrent.roomTypeId,
+      roomTypeName: roomTypes.name,
+    })
+    .from(rateCurrent)
+    .leftJoin(roomTypes, eq(rateCurrent.roomTypeId, roomTypes.id))
+    .where(
+      and(
+        inArray(rateCurrent.propertyId, propertyIds),
+        eq(rateCurrent.rateCode, q.rateCode),
+        eq(rateCurrent.nights, q.nights),
+        eq(rateCurrent.adults, q.adults),
+        eq(rateCurrent.children, q.children),
+        q.roomTypeId ? eq(rateCurrent.roomTypeId, q.roomTypeId) : sql`true`,
+        gte(rateCurrent.stayDate, from),
+        lte(rateCurrent.stayDate, to),
+        eq(rateCurrent.available, true)
+      )
+    )
+    .orderBy(
+      asc(rateCurrent.propertyId),
+      asc(rateCurrent.stayDate),
+      asc(rateCurrent.nightlyCents)
+    );
+
+  const paged = target
+    .sort(
+      (a, b) =>
+        a.stayDate.localeCompare(b.stayDate) ||
+        propertyById.get(a.propertyId)!.name.localeCompare(propertyById.get(b.propertyId)!.name)
+    )
+    .slice(q.offset, q.offset + q.limit);
+
+  let standardByKey = new Map<string, { nightlyCents: number }>();
+  if (q.rateCode !== "STANDARD" && paged.length > 0) {
+    const pagePropertyIds = [...new Set(paged.map((row) => row.propertyId))];
+    const pageRoomTypeIds = [
+      ...new Set(paged.map((row) => row.roomTypeId).filter((id): id is string => id !== null)),
+    ];
+    const minDate = paged[0]!.stayDate;
+    const maxDate = paged[paged.length - 1]!.stayDate;
+
+    const standardRows = await db
       .select({
         propertyId: rateCurrent.propertyId,
         stayDate: rateCurrent.stayDate,
-        nightlyCents: rateCurrent.nightlyCents,
-        totalCents: rateCurrent.totalCents,
-        available: rateCurrent.available,
-        source: rateCurrent.source,
-        isEstimated: rateCurrent.isEstimated,
-        merchant: rateCurrent.merchant,
-        historicalLowCents: rateCurrent.historicalLowCents,
-        previousCents: rateCurrent.previousCents,
-        observedAt: rateCurrent.observedAt,
         roomTypeId: rateCurrent.roomTypeId,
-        roomTypeName: roomTypes.name,
+        nightlyCents: rateCurrent.nightlyCents,
       })
       .from(rateCurrent)
-      .leftJoin(roomTypes, eq(rateCurrent.roomTypeId, roomTypes.id))
       .where(
         and(
-          inArray(rateCurrent.propertyId, propertyIds),
-          eq(rateCurrent.rateCode, rateCode),
+          inArray(rateCurrent.propertyId, pagePropertyIds),
+          eq(rateCurrent.rateCode, "STANDARD"),
           eq(rateCurrent.nights, q.nights),
           eq(rateCurrent.adults, q.adults),
           eq(rateCurrent.children, q.children),
-          q.roomTypeId ? eq(rateCurrent.roomTypeId, q.roomTypeId) : sql`true`,
-          gte(rateCurrent.stayDate, from),
-          lte(rateCurrent.stayDate, to),
+          pageRoomTypeIds.length > 0 ? inArray(rateCurrent.roomTypeId, pageRoomTypeIds) : sql`true`,
+          gte(rateCurrent.stayDate, minDate),
+          lte(rateCurrent.stayDate, maxDate),
           eq(rateCurrent.available, true)
         )
-      )
-      .orderBy(
-        asc(rateCurrent.propertyId),
-        asc(rateCurrent.stayDate),
-        asc(rateCurrent.nightlyCents)
       );
 
-  const [target, standard] = await Promise.all([
-    cheapest(q.rateCode),
-    q.rateCode === "STANDARD" ? Promise.resolve([]) : cheapest("STANDARD"),
-  ]);
+    standardByKey = new Map(
+      standardRows.map((row) => [`${row.propertyId}|${row.stayDate}|${row.roomTypeId ?? ""}`, row])
+    );
+  }
 
-  const dedupe = <T extends { propertyId: string; stayDate: string }>(rows: T[]) => {
-    const out = new Map<string, T>();
-    for (const row of rows) {
-      const key = `${row.propertyId}|${row.stayDate}`;
-      if (!out.has(key)) out.set(key, row); // already sorted by price ascending
-    }
-    return out;
-  };
-
-  const targetByKey = dedupe(target);
-  const standardByKey = new Map(
-    standard.map((row) => [`${row.propertyId}|${row.stayDate}|${row.roomTypeId ?? ""}`, row])
-  );
-
-  const items = [...targetByKey.values()]
-    .map((row) => {
-      const property = propertyById.get(row.propertyId)!;
-      const std = standardByKey.get(
-        `${row.propertyId}|${row.stayDate}|${row.roomTypeId ?? ""}`
-      );
-      return {
-        propertyId: row.propertyId,
-        propertySlug: property.slug,
-        propertyName: property.name,
-        stayDate: row.stayDate,
-        rateCode: q.rateCode,
-        nightlyCents: row.nightlyCents,
-        totalCents: row.totalCents,
-        roomTypeName: row.roomTypeName,
-        available: row.available,
-        source: row.source,
-        isEstimated: row.isEstimated,
-        merchant: row.merchant,
-        observedAt: row.observedAt.toISOString(),
-        standardNightlyCents: std?.nightlyCents ?? null,
-        savingsCents: std ? std.nightlyCents - row.nightlyCents : null,
-        historicalLowCents: row.historicalLowCents,
-        changeCents: row.previousCents === null ? null : row.nightlyCents - row.previousCents,
-      };
-    })
-    .sort((a, b) => a.stayDate.localeCompare(b.stayDate) || a.propertyName.localeCompare(b.propertyName))
-    .slice(q.offset, q.offset + q.limit);
+  const items = paged.map((row) => {
+    const property = propertyById.get(row.propertyId)!;
+    const std = standardByKey.get(`${row.propertyId}|${row.stayDate}|${row.roomTypeId ?? ""}`);
+    return {
+      propertyId: row.propertyId,
+      propertySlug: property.slug,
+      propertyName: property.name,
+      stayDate: row.stayDate,
+      rateCode: q.rateCode,
+      nightlyCents: row.nightlyCents,
+      totalCents: row.totalCents,
+      roomTypeName: row.roomTypeName,
+      available: row.available,
+      source: row.source,
+      isEstimated: row.isEstimated,
+      merchant: row.merchant,
+      observedAt: row.observedAt.toISOString(),
+      standardNightlyCents: std?.nightlyCents ?? null,
+      savingsCents: std ? std.nightlyCents - row.nightlyCents : null,
+      historicalLowCents: row.historicalLowCents,
+      changeCents: row.previousCents === null ? null : row.nightlyCents - row.previousCents,
+    };
+  });
 
   return c.json({ items, attribution: [], gate: gate.info });
 });

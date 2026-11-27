@@ -12,3 +12,4 @@ export * from "./affiliate.js";
 export * from "./park-state.js";
 export * from "./client.js";
 export * from "./money.js";
+export * from "./guides/index.js";

@@ -1,7 +1,23 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { ENTITLEMENTS, RateCoasterClient, type Entitlements, type GateInfo } from "@ratecoaster/shared";
 
 const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8787";
+
+/**
+ * Cookie-free API client for public pages so Next.js static generation and ISR
+ * (`export const revalidate = ...`) work without being forced dynamic by
+ * `cookies()`.
+ */
+export function getPublicClient(revalidate = 60): RateCoasterClient {
+  return new RateCoasterClient({
+    baseUrl: BASE_URL,
+    fetch: (input, init) =>
+      fetch(input, {
+        ...init,
+        next: { revalidate },
+      }),
+  });
+}
 
 /**
  * Server-side API client that forwards the caller's session cookie so saved

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useClientSession } from "./ClientSession";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
 
@@ -16,16 +17,18 @@ export function WatchButton({
   propertyName,
   destination,
   rateCode,
-  signedIn,
+  signedIn: signedInProp,
   returnTo,
 }: {
   propertyId: string;
   propertyName: string;
   destination: string;
   rateCode: string;
-  signedIn: boolean;
+  signedIn?: boolean;
   returnTo: string;
 }) {
+  const session = useClientSession();
+  const signedIn = signedInProp ?? session.signedIn;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);

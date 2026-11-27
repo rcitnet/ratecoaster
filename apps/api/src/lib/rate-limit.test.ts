@@ -26,6 +26,18 @@ describe("MemoryRateLimitStore", () => {
     assert.equal(lower, opaqueRateLimitKey("magic-email", "traveler@example.com"));
     assert.doesNotMatch(lower, /traveler|example/i);
   });
+
+  test("caps stored buckets to prevent unbounded memory growth", () => {
+    const store = new MemoryRateLimitStore(3);
+    const start = Date.UTC(2026, 8, 2, 12);
+
+    store.take("ip-1", 5, 60_000, start);
+    store.take("ip-2", 5, 60_000, start);
+    store.take("ip-3", 5, 60_000, start);
+    store.take("ip-4", 5, 60_000, start);
+
+    assert.equal(store.size, 3);
+  });
 });
 
 test("IP middleware trusts Caddy's final forwarded address and returns 429 headers", async () => {
